@@ -13,6 +13,13 @@ Add a git remote. The scaffold is committed locally but has nowhere to push, so 
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
 
+### 2026-07-26 14:17 ET · Codex
+- **Changed:** Intensified the replacement palette across the dashboard: electric blue, cyan, violet, orange, yellow, and signal-red now appear as clear active states and module accents.
+  Kept white, black, gray, and slate as the only neutral surfaces, with no pink UI color introduced.
+- **Commit:** `54314d4`
+- **Next:** Review the saturated palette in-browser and choose the next dashboard module to expand.
+- **Watch out:** This repository still has no Git remote, so the refinement is committed locally but not banked off-machine.
+
 ### 2026-07-26 13:58 ET · Codex
 - **Changed:** Rebalanced the dashboard around a light-slate canvas and modular white, charcoal, gradient, and translucent panels.
   Removed pink from the active palette, using cyan, blue, violet, orange, yellow, and lime only as intentional signals.

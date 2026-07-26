@@ -13,6 +13,13 @@ Add a git remote. The scaffold is committed locally but has nowhere to push, so 
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
 
+### 2026-07-26 13:25 ET · Codex
+- **Changed:** Shifted the dashboard to a rounded, midnight-neon field-console system.
+  Replaced pale surfaces with cyan, blue, violet, pink, and orange signals while preserving the dashboard’s working behavior.
+- **Commit:** `5c91dcb`
+- **Next:** Review the neon direction in-browser and tune any modules that feel too bright.
+- **Watch out:** This repository still has no Git remote, so the refinement is committed locally but not banked off-machine.
+
 ### 2026-07-26 13:14 ET · Codex
 - **Changed:** Rebuilt the Horizon and Project Registry surfaces as a bioluminescent field-console dashboard.
   Added responsive instrument modules, tactile controls, project signal states, capture feedback, and the new palette system.

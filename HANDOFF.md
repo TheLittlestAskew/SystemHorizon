@@ -4,18 +4,17 @@
 > Handoff is **enabled** for this repo. Every change updates the DO NEXT block below and prepends a log entry.
 
 ## ▶ DO NEXT
-Make the first commit. The repo has **zero commits** and 8 untracked paths (`src/`, `public/`, `index.html`, `package.json`, `vite.config.js`, `.gitignore`, `.oxlintrc.json`, `README.md`), so nothing here is banked yet.
-- ⚠️ No git remote is configured, so `git push` will fail until one is added. Commit locally first, then add the remote.
+Add a git remote. The scaffold is committed locally but has nowhere to push, so nothing here is backed up off this machine.
+- ⚠️ Decide first whether this belongs under `TheLittlestAskew/SystemHorizon` **or** as a subroute of `taylorritchie/systemhorizon/`. The `taylorritchie` handoff has an open item to repoint `systemhorizon-build` at the subroute and archive the standalone repo, so these two plans conflict. Resolve that before creating a remote.
 - `README.md` is still the stock Vite template text; it describes React+Vite, not System Horizon.
-- Decide whether this lives under `TheLittlestAskew/SystemHorizon` (already in the repo list in True North) before adding the remote.
 
 ---
 
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
 
-### 2026-07-26 11:22 ET · Claude Code
-- **Changed:** Enabled repo handoff — added this `HANDOFF.md` at root, which opts the repo into the automatic handoff guard.
-- **Commit:** `(none yet — repo has no commits)`
-- **Next:** Make the initial commit, then add the `SystemHorizon` remote.
-- **Watch out:** The `handoff-guard.ps1` Stop hook will now block turns in this repo until the work is committed. That is intended.
+### 2026-07-26 11:25 ET · Claude Code
+- **Changed:** Enabled repo handoff (added this `HANDOFF.md`) and made the repo's first commit: the React+Vite scaffold, 16 files.
+- **Commit:** `b48dda4`
+- **Next:** Resolve the standalone-vs-subroute question, then add the remote.
+- **Watch out:** No remote is configured, so `git push` fails. The work is committed but not backed up anywhere.

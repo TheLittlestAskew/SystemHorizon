@@ -13,6 +13,12 @@ Add a git remote. The scaffold is committed locally but has nowhere to push, so 
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
 
+### 2026-07-26 11:44 ET · Claude Code
+- **Changed:** Added the Handoff Contract to `AGENTS.md` so Codex follows it. Codex reads `AGENTS.md`, never `~/.claude/skills/`, so it had no handoff instructions at all before this.
+- **Commit:** `bd06e5f`
+- **Next:** Unchanged. See the block above this log.
+- **Watch out:** Log entries must now carry a tool label (`Claude Code` / `Claude desktop` / `Codex` / `ChatGPT`). Do not restructure this file; the dashboard parses it.
+
 ### 2026-07-26 11:25 ET · Claude Code
 - **Changed:** Enabled repo handoff (added this `HANDOFF.md`) and made the repo's first commit: the React+Vite scaffold, 16 files.
 - **Commit:** `b48dda4`

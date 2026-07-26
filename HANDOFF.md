@@ -13,6 +13,13 @@ Add a git remote. The scaffold is committed locally but has nowhere to push, so 
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
 
+### 2026-07-26 16:53 ET · Codex
+- **Changed:** Removed navy as a dashboard base color.
+  Rebuilt depth with true black and charcoal, while the hero and active signals now use electric blue, cyan, violet, orange, yellow, and signal-red.
+- **Commit:** `f1ab94e`
+- **Next:** Review the black-and-spectrum contrast before expanding the next dashboard module.
+- **Watch out:** This repository still has no Git remote, so the correction is committed locally but not banked off-machine.
+
 ### 2026-07-26 14:17 ET · Codex
 - **Changed:** Intensified the replacement palette across the dashboard: electric blue, cyan, violet, orange, yellow, and signal-red now appear as clear active states and module accents.
   Kept white, black, gray, and slate as the only neutral surfaces, with no pink UI color introduced.

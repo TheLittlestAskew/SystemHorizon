@@ -4,8 +4,7 @@
 > Handoff is **enabled** for this repo. Every change updates the DO NEXT block below and prepends a log entry.
 
 ## ▶ DO NEXT
-Confirm the freshly triggered GitHub Actions Pages deployment replaces the former branch deployment.
-- Once the site is live, decide the canonical Rectrix Caedere / Aftermath Atlas naming before connecting the Project Registry to live project rows.
+Decide the canonical Rectrix Caedere / Aftermath Atlas naming before connecting the Project Registry to live project rows.
 - ⚠️ The registry currently uses **Rectrix Caedere** for the campaign, brand, and public site; **Aftermath Atlas** for the analytics app; and **Aftermath Meridian** only for its database. Confirm that is the durable naming scheme before data integration.
 - Remote: `origin` is `TheLittlestAskew/SystemHorizon`. The prior standalone HTML control panel is preserved as `meridian-keystone.html` while the Vite dashboard is the active entry point.
 - `README.md` is still the stock Vite template text; it describes React+Vite, not System Horizon.

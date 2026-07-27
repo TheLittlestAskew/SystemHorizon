@@ -10,10 +10,22 @@ const navItems = [
 ]
 
 const initialProjects = [
-  { id: 'septentrion', name: 'Septentrion', status: 'Active', tone: 'cyan', nextAction: 'Define the first stable project-registry export.', signal: 78 },
-  { id: 'system-horizon', name: 'System Horizon', status: 'In focus', tone: 'coral', nextAction: 'Build the Project Registry as the first working module.', signal: 92 },
-  { id: 'aftermath-atlas', name: 'Aftermath Atlas', status: 'Waiting', tone: 'violet', nextAction: 'Choose the next table-facing workflow to improve.', signal: 36 },
-  { id: 'career-ops', name: 'Career ops', status: 'Active', tone: 'cyan', nextAction: 'Review the next highest-value job-search action.', signal: 64 },
+  { id: 'system-horizon', name: 'System Horizon', area: 'Ops & Infra', kind: 'app', status: 'Active', health: 'Yellow', tone: 'coral', metric: '10/15 views live', signal: 67, summary: 'The cross-device control panel for projects, return points, and the next true thing.', nextAction: 'Restore or locate the missing tayls-task-manager.jsx source.', details: ['Known trap: recurring strip is hardcoded.', 'Failed Flows is still unbuilt.', 'The missing JSX source stays visible until resolved.'] },
+  { id: 'septentrion', name: 'Septentrion / Observatory', area: 'Ops & Infra', kind: 'app + vault', status: 'Active', health: 'Green', tone: 'cyan', metric: '5 panels · daily 07:30 task', signal: 88, summary: 'The mind palace: a Return Point that stays current from every repo handoff.', nextAction: 'Choose the jobs-Supabase connection and finish the HTML Embed path.', details: ['5 operational panels are shipped.', 'Daily generator task is scheduled for 07:30.', 'Repo feeds need a freshness check on the eventual live page.'] },
+  { id: 'rectrix-caedere', name: 'Rectrix Caedere', area: 'Aftermath', kind: 'app + content', status: 'Active', health: 'Green', tone: 'cyan', metric: 'Live site + roll dashboard', signal: 86, summary: 'Campaign, public brand system, and the flagship creative-data product at rectrixcaedere.com.', nextAction: 'Confirm the latest roll-sync health and surface its freshness.', details: ['Oracle-deck product concept and brand assets belong here.', 'The historic prop-types black-screen bug is resolved.', 'Canonical name: campaign + brand + public site.'] },
+  { id: 'aftermath-atlas', name: 'Aftermath Atlas', area: 'Aftermath', kind: 'app', status: 'Active', health: 'Yellow', tone: 'coral', metric: 'Spread · Court · Orrery', signal: 42, summary: 'The roll-analytics engine behind Rectrix Caedere and Dimension 20 data.', nextAction: 'Reconcile the diverged branch and six orphaned remote migrations.', details: ['Open: seed.sql line-30 quoting bug.', 'Browser extension is part of the product.', 'Aftermath Meridian is the database name, not a duplicate project.'] },
+  { id: 'sitl', name: 'Sky Is The Limit', area: 'Aftermath', kind: 'automation + archive', status: 'Active', health: 'Green', tone: 'cyan', metric: 'mp3 → note → approve', signal: 91, summary: 'The transcription pipeline that turns campaign audio into approved session notes.', nextAction: 'Check watcher status and clear the pending-approvals queue.', details: ['AssemblyAI custom spelling is part of the pipeline.', 'The scheduled watcher auto-starts.', 'This is the pattern cloned for Dimension 20.'] },
+  { id: 'flowers-forget', name: 'Where The Flowers Forget', area: 'Aftermath', kind: 'archive', status: 'Paused', health: 'Yellow', tone: 'violet', metric: 'Season 02 integrated', signal: 48, summary: 'Campaign archive of transcripts, session notes, and roll logs.', nextAction: 'Keep the archive parked until the next season or import needs attention.', details: ['Season 02 is integrated into Aftermath Atlas.', 'Best future view: processed-versus-pending episode progress.', 'No live pipeline is needed while paused.'] },
+  { id: 'ashfall-britannia', name: 'Ashfall Britannia', area: 'Aftermath', kind: 'archive', status: 'Active', health: 'Green', tone: 'cyan', metric: 'Player journal', signal: 76, summary: 'A campaign vault framed as your player journal, not campaign operations.', nextAction: 'Add the most recent session and character-note return point.', details: ['Your role is Player.', 'Taylor (DM) is a different Taylor.', 'Keep the page lighter than the analytics projects.'] },
+  { id: 'pacts-power', name: 'Pacts & Power', area: 'Aftermath', kind: 'archive', status: 'Paused', health: 'Idle', tone: 'violet', metric: 'Vault synced', signal: 22, summary: 'A settled campaign vault with its audio cleanup and sync work complete.', nextAction: 'Leave parked unless the campaign resumes or retrieval is needed.', details: ['PAT → GCM sync work is complete.', 'No dashboard tile until it is active again.', 'This is a minimal archive, not a live system.'] },
+  { id: 'dimension-20', name: 'Dimension 20 pipeline', area: 'Aftermath', kind: 'automation + archive', status: 'Active', health: 'Yellow', tone: 'coral', metric: 'Episode 1 proven · 2–17 pending', signal: 39, summary: 'A high-volume transcript-to-session-note pipeline feeding the Aftermath Atlas data model.', nextAction: 'Process Episodes 2–17, then establish the campaign progress matrix.', details: ['24 campaigns and 225 transcripts are imported.', 'Reconciliation policy needs visible source notes.', 'Writes to the Aftermath Meridian project.'] },
+  { id: 'career-ops', name: 'Resume & Job Hunting', area: 'Career', kind: 'automation', status: 'Active', health: 'Green', tone: 'cyan', metric: 'Tracker + weekly discovery', signal: 84, summary: 'The job-search command center: applications, resume variants, compliance, and next moves.', nextAction: 'Check this week’s three GA DOL work-search contacts.', details: ['Funnel: Discovered → Applied → Interview → Offer.', 'Recent scores include MAVEN 94% and NDI 84%.', 'Sunday and Friday GDOL toasts support the deadline.'] },
+  { id: 'storybook-resume', name: 'Storybook Resume', area: 'Career', kind: 'app', status: 'Idea', health: 'Idle', tone: 'violet', metric: '9 scenes · 0/10 built', signal: 0, summary: 'A scroll-snap resume built as a career journey, with an Among Trees design DNA.', nextAction: 'Choose the first of the committed ten build tasks when capacity opens.', details: ['The nine-scene storyboard exists.', 'The 10-task plan is committed.', 'Nothing is built yet, so this stays out of Horizon.'] },
+  { id: 'nonprofit-power-platform', name: 'Nonprofit Power Platform', area: 'Career', kind: 'content / case study', status: 'Paused', health: 'Yellow', tone: 'coral', metric: '129 sanitized tr_ tables', signal: 55, summary: 'A public-safe case study of a six-area Power Platform build, designed without exposing private source data.', nextAction: 'Review the unmerged branches and decide whether to finish the public case-study merge.', details: ['Public repo contains zero PII.', 'Source-private and public-sanitized work stay separated.', 'This is for hiring-manager review, not a live operations tile.'] },
+  { id: 'invisible-string-theory', name: 'Invisible String Theory', area: 'Swift', kind: 'intel', status: 'Active', health: 'Green', tone: 'cyan', metric: 'Signals + merch watch', signal: 79, summary: 'A Taylor Swift intelligence project for Easter eggs, merch, and evidence-backed next-move predictions.', nextAction: 'Review the newest Swiftwatch detection against the prediction log.', details: ['Signal library includes song-title source notes.', 'Merch tracker separates available, wishlist, and owned.', 'Swiftwatch is the sensor; this is the analyst.'] },
+  { id: 'swiftwatch', name: 'Swiftwatch', area: 'Swift', kind: 'intel / monitor', status: 'Active', health: 'Green', tone: 'cyan', metric: '2 watches · chain verified', signal: 90, summary: 'A local change-detection monitor for the Taylor Swift store and taylorswift.com.', nextAction: 'Verify the two watch freshness timestamps after the next notification cycle.', details: ['Store checks every 30 minutes; site checks every 2 hours.', 'changedetection → Apprise → ntfy → BurntToast is verified.', 'Duplicate-toast bug was fixed.'] },
+  { id: 'fantasy-football', name: 'Fantasy Football', area: 'Learning', kind: 'app + learning', status: 'Active', health: 'Yellow', tone: 'violet', metric: 'ESPN league tracker', signal: 45, summary: 'A season-long ESPN league tracker that doubles as a guided coding project.', nextAction: 'Verify the product scope, then make the next feature checklist concrete.', details: ['The app is both a tool and a learning vehicle.', 'GitHub access and guided practice are recent work.', 'Keep learning goals visible alongside build progress.'] },
+  { id: 'learn-javascript', name: 'Learn JavaScript', area: 'Learning', kind: 'learning', status: 'Active', health: 'Idle', tone: 'violet', metric: 'Ongoing skill track', signal: 30, summary: 'The deliberate JavaScript practice track behind the apps you are learning to build and maintain.', nextAction: 'Log the next concept or exercise as a visible return point.', details: ['Self-rated as beginner, with strong editing and systems instincts.', 'Future view: concepts learned, exercises, and consistency.', 'Optional home tile only if a study streak becomes useful.'] },
 ]
 
 function Button({ tone = 'quiet', className = '', children, ...props }) {
@@ -69,7 +81,7 @@ function ProjectRegistry({ projects, selectedProjectId, onSelectProject, onAddPr
       setFormError('Use at least one letter or number in the name.')
       return
     }
-    onAddProject({ id, name: cleanName, status: 'Waiting', tone: 'violet', nextAction: 'Add a clear purpose and first return point.', signal: 12 })
+    onAddProject({ id, name: cleanName, area: 'Unsorted', kind: 'project', status: 'Idea', health: 'Idle', tone: 'violet', metric: 'No metric yet', summary: 'A newly registered project awaiting its first useful description.', nextAction: 'Add a clear purpose and first return point.', details: ['Add the work this project represents.', 'Choose the one next action that makes it real.'], signal: 12 })
     setProjectName('')
     setFormError('')
     setIsAdding(false)
@@ -80,7 +92,7 @@ function ProjectRegistry({ projects, selectedProjectId, onSelectProject, onAddPr
       <div>
         <p className="eyebrow">System index / 02</p>
         <h2 id="registry-heading">Project registry</h2>
-        <p>Every active system, with its next honest move.</p>
+        <p>Sixteen real systems, archives, and experiments. Every one has an honest next move.</p>
       </div>
       <Button tone="coral" onClick={() => setIsAdding((open) => !open)}>{isAdding ? 'Close panel' : 'Add project'}</Button>
     </header>
@@ -95,24 +107,32 @@ function ProjectRegistry({ projects, selectedProjectId, onSelectProject, onAddPr
     </form>}
 
     <div className="registry-controls" role="group" aria-label="Filter projects by status">
-      {['All', 'Active', 'In focus', 'Waiting'].map((option) => <button className={filter === option ? 'selected' : ''} key={option} type="button" onClick={() => setFilter(option)}>{option}</button>)}
+      {['All', 'Active', 'Paused', 'Idea'].map((option) => <button className={filter === option ? 'selected' : ''} key={option} type="button" onClick={() => setFilter(option)}>{option}</button>)}
     </div>
 
     <div className="registry-layout">
       <div className="registry-list" aria-label="Registered projects">
         {visibleProjects.map((project) => <button className={selectedProject.id === project.id ? 'registry-row selected' : 'registry-row'} key={project.id} type="button" onClick={() => onSelectProject(project.id)}>
           <Signal tone={project.tone} />
-          <span><strong>{project.name}</strong><small>{project.nextAction}</small></span>
+          <span><strong>{project.name}</strong><small>{project.area} · {project.metric}</small></span>
           <b>{project.status}</b>
         </button>)}
         {visibleProjects.length === 0 && <p className="empty-state">No projects match that signal yet.</p>}
       </div>
       {selectedProject && <article className="project-inspector" aria-live="polite">
-        <div className="inspector-topline"><span>Selected signal</span><span>{String(selectedProject.signal).padStart(2, '0')}%</span></div>
+        <div className="inspector-topline"><span>{selectedProject.area} · {selectedProject.kind}</span><span>{selectedProject.health} health</span></div>
         <h3>{selectedProject.name}</h3>
-        <p>{selectedProject.nextAction}</p>
+        <p>{selectedProject.summary}</p>
         <div className="signal-meter"><span style={{ width: `${selectedProject.signal}%` }} /></div>
-        <dl><div><dt>State</dt><dd><Signal tone={selectedProject.tone} /> {selectedProject.status}</dd></div><div><dt>Next action</dt><dd>{selectedProject.nextAction}</dd></div></dl>
+        <dl>
+          <div><dt>State</dt><dd><Signal tone={selectedProject.tone} /> {selectedProject.status}</dd></div>
+          <div><dt>Headline</dt><dd>{selectedProject.metric}</dd></div>
+          <div><dt>Next action</dt><dd>{selectedProject.nextAction}</dd></div>
+        </dl>
+        <section className="project-detail-notes" aria-label={`${selectedProject.name} project notes`}>
+          <span>Field notes</span>
+          <ul>{selectedProject.details.map((detail) => <li key={detail}>{detail}</li>)}</ul>
+        </section>
       </article>}
     </div>
   </section>

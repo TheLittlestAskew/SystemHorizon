@@ -152,7 +152,7 @@ function ProjectRegistry({ projects, selectedProjectId, onSelectProject, onAddPr
   </section>
 }
 
-function CareerView({ applications, contacts, onAddApplication, onAddContact }) {
+function CareerView({ applications, contacts, onAddApplication, onAddContact, onUpdateApplication }) {
   const [company, setCompany] = useState('')
   const [role, setRole] = useState('')
   const [score, setScore] = useState('')
@@ -193,7 +193,14 @@ function CareerView({ applications, contacts, onAddApplication, onAddContact }) 
     } catch (error) { setFormError(error.message || 'The work-search contact could not be saved.') }
   }
 
-  return <section className="career-view" aria-labelledby="career-heading"><header className="view-header"><div><p className="eyebrow">Career operations / 05</p><h2 id="career-heading">Job search field</h2><p>Applications, compliance, and the next move that earns its place.</p></div></header><div className="career-grid"><article className="career-panel compliance-panel"><span>This week’s work search</span><strong>{weeklyContacts}<small>/3 contacts</small></strong><p>{weeklyContacts >= 3 ? 'GA DOL contact requirement met for this week.' : `${3 - weeklyContacts} more contact${3 - weeklyContacts === 1 ? '' : 's'} needed this week.`}</p><form onSubmit={submitContact}><label>Organization or contact<input value={organization} onChange={(event) => setOrganization(event.target.value)} placeholder="Employer, recruiter, or network contact" /></label><label>Contact type<select value={contactType} onChange={(event) => setContactType(event.target.value)}>{['Application', 'Employer contact', 'Networking', 'Interview', 'Follow-up'].map((type) => <option key={type}>{type}</option>)}</select></label><Button tone="coral" type="submit">Log contact</Button></form></article><article className="career-panel"><span>Active applications</span><strong>{activeApplications.length}</strong><p>Discovered, applied, or moving through interviews.</p><div className="career-statuses">{['Discovered', 'Applied', 'Interview', 'Offer'].map((status) => <div key={status}><small>{status}</small><b>{applications.filter((application) => application.status === status).length}</b></div>)}</div></article></div><div className="career-workbench"><form className="career-form" onSubmit={submitApplication}><div><label>Company<input value={company} onChange={(event) => setCompany(event.target.value)} placeholder="Organization" /></label><label>Role<input value={role} onChange={(event) => setRole(event.target.value)} placeholder="Job title" /></label><label>Match score<input type="number" min="0" max="100" value={score} onChange={(event) => setScore(event.target.value)} placeholder="Optional" /></label><Button tone="coral" type="submit">Add application</Button></div>{formError && <p role="alert">{formError}</p>}</form><section className="application-list" aria-label="Applications"><div className="instrument-heading"><span>Application pipeline</span><b>{applications.length}</b></div>{applications.length ? applications.map((application) => <article key={application.id}><div><strong>{application.company}</strong><span>{application.role}</span></div><small>{application.status}{application.score ? ` · ${application.score}%` : ''}</small></article>) : <p className="empty-state">No applications yet. Add the first one above.</p>}</section></div></section>
+  async function changeApplicationStatus(id, status) {
+    try {
+      await onUpdateApplication(id, status)
+      setFormError('')
+    } catch (error) { setFormError(error.message || 'The application stage could not be updated.') }
+  }
+
+  return <section className="career-view" aria-labelledby="career-heading"><header className="view-header"><div><p className="eyebrow">Career operations / 05</p><h2 id="career-heading">Job search field</h2><p>Applications, compliance, and the next move that earns its place.</p></div></header><div className="career-grid"><article className="career-panel compliance-panel"><span>This week’s work search</span><strong>{weeklyContacts}<small>/3 contacts</small></strong><p>{weeklyContacts >= 3 ? 'GA DOL contact requirement met for this week.' : `${3 - weeklyContacts} more contact${3 - weeklyContacts === 1 ? '' : 's'} needed this week.`}</p><form onSubmit={submitContact}><label>Organization or contact<input value={organization} onChange={(event) => setOrganization(event.target.value)} placeholder="Employer, recruiter, or network contact" /></label><label>Contact type<select value={contactType} onChange={(event) => setContactType(event.target.value)}>{['Application', 'Employer contact', 'Networking', 'Interview', 'Follow-up'].map((type) => <option key={type}>{type}</option>)}</select></label><Button tone="coral" type="submit">Log contact</Button></form></article><article className="career-panel"><span>Active applications</span><strong>{activeApplications.length}</strong><p>Discovered, applied, or moving through interviews.</p><div className="career-statuses">{['Discovered', 'Applied', 'Interview', 'Offer'].map((status) => <div key={status}><small>{status}</small><b>{applications.filter((application) => application.status === status).length}</b></div>)}</div></article></div><div className="career-workbench"><form className="career-form" onSubmit={submitApplication}><div><label>Company<input value={company} onChange={(event) => setCompany(event.target.value)} placeholder="Organization" /></label><label>Role<input value={role} onChange={(event) => setRole(event.target.value)} placeholder="Job title" /></label><label>Match score<input type="number" min="0" max="100" value={score} onChange={(event) => setScore(event.target.value)} placeholder="Optional" /></label><Button tone="coral" type="submit">Add application</Button></div>{formError && <p role="alert">{formError}</p>}</form><section className="application-list" aria-label="Applications"><div className="instrument-heading"><span>Application pipeline</span><b>{applications.length}</b></div>{applications.length ? applications.map((application) => <article key={application.id}><div><strong>{application.company}</strong><span>{application.role}</span></div><label className="application-status">Stage<select value={application.status} onChange={(event) => changeApplicationStatus(application.id, event.target.value)}>{['Discovered', 'Applied', 'Interview', 'Offer', 'Rejected', 'Archived'].map((status) => <option key={status}>{status}</option>)}</select>{application.score ? <small>{application.score}% match</small> : null}</label></article>) : <p className="empty-state">No applications yet. Add the first one above.</p>}</section></div></section>
 }
 
 function AccessGate() {
@@ -408,6 +415,14 @@ function App() {
     setApplications((current) => [data, ...current])
   }
 
+  async function updateApplication(id, status) {
+    const update = { status }
+    if (status === 'Applied') update.applied_at = new Date().toISOString().slice(0, 10)
+    const { data, error } = await supabase.from('horizon_applications').update(update).eq('id', id).select().single()
+    if (error) throw error
+    setApplications((current) => current.map((application) => application.id === id ? data : application))
+  }
+
   async function addContact(contact) {
     const { data, error } = await supabase.from('horizon_work_search_contacts').insert(contact).select().single()
     if (error) throw error
@@ -430,7 +445,7 @@ function App() {
           <div className="topbar-tools"><label className="search-field"><span>Search</span><input aria-label="Search System Horizon" placeholder="Find a system" /></label><Button type="button" onClick={() => supabase.auth.signOut()}>Sign out</Button><DateReadout /></div>
         </header>
         {databaseError && <p className="database-error" role="alert">Database error: {databaseError}</p>}
-        {activeView === 'Projects' ? <ProjectRegistry projects={projects} selectedProjectId={selectedProjectId} onSelectProject={setSelectedProjectId} onAddProject={addProject} onSeedProjects={seedProjects} /> : activeView === 'Career' ? <CareerView applications={applications} contacts={contacts} onAddApplication={addApplication} onAddContact={addContact} /> : activeView === 'Horizon' ? <Horizon projects={projects} onProjects={() => setActiveView('Projects')} /> : <ScaffoldView view={activeView} onOpenProjects={() => setActiveView('Projects')} />}
+        {activeView === 'Projects' ? <ProjectRegistry projects={projects} selectedProjectId={selectedProjectId} onSelectProject={setSelectedProjectId} onAddProject={addProject} onSeedProjects={seedProjects} /> : activeView === 'Career' ? <CareerView applications={applications} contacts={contacts} onAddApplication={addApplication} onAddContact={addContact} onUpdateApplication={updateApplication} /> : activeView === 'Horizon' ? <Horizon projects={projects} onProjects={() => setActiveView('Projects')} /> : <ScaffoldView view={activeView} onOpenProjects={() => setActiveView('Projects')} />}
       </main>
     </div>
   </div>

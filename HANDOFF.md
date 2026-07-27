@@ -14,6 +14,12 @@ Add your first application and work-search contact, then confirm the weekly thre
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
 
+### 2026-07-27 16:19 ET · Codex
+- **Changed:** Added persistent application-stage controls for Discovered, Applied, Interview, Offer, Rejected, and Archived.
+  Moving an application to Applied records its application date; Career is now visible in the compact mobile navigation.
+- **Commit:** `defea1a`
+- **Next:** Add your first application and work-search contact, then confirm the weekly meter updates.
+
 ### 2026-07-27 16:15 ET · Codex
 - **Changed:** Added the private Career screen: application capture, pipeline counts, and weekly GA DOL work-search contact meter.
   Created owner-only applications and contact tables in Rectrix Caedere Supabase and recorded the migration locally.
@@ -107,14 +113,4 @@ Add your first application and work-search contact, then confirm the weekly thre
 - **Next:** Resolve the standalone-versus-subroute destination, add the approved remote, then push the dashboard work.
 - **Watch out:** This repository still has no Git remote, so the redesign is committed locally but not banked off-machine.
 
-### 2026-07-26 11:44 ET · Claude Code
-- **Changed:** Added the Handoff Contract to `AGENTS.md` so Codex follows it. Codex reads `AGENTS.md`, never `~/.claude/skills/`, so it had no handoff instructions at all before this.
-- **Commit:** `bd06e5f`
-- **Next:** Unchanged. See the block above this log.
-- **Watch out:** Log entries must now carry a tool label (`Claude Code` / `Claude desktop` / `Codex` / `ChatGPT`). Do not restructure this file; the dashboard parses it.
-
-### 2026-07-26 11:25 ET · Claude Code
-- **Changed:** Enabled repo handoff (added this `HANDOFF.md`) and made the repo's first commit: the React+Vite scaffold, 16 files.
-- **Commit:** `b48dda4`
-- **Next:** Resolve the standalone-vs-subroute question, then add the remote.
-- **Watch out:** No remote is configured, so `git push` fails. The work is committed but not backed up anywhere.
+Earlier entries archived in `handoff-archive/2026-07.md`.

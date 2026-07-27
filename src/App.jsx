@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from './supabase'
+import { jobPipeline } from './jobPipeline'
 import './App.css'
 
 const navItems = [
@@ -152,55 +153,16 @@ function ProjectRegistry({ projects, selectedProjectId, onSelectProject, onAddPr
   </section>
 }
 
-function CareerView({ applications, contacts, onAddApplication, onAddContact, onUpdateApplication }) {
-  const [company, setCompany] = useState('')
-  const [role, setRole] = useState('')
-  const [score, setScore] = useState('')
-  const [organization, setOrganization] = useState('')
-  const [contactType, setContactType] = useState('Application')
-  const [formError, setFormError] = useState('')
-  const weekStart = new Date()
-  weekStart.setDate(weekStart.getDate() - weekStart.getDay())
+function CareerView({ jobs, jobError }) {
+  const now = new Date()
+  const weekStart = new Date(now)
+  weekStart.setDate(now.getDate() - now.getDay())
   weekStart.setHours(0, 0, 0, 0)
-  const weeklyContacts = contacts.filter((contact) => new Date(`${contact.contact_date}T00:00:00`) >= weekStart).length
-  const activeApplications = applications.filter((application) => !['Rejected', 'Archived'].includes(application.status))
+  const weeklyContacts = jobs.filter((job) => job.ws_activity_date && new Date(`${job.ws_activity_date}T00:00:00`) >= weekStart).length
+  const activeJobs = jobs.filter((job) => !['Rejected', 'Archived', 'Withdrawn'].includes(job.status))
+  const safeUrl = (url) => { try { const parsed = new URL(url); return ['http:', 'https:'].includes(parsed.protocol) ? url : '' } catch { return '' } }
 
-  async function submitApplication(event) {
-    event.preventDefault()
-    if (!company.trim() || !role.trim()) {
-      setFormError('Add both the company and role.')
-      return
-    }
-    try {
-      await onAddApplication({ company: company.trim(), role: role.trim(), score: score ? Number(score) : null })
-      setCompany('')
-      setRole('')
-      setScore('')
-      setFormError('')
-    } catch (error) { setFormError(error.message || 'The application could not be saved.') }
-  }
-
-  async function submitContact(event) {
-    event.preventDefault()
-    if (!organization.trim()) {
-      setFormError('Name the organization or person you contacted.')
-      return
-    }
-    try {
-      await onAddContact({ organization: organization.trim(), contact_type: contactType })
-      setOrganization('')
-      setFormError('')
-    } catch (error) { setFormError(error.message || 'The work-search contact could not be saved.') }
-  }
-
-  async function changeApplicationStatus(id, status) {
-    try {
-      await onUpdateApplication(id, status)
-      setFormError('')
-    } catch (error) { setFormError(error.message || 'The application stage could not be updated.') }
-  }
-
-  return <section className="career-view" aria-labelledby="career-heading"><header className="view-header"><div><p className="eyebrow">Career operations / 05</p><h2 id="career-heading">Job search field</h2><p>Applications, compliance, and the next move that earns its place.</p></div></header><div className="career-grid"><article className="career-panel compliance-panel"><span>This week’s work search</span><strong>{weeklyContacts}<small>/3 contacts</small></strong><p>{weeklyContacts >= 3 ? 'GA DOL contact requirement met for this week.' : `${3 - weeklyContacts} more contact${3 - weeklyContacts === 1 ? '' : 's'} needed this week.`}</p><form onSubmit={submitContact}><label>Organization or contact<input value={organization} onChange={(event) => setOrganization(event.target.value)} placeholder="Employer, recruiter, or network contact" /></label><label>Contact type<select value={contactType} onChange={(event) => setContactType(event.target.value)}>{['Application', 'Employer contact', 'Networking', 'Interview', 'Follow-up'].map((type) => <option key={type}>{type}</option>)}</select></label><Button tone="coral" type="submit">Log contact</Button></form></article><article className="career-panel"><span>Active applications</span><strong>{activeApplications.length}</strong><p>Discovered, applied, or moving through interviews.</p><div className="career-statuses">{['Discovered', 'Applied', 'Interview', 'Offer'].map((status) => <div key={status}><small>{status}</small><b>{applications.filter((application) => application.status === status).length}</b></div>)}</div></article></div><div className="career-workbench"><form className="career-form" onSubmit={submitApplication}><div><label>Company<input value={company} onChange={(event) => setCompany(event.target.value)} placeholder="Organization" /></label><label>Role<input value={role} onChange={(event) => setRole(event.target.value)} placeholder="Job title" /></label><label>Match score<input type="number" min="0" max="100" value={score} onChange={(event) => setScore(event.target.value)} placeholder="Optional" /></label><Button tone="coral" type="submit">Add application</Button></div>{formError && <p role="alert">{formError}</p>}</form><section className="application-list" aria-label="Applications"><div className="instrument-heading"><span>Application pipeline</span><b>{applications.length}</b></div>{applications.length ? applications.map((application) => <article key={application.id}><div><strong>{application.company}</strong><span>{application.role}</span></div><label className="application-status">Stage<select value={application.status} onChange={(event) => changeApplicationStatus(application.id, event.target.value)}>{['Discovered', 'Applied', 'Interview', 'Offer', 'Rejected', 'Archived'].map((status) => <option key={status}>{status}</option>)}</select>{application.score ? <small>{application.score}% match</small> : null}</label></article>) : <p className="empty-state">No applications yet. Add the first one above.</p>}</section></div></section>
+  return <section className="career-view" aria-labelledby="career-heading"><header className="view-header"><div><p className="eyebrow">Career operations / 05</p><h2 id="career-heading">Job search field</h2><p>Live readout from the Claude Code job pipeline. Update jobs through that workflow, not this dashboard.</p></div></header>{jobError ? <p className="database-error" role="alert">Job pipeline error: {jobError}</p> : <><div className="career-grid"><article className="career-panel compliance-panel"><span>This week’s work search</span><strong>{weeklyContacts}<small>/3 contacts</small></strong><p>{weeklyContacts >= 3 ? 'GA DOL contact requirement met for this week.' : `${3 - weeklyContacts} more contact${3 - weeklyContacts === 1 ? '' : 's'} needed this week.`}</p><p className="career-source">Source: Claude Code → dashboard_jobs</p></article><article className="career-panel"><span>Active applications</span><strong>{activeJobs.length}</strong><p>Live pipeline data, without a second System Horizon tracker.</p><div className="career-statuses">{['Discovered', 'Docs Created', 'Applied', 'Interview'].map((status) => <div key={status}><small>{status}</small><b>{jobs.filter((job) => job.status === status).length}</b></div>)}</div></article></div><div className="career-workbench"><section className="application-list" aria-label="Applications"><div className="instrument-heading"><span>Automated application pipeline</span><b>{jobs.length}</b></div>{jobs.length ? jobs.map((job) => { const postUrl = safeUrl(job.post_url); return <article key={job.id}><div><strong>{job.title || 'Untitled role'}</strong><span>{job.organization || 'Organization unknown'}{job.location ? ` · ${job.location}` : ''}</span><small>{job.recommendation ? `${job.recommendation} recommendation` : 'No recommendation yet'}{job.deadline ? ` · Due ${job.deadline}` : ''}</small></div><div className="application-status"><b>{job.status || 'Unknown'}</b>{typeof job.match_percent === 'number' ? <small>{job.match_percent}% match</small> : null}{postUrl ? <a href={postUrl} target="_blank" rel="noreferrer">Open posting</a> : null}</div></article> }) : <p className="empty-state">No jobs are currently visible in the pipeline.</p>}</section></div></>}</section>
 }
 
 function AccessGate() {
@@ -360,8 +322,8 @@ function App() {
   const [session, setSession] = useState(null)
   const [projects, setProjects] = useState([])
   const [selectedProjectId, setSelectedProjectId] = useState(null)
-  const [applications, setApplications] = useState([])
-  const [contacts, setContacts] = useState([])
+  const [jobs, setJobs] = useState([])
+  const [jobError, setJobError] = useState('')
   const [databaseError, setDatabaseError] = useState('')
   const greeting = useMemo(() => new Date().getHours() < 12 ? 'Morning field check' : new Date().getHours() < 18 ? 'Afternoon field check' : 'Evening field check', [])
 
@@ -380,12 +342,15 @@ function App() {
     return data
   }
 
-  async function loadCareerData() {
-    const [applicationResult, contactResult] = await Promise.all([supabase.from('horizon_applications').select('*').order('discovered_at', { ascending: false }), supabase.from('horizon_work_search_contacts').select('*').order('contact_date', { ascending: false })])
-    if (applicationResult.error) throw applicationResult.error
-    if (contactResult.error) throw contactResult.error
-    setApplications(applicationResult.data)
-    setContacts(contactResult.data)
+  async function loadJobPipeline() {
+    const { data, error } = await jobPipeline.from('dashboard_jobs').select('id,status,title,organization,location,match_percent,recommendation,post_url,deadline,submitted,ws_activity_date,ws_reported').order('last_update', { ascending: false })
+    if (error) {
+      setJobs([])
+      setJobError(error.message || 'Could not load the Claude Code job pipeline.')
+      return
+    }
+    setJobs(data ?? [])
+    setJobError('')
   }
 
   useEffect(() => {
@@ -396,7 +361,7 @@ function App() {
 
   useEffect(() => {
     if (!session) return
-    Promise.all([loadProjects(), loadCareerData()]).catch((error) => setDatabaseError(error.message || 'Could not load private records.'))
+    Promise.all([loadProjects(), loadJobPipeline()]).catch((error) => setDatabaseError(error.message || 'Could not load private records.'))
   }, [session])
 
   async function addProject(project) {
@@ -417,26 +382,6 @@ function App() {
     await loadProjects()
   }
 
-  async function addApplication(application) {
-    const { data, error } = await supabase.from('horizon_applications').insert(application).select().single()
-    if (error) throw error
-    setApplications((current) => [data, ...current])
-  }
-
-  async function updateApplication(id, status) {
-    const update = { status }
-    if (status === 'Applied') update.applied_at = new Date().toISOString().slice(0, 10)
-    const { data, error } = await supabase.from('horizon_applications').update(update).eq('id', id).select().single()
-    if (error) throw error
-    setApplications((current) => current.map((application) => application.id === id ? data : application))
-  }
-
-  async function addContact(contact) {
-    const { data, error } = await supabase.from('horizon_work_search_contacts').insert(contact).select().single()
-    if (error) throw error
-    setContacts((current) => [data, ...current])
-  }
-
   if (!session) return <AccessGate />
 
   return <div className="app-provider">
@@ -453,7 +398,7 @@ function App() {
           <div className="topbar-tools"><label className="search-field"><span>Search</span><input aria-label="Search System Horizon" placeholder="Find a system" /></label><Button type="button" onClick={() => supabase.auth.signOut()}>Sign out</Button><DateReadout /></div>
         </header>
         {databaseError && <p className="database-error" role="alert">Database error: {databaseError}</p>}
-        {activeView === 'Projects' ? <ProjectRegistry projects={projects} selectedProjectId={selectedProjectId} onSelectProject={setSelectedProjectId} onAddProject={addProject} onSeedProjects={seedProjects} /> : activeView === 'Career' ? <CareerView applications={applications} contacts={contacts} onAddApplication={addApplication} onAddContact={addContact} onUpdateApplication={updateApplication} /> : activeView === 'Horizon' ? <Horizon projects={projects} onProjects={() => setActiveView('Projects')} /> : <ScaffoldView view={activeView} onOpenProjects={() => setActiveView('Projects')} />}
+        {activeView === 'Projects' ? <ProjectRegistry projects={projects} selectedProjectId={selectedProjectId} onSelectProject={setSelectedProjectId} onAddProject={addProject} onSeedProjects={seedProjects} /> : activeView === 'Career' ? <CareerView jobs={jobs} jobError={jobError} /> : activeView === 'Horizon' ? <Horizon projects={projects} onProjects={() => setActiveView('Projects')} /> : <ScaffoldView view={activeView} onOpenProjects={() => setActiveView('Projects')} />}
       </main>
     </div>
   </div>

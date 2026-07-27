@@ -182,6 +182,73 @@ function Horizon({ projects, onProjects }) {
   </>
 }
 
+function ScaffoldView({ view, onOpenProjects }) {
+  const views = {
+    Flow: {
+      code: '03',
+      title: 'Flow board',
+      description: 'A single place to decide what is active, waiting, parked, or done.',
+      primary: 'Active queue',
+      primaryItems: ['Define the System Horizon data model', 'Choose the next Septentrion connection'],
+      secondary: 'Waiting room',
+      secondaryItems: ['Aftermath Atlas workflow', 'Career priorities review'],
+      note: 'Later, this becomes the drag-and-drop working queue. For now, the states and ownership are scaffolded.',
+    },
+    Calendar: {
+      code: '04',
+      title: 'Calendar field',
+      description: 'A time-aware view for commitments, build blocks, and the space around them.',
+      primary: 'Today’s frame',
+      primaryItems: ['10:00   Build block', '13:30   Admin orbit', '16:00   Close the loop'],
+      secondary: 'Planning horizon',
+      secondaryItems: ['This week', 'Next week', 'Someday, not scheduled'],
+      note: 'Later, this will connect scheduled work, capacity, and the real calendar. Nothing is assumed or synced yet.',
+    },
+    Archive: {
+      code: '05',
+      title: 'Archive field',
+      description: 'The retrieval layer for handoffs, decisions, artifacts, and settled work.',
+      primary: 'Retrieval paths',
+      primaryItems: ['Project handoffs', 'Decision records', 'Reference artifacts'],
+      secondary: 'Archive status',
+      secondaryItems: ['No source connected yet', 'Ready for Septentrion index', 'Search stays local until linked'],
+      note: 'Later, this becomes the doorway into durable project memory. This scaffold deliberately does not pretend the archive is connected.',
+    },
+  }
+  const current = views[view] ?? views.Flow
+
+  return <section className="scaffold-view" aria-labelledby="scaffold-heading">
+    <header className="view-header scaffold-header">
+      <div>
+        <p className="eyebrow">System index / {current.code}</p>
+        <h2 id="scaffold-heading">{current.title}</h2>
+        <p>{current.description}</p>
+      </div>
+      {view === 'Flow' ? <Button tone="coral" onClick={onOpenProjects}>Open projects</Button> : <span className="scaffold-status">Scaffold ready</span>}
+    </header>
+
+    <div className="scaffold-grid">
+      <article className="scaffold-card primary-card">
+        <div className="instrument-heading"><span>{current.primary}</span><b>01</b></div>
+        <div className="scaffold-list">
+          {current.primaryItems.map((item, index) => <div key={item}><Signal tone={index === 0 ? 'cyan' : 'violet'} /><span>{item}</span><small>{String(index + 1).padStart(2, '0')}</small></div>)}
+        </div>
+      </article>
+      <article className="scaffold-card secondary-card">
+        <div className="instrument-heading"><span>{current.secondary}</span><b>02</b></div>
+        <div className="scaffold-list">
+          {current.secondaryItems.map((item, index) => <div key={item}><span className="scaffold-mark">{index + 1}</span><span>{item}</span></div>)}
+        </div>
+      </article>
+      <article className="scaffold-card note-card">
+        <div className="instrument-heading"><span>Connection status</span><b>03</b></div>
+        <p>{current.note}</p>
+        <span className="connection-note"><Signal tone="coral" /> Not connected yet</span>
+      </article>
+    </div>
+  </section>
+}
+
 function App() {
   const [activeView, setActiveView] = useState('Horizon')
   const [projects, setProjects] = useState(initialProjects)
@@ -206,7 +273,7 @@ function App() {
           <div><span>{greeting}</span><h1>{activeView === 'Horizon' ? 'System Horizon' : activeView}</h1></div>
           <div className="topbar-tools"><label className="search-field"><span>Search</span><input aria-label="Search System Horizon" placeholder="Find a system" /></label><DateReadout /></div>
         </header>
-        {activeView === 'Projects' ? <ProjectRegistry projects={projects} selectedProjectId={selectedProjectId} onSelectProject={setSelectedProjectId} onAddProject={addProject} /> : <Horizon projects={projects} onProjects={() => setActiveView('Projects')} />}
+        {activeView === 'Projects' ? <ProjectRegistry projects={projects} selectedProjectId={selectedProjectId} onSelectProject={setSelectedProjectId} onAddProject={addProject} /> : activeView === 'Horizon' ? <Horizon projects={projects} onProjects={() => setActiveView('Projects')} /> : <ScaffoldView view={activeView} onOpenProjects={() => setActiveView('Projects')} />}
       </main>
     </div>
   </div>

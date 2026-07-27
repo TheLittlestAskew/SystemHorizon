@@ -14,6 +14,11 @@ Decide the canonical Rectrix Caedere / Aftermath Atlas naming before connecting 
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
 
+### 2026-07-27 15:25 ET · Codex
+- **Changed:** Verified the GitHub Actions artifact replaced the prior branch deployment. The live page now loads the built React bundle and stylesheet, renders the app root, and reports no console errors.
+- **Commit:** `f82c3d5`
+- **Next:** Decide the canonical RC / Aftermath naming before connecting the registry to live project rows.
+
 ### 2026-07-27 15:21 ET · Codex
 - **Changed:** Triggered a fresh GitHub Pages deployment after the publishing source was switched to GitHub Actions.
 - **Commit:** `277680b`

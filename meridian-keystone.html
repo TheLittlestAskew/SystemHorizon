@@ -1,0 +1,1518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meridian Keystone — Davies Shelters ED Report</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body,#root{height:100%;width:100%;overflow:hidden}
+    body{font-family:'Montserrat',system-ui,-apple-system,sans-serif;background:#f1f5f9;color:#2b3b54}
+    ::-webkit-scrollbar{width:4px}
+    ::-webkit-scrollbar-track{background:transparent}
+    ::-webkit-scrollbar-thumb{background:rgba(0,0,0,0.12);border-radius:2px}
+    button{cursor:pointer;outline:none;transition:all 0.15s}
+    button:hover{opacity:0.85}
+  </style>
+</head>
+<body>
+  <div id="root">
+    <div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:'Montserrat',system-ui,sans-serif;background:#f1f5f9">
+      <div style="text-align:center">
+        <div style="font-size:18px;font-weight:700;color:#1e3a8a;letter-spacing:0.04em">MERIDIAN KEYSTONE</div>
+        <div style="margin-top:6px;color:#4b5563;font-size:12px">Loading dashboard data...</div>
+      </div>
+    </div>
+  </div>
+  <script>
+    const{useState,useEffect,useRef,useCallback,useMemo}=React;
+    // ═══════════════════════════════════════════════════
+// MERIDIAN KEYSTONE — Davies Shelters ED Weekly Report
+// ═══════════════════════════════════════════════════
+
+// ── Config ──────────────────────────────────────────
+const SURL = "https://qzliydcrlhioradwacmd.supabase.co";
+const SKEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6bGl5ZGNybGhpb3JhZHdhY21kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwMDc5ODksImV4cCI6MjA5MDU4Mzk4OX0.c0oNE6Y5xWgiYPjok5ODSeH4nAJhSVyfOKghsR-Mp_0";
+const STORE = "https://qzliydcrlhioradwacmd.supabase.co/storage/v1/object/public/systemhorizon-assets";
+const HEROES = {
+  shelter: STORE + "/clocktower.png",
+  mens: STORE + "/mensshelter.png",
+  womens: STORE + "/womensshelter.png",
+  finance: STORE + "/desoto.png"
+};
+const LOGO = STORE + "/horizonal%20logo%20transparent.png";
+const NF = "'Barlow',sans-serif"; // number font
+
+const LOC_CHOICE = {
+  mens: "614130000",
+  womens: "614130001"
+};
+const CAPACITY = {
+  mens: 16,
+  womens: 12
+};
+
+// ── Brand Colors ────────────────────────────────────
+const C = {
+  blue: "#1d4ed8",
+  navy: "#112b74",
+  textNavy: "#1e3a8a",
+  green: "#16a34a",
+  yellow: "#ffd54c",
+  orange: "#f97316",
+  red: "#dc2626",
+  slate: "#2b3b54",
+  gray: "#4b5563",
+  lgray: "#f1f5f9",
+  skyTint: "#d3e2ff",
+  meadowTint: "#b7e4c7",
+  sunTint: "#ffe9a2",
+  offWhite: "#fffdf7",
+  white: "#ffffff"
+};
+
+// ── Supabase API ────────────────────────────────────
+const sh = () => ({
+  "apikey": SKEY,
+  "Authorization": "Bearer " + SKEY,
+  "Content-Type": "application/json"
+});
+async function sGet(table, q) {
+  try {
+    const r = await fetch(SURL + "/rest/v1/" + table + "?select=*" + (q ? "&" + q : ""), {
+      headers: sh()
+    });
+    return r.ok ? await r.json() : [];
+  } catch {
+    return [];
+  }
+}
+
+// ── Date helpers ────────────────────────────────────
+const today = () => new Date().toISOString().slice(0, 10);
+const fmtDate = d => {
+  if (!d) return "—";
+  const dt = new Date(d + "T12:00:00");
+  return dt.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric"
+  });
+};
+const fmtMoney = n => "$" + Math.abs(n).toLocaleString("en-US", {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0
+});
+const fmtK = n => Math.abs(n) >= 1000 ? "$" + Math.round(Math.abs(n) / 100) / 10 + "k" : fmtMoney(n);
+function getWeekRange(offset) {
+  const now = new Date();
+  const day = now.getDay();
+  const mon = new Date(now);
+  mon.setDate(now.getDate() - (day + 6) % 7 + offset * 7);
+  const sun = new Date(mon);
+  sun.setDate(mon.getDate() + 6);
+  return {
+    start: mon.toISOString().slice(0, 10),
+    end: sun.toISOString().slice(0, 10),
+    label: fmtDate(mon.toISOString().slice(0, 10)) + " – " + fmtDate(sun.toISOString().slice(0, 10))
+  };
+}
+function getMTDRange() {
+  const now = new Date();
+  const s = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+  return {
+    start: s,
+    end: today(),
+    label: "Month to date"
+  };
+}
+function getYTDRange() {
+  const now = new Date();
+  const s = now.getFullYear() + "-01-01";
+  return {
+    start: s,
+    end: today(),
+    label: "Year to date"
+  };
+}
+function inRange(dateStr, range) {
+  if (!dateStr || !range) return false;
+  return dateStr >= range.start && dateStr <= range.end;
+}
+
+// ── Sparkline component ─────────────────────────────
+function Spark({
+  data,
+  color,
+  h
+}) {
+  const height = h || 16;
+  if (!data || data.length === 0) return null;
+  const max = Math.max(...data, 1);
+  return React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "end",
+      gap: 1,
+      height
+    }
+  }, data.map((v, i) => React.createElement("div", {
+    key: i,
+    style: {
+      width: 2,
+      borderRadius: 1,
+      background: color || "#c0cede",
+      height: Math.max(2, Math.round(v / max * height))
+    }
+  })));
+}
+
+// ── KPI Card ────────────────────────────────────────
+function KpiCard({
+  label,
+  value,
+  spark,
+  delta,
+  deltaColor
+}) {
+  return React.createElement("div", {
+    style: {
+      background: "rgba(255,255,255,0.72)",
+      border: "1px solid rgba(226,232,240,0.5)",
+      borderRadius: 12,
+      padding: "12px 14px",
+      backdropFilter: "blur(16px)",
+      WebkitBackdropFilter: "blur(16px)"
+    }
+  }, React.createElement("div", {
+    style: {
+      fontSize: 11,
+      fontWeight: 500,
+      textTransform: "uppercase",
+      letterSpacing: "0.04em",
+      color: C.gray,
+      marginBottom: 4
+    }
+  }, label), React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "baseline",
+      gap: 6
+    }
+  }, React.createElement("div", {
+    style: {
+      fontSize: 24,
+      fontWeight: 700,
+      color: C.textNavy,
+      fontFamily: NF
+    }
+  }, value), spark ? React.createElement(Spark, {
+    data: spark,
+    h: 18
+  }) : null), delta ? React.createElement("div", {
+    style: {
+      fontSize: 10,
+      fontWeight: 500,
+      marginTop: 3,
+      color: deltaColor || C.gray
+    }
+  }, delta) : null);
+}
+
+// ── Stat Row ────────────────────────────────────────
+function StatRow({
+  icon,
+  label,
+  value,
+  delta,
+  deltaColor
+}) {
+  return React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      padding: "6px 0",
+      borderBottom: "1px solid rgba(241,245,249,0.6)"
+    }
+  }, icon ? React.createElement("div", {
+    style: {
+      width: 18,
+      fontSize: 13,
+      textAlign: "center",
+      marginRight: 8,
+      color: C.gray
+    }
+  }, icon) : null, React.createElement("div", {
+    style: {
+      fontSize: 13,
+      color: C.slate,
+      flex: 1
+    }
+  }, label), React.createElement("div", {
+    style: {
+      fontSize: 15,
+      fontWeight: 600,
+      color: C.textNavy,
+      minWidth: 28,
+      textAlign: "right",
+      fontFamily: NF
+    }
+  }, value), delta != null ? React.createElement("div", {
+    style: {
+      fontSize: 10,
+      fontWeight: 500,
+      marginLeft: 6,
+      minWidth: 32,
+      textAlign: "right",
+      color: deltaColor || C.gray,
+      fontFamily: NF
+    }
+  }, delta > 0 ? "+" + delta : delta === 0 ? "0" : "" + delta) : null);
+}
+
+// ── Card wrapper ────────────────────────────────────
+function Card({
+  title,
+  children,
+  style
+}) {
+  return React.createElement("div", {
+    style: {
+      background: "rgba(255,255,255,0.72)",
+      border: "1px solid rgba(226,232,240,0.5)",
+      borderRadius: 12,
+      padding: "14px 16px",
+      backdropFilter: "blur(16px)",
+      WebkitBackdropFilter: "blur(16px)",
+      display: "flex",
+      flexDirection: "column",
+      ...(style || {})
+    }
+  }, title ? React.createElement("div", {
+    style: {
+      fontSize: 13,
+      fontWeight: 600,
+      textTransform: "uppercase",
+      letterSpacing: "0.04em",
+      color: C.textNavy,
+      marginBottom: 10
+    }
+  }, title) : null, children);
+}
+
+// ── Phase badge ─────────────────────────────────────
+function PhaseBadge({
+  phase
+}) {
+  return React.createElement("span", {
+    style: {
+      display: "inline-block",
+      padding: "2px 8px",
+      borderRadius: 4,
+      fontSize: 11,
+      fontWeight: 600,
+      background: C.skyTint,
+      color: C.textNavy
+    }
+  }, phase || "—");
+}
+
+// ── Activity badge ──────────────────────────────────
+function TypeBadge({
+  type
+}) {
+  const isIntake = type === "Intake" || type === "intake";
+  return React.createElement("span", {
+    style: {
+      display: "inline-block",
+      padding: "2px 8px",
+      borderRadius: 4,
+      fontSize: 11,
+      fontWeight: 600,
+      background: isIntake ? C.meadowTint : C.skyTint,
+      color: isIntake ? "#27500A" : C.textNavy
+    }
+  }, type);
+}
+
+// ── Mini finance cards ──────────────────────────────
+function FinMini({
+  label,
+  value
+}) {
+  return React.createElement("div", {
+    style: {
+      background: "rgba(248,250,252,0.7)",
+      borderRadius: 6,
+      padding: "8px 10px",
+      textAlign: "center"
+    }
+  }, React.createElement("div", {
+    style: {
+      fontSize: 18,
+      fontWeight: 700,
+      color: C.textNavy,
+      fontFamily: NF
+    }
+  }, value), React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: C.gray,
+      marginTop: 2,
+      textTransform: "uppercase",
+      letterSpacing: "0.03em",
+      fontWeight: 500
+    }
+  }, label));
+}
+
+// ── Hero Page Layout ────────────────────────────────
+function HeroPage({
+  heroUrl,
+  heroOverlay,
+  children
+}) {
+  return React.createElement("div", {
+    style: {
+      flex: 1,
+      display: "flex",
+      position: "relative",
+      minHeight: 0
+    }
+  },
+  // Full-width background image
+  React.createElement("div", {
+    style: {
+      position: "absolute",
+      inset: 0,
+      backgroundImage: "url('" + heroUrl + "')",
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+      zIndex: 0
+    }
+  }),
+  // Subtle darkening overlay — no white fade
+  React.createElement("div", {
+    style: {
+      position: "absolute",
+      inset: 0,
+      background: "linear-gradient(90deg,rgba(17,43,116,0.45) 0%,rgba(17,43,116,0.2) 35%,rgba(17,43,116,0.12) 50%,rgba(17,43,116,0.18) 100%)",
+      zIndex: 1
+    }
+  }),
+  // Hero overlay — fits content, not full width
+  React.createElement("div", {
+    style: {
+      position: "absolute",
+      left: 0,
+      bottom: 0,
+      zIndex: 2,
+      padding: "20px 24px",
+      maxWidth: "40%"
+    }
+  }, heroOverlay),
+  // Data cards panel — frosted glass, overlapping the image
+  React.createElement("div", {
+    style: {
+      position: "absolute",
+      right: 0,
+      top: 0,
+      width: "58%",
+      height: "100%",
+      zIndex: 3,
+      padding: "14px 16px 14px 20px",
+      overflowY: "auto",
+      display: "flex",
+      flexDirection: "column",
+      gap: 12
+    }
+  }, children));
+}
+
+// ── Occupancy Badge (floating glass card on hero) ───
+function OccBadge({
+  occ
+}) {
+  const menPct = CAPACITY.mens > 0 ? Math.round(occ.men / CAPACITY.mens * 100) : 0;
+  const womPct = CAPACITY.womens > 0 ? Math.round(occ.women / CAPACITY.womens * 100) : 0;
+  const total = occ.men + occ.women;
+  const totalCap = CAPACITY.mens + CAPACITY.womens;
+  const totalPct = Math.round(total / totalCap * 100);
+  return React.createElement("div", {
+    style: {
+      display: "inline-block",
+      background: "rgba(17,43,116,0.75)",
+      border: "1px solid rgba(255,255,255,0.15)",
+      borderRadius: 10,
+      padding: "12px 16px",
+      marginBottom: 14,
+      backdropFilter: "blur(12px)",
+      WebkitBackdropFilter: "blur(12px)"
+    }
+  }, React.createElement("div", {
+    style: {
+      fontSize: 11,
+      textTransform: "uppercase",
+      letterSpacing: "0.06em",
+      color: "rgba(255,255,255,0.55)",
+      fontWeight: 500,
+      marginBottom: 8
+    }
+  }, "Live occupancy"), React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+      marginBottom: 6
+    }
+  }, React.createElement("div", {
+    style: {
+      width: 8,
+      height: 8,
+      borderRadius: "50%",
+      background: C.green,
+      flexShrink: 0
+    }
+  }), React.createElement("div", {
+    style: {
+      fontSize: 13,
+      color: "rgba(255,255,255,0.7)",
+      flex: 1
+    }
+  }, "Men's shelter"), React.createElement("div", {
+    style: {
+      fontSize: 15,
+      fontWeight: 600,
+      color: "#fff",
+      fontFamily: NF
+    }
+  }, occ.men + " / " + CAPACITY.mens)), React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+      marginBottom: 6
+    }
+  }, React.createElement("div", {
+    style: {
+      width: 8,
+      height: 8,
+      borderRadius: "50%",
+      background: C.blue,
+      flexShrink: 0
+    }
+  }), React.createElement("div", {
+    style: {
+      fontSize: 13,
+      color: "rgba(255,255,255,0.7)",
+      flex: 1
+    }
+  }, "Women's shelter"), React.createElement("div", {
+    style: {
+      fontSize: 15,
+      fontWeight: 600,
+      color: "#fff",
+      fontFamily: NF
+    }
+  }, occ.women + " / " + CAPACITY.womens)), React.createElement("div", {
+    style: {
+      fontSize: 8,
+      color: "rgba(255,255,255,0.35)",
+      marginTop: 4
+    }
+  }, totalPct + "% total \u00B7 synced " + (occ.updatedAt ? Math.round((Date.now() - new Date(occ.updatedAt).getTime()) / 60000) + "m ago" : "—")));
+}
+
+// ══════════════════════════════════════════════════════
+// PAGE: Unified Shelter
+// ══════════════════════════════════════════════════════
+function ShelterPage({
+  range,
+  prevRange,
+  occ,
+  intakes,
+  discharges,
+  caseMeetings,
+  infractions,
+  guestWins,
+  phaseChanges,
+  greeting
+}) {
+  const fi = intakes.filter(r => inRange(r.date, range));
+  const fd = discharges.filter(r => inRange(r.date, range));
+  const fcm = caseMeetings.filter(r => inRange(r.date, range));
+  const finf = infractions.filter(r => inRange(r.date, range));
+  const fgw = guestWins.filter(r => inRange(r.date, range));
+  const fpc = phaseChanges.filter(r => inRange(r.date, range));
+  const pi = intakes.filter(r => inRange(r.date, prevRange));
+  const pd = discharges.filter(r => inRange(r.date, prevRange));
+  const pcm = caseMeetings.filter(r => inRange(r.date, prevRange));
+  const pinf = infractions.filter(r => inRange(r.date, prevRange));
+  const pgw = guestWins.filter(r => inRange(r.date, prevRange));
+  const heroOverlay = React.createElement(React.Fragment, null, React.createElement(OccBadge, {
+    occ
+  }), React.createElement("div", {
+    style: {
+      fontSize: 22,
+      fontWeight: 600,
+      color: "#fff",
+      lineHeight: 1.2,
+      textShadow: "0 1px 8px rgba(0,0,0,0.3)",
+      marginBottom: 4
+    }
+  }, greeting), React.createElement("div", {
+    style: {
+      fontSize: 16,
+      fontWeight: 500,
+      color: "rgba(255,255,255,0.85)",
+      textShadow: "0 1px 6px rgba(0,0,0,0.2)"
+    }
+  }, "Weekly operations snapshot"), React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: "rgba(255,255,255,0.6)",
+      marginTop: 4,
+      textShadow: "0 1px 4px rgba(0,0,0,0.2)"
+    }
+  }, "The William S. Davies Homeless Shelter, Inc."));
+
+  // Sparkline data (last 6 weeks of intakes)
+  const weeks6 = [];
+  for (let i = 5; i >= 0; i--) {
+    const wr = getWeekRange(-i);
+    weeks6.push(intakes.filter(r => inRange(r.date, wr)).length);
+  }
+  const weeks6d = [];
+  for (let i = 5; i >= 0; i--) {
+    const wr = getWeekRange(-i);
+    weeks6d.push(discharges.filter(r => inRange(r.date, wr)).length);
+  }
+  const weeks6cm = [];
+  for (let i = 5; i >= 0; i--) {
+    const wr = getWeekRange(-i);
+    weeks6cm.push(caseMeetings.filter(r => inRange(r.date, wr)).length);
+  }
+  return React.createElement(HeroPage, {
+    heroUrl: HEROES.shelter,
+    heroOverlay
+  }, React.createElement("div", {
+    style: {
+      display: "grid",
+      gridTemplateColumns: "repeat(4,minmax(0,1fr))",
+      gap: 8,
+      flexShrink: 0
+    }
+  }, React.createElement(KpiCard, {
+    label: "Intakes",
+    value: fi.length,
+    spark: weeks6,
+    delta: fi.length - pi.length > 0 ? "+" + (fi.length - pi.length) + " vs last wk" : fi.length - pi.length + " vs last wk",
+    deltaColor: fi.length >= pi.length ? C.green : C.gray
+  }), React.createElement(KpiCard, {
+    label: "Discharges",
+    value: fd.length,
+    spark: weeks6d,
+    delta: fd.length + " this period"
+  }), React.createElement(KpiCard, {
+    label: "Case meetings",
+    value: fcm.length,
+    spark: weeks6cm,
+    delta: fpc.length + " phase changes"
+  }), React.createElement(KpiCard, {
+    label: "Infractions",
+    value: finf.length,
+    delta: finf.length === 0 ? "None" : finf.length > pinf.length ? "+" + (finf.length - pinf.length) + " vs last" : null,
+    deltaColor: finf.length > 0 ? C.red : C.green
+  })), React.createElement("div", {
+    style: {
+      display: "grid",
+      gridTemplateColumns: "1fr 1fr",
+      gap: 10,
+      flex: 1,
+      minHeight: 0
+    }
+  }, React.createElement(Card, {
+    title: "Guest activity"
+  }, React.createElement(StatRow, {
+    icon: "\u2193",
+    label: "New intakes",
+    value: fi.length,
+    delta: fi.length - pi.length,
+    deltaColor: fi.length > pi.length ? C.green : C.gray
+  }), React.createElement(StatRow, {
+    icon: "\u2191",
+    label: "Discharges",
+    value: fd.length,
+    delta: fd.length - pd.length,
+    deltaColor: C.gray
+  }), React.createElement(StatRow, {
+    icon: "\u2691",
+    label: "Infractions",
+    value: finf.length,
+    delta: finf.length - pinf.length,
+    deltaColor: finf.length > pinf.length ? C.red : C.gray
+  }), React.createElement(StatRow, {
+    icon: "\u2605",
+    label: "Guest wins",
+    value: fgw.length,
+    delta: fgw.length - pgw.length,
+    deltaColor: fgw.length > pgw.length ? C.green : C.gray
+  }), React.createElement(StatRow, {
+    icon: "\u25C6",
+    label: "Phase changes",
+    value: fpc.length
+  })), React.createElement(Card, {
+    title: "Recent activity"
+  }, React.createElement("div", {
+    style: {
+      flex: 1,
+      overflowY: "auto"
+    }
+  }, [...fi.map(r => ({
+    ...r,
+    type: "Intake"
+  })), ...fd.map(r => ({
+    ...r,
+    type: "Discharge"
+  }))].sort((a, b) => (b.date || "").localeCompare(a.date || "")).slice(0, 6).map((r, i) => React.createElement("div", {
+    key: i,
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 6,
+      padding: "3px 0",
+      borderBottom: "1px solid rgba(241,245,249,0.6)",
+      fontSize: 13
+    }
+  }, React.createElement(TypeBadge, {
+    type: r.type
+  }), React.createElement("span", {
+    style: {
+      color: C.gray,
+      minWidth: 44
+    }
+  }, fmtDate(r.date)), React.createElement("span", {
+    style: {
+      color: C.slate,
+      flex: 1
+    }
+  }, r.location_label || "—"))))), React.createElement(Card, {
+    title: "Case meetings"
+  }, React.createElement("div", {
+    style: {
+      flex: 1,
+      overflowY: "auto"
+    }
+  }, fcm.slice(0, 5).map((r, i) => React.createElement("div", {
+    key: i,
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 6,
+      padding: "3px 0",
+      borderBottom: "1px solid rgba(241,245,249,0.6)",
+      fontSize: 13
+    }
+  }, React.createElement("span", {
+    style: {
+      color: C.slate,
+      flex: 1
+    }
+  }, r.guest_name || "Guest"), React.createElement("span", {
+    style: {
+      color: C.gray,
+      minWidth: 44
+    }
+  }, fmtDate(r.date)), React.createElement(PhaseBadge, {
+    phase: r.phase_label || "—"
+  }), React.createElement("span", {
+    style: {
+      color: C.gray,
+      fontSize: 10,
+      maxWidth: 80,
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap"
+    }
+  }, r.notes || ""))), fcm.length === 0 ? React.createElement("div", {
+    style: {
+      color: C.gray,
+      fontSize: 13,
+      padding: 10,
+      textAlign: "center"
+    }
+  }, "No meetings this period") : null)), React.createElement(Card, {
+    title: "Guest wins"
+  }, React.createElement("div", {
+    style: {
+      flex: 1,
+      overflowY: "auto"
+    }
+  }, fgw.slice(0, 5).map((r, i) => React.createElement("div", {
+    key: i,
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 6,
+      padding: "4px 0",
+      borderBottom: "1px solid rgba(241,245,249,0.6)",
+      fontSize: 13
+    }
+  }, React.createElement("span", {
+    style: {
+      color: C.green,
+      fontSize: 12
+    }
+  }, "\u2605"), React.createElement("span", {
+    style: {
+      color: C.slate,
+      flex: 1
+    }
+  }, r.description || r.notes || "Win recorded"), React.createElement("span", {
+    style: {
+      color: C.gray,
+      minWidth: 44
+    }
+  }, fmtDate(r.date)))), fgw.length === 0 ? React.createElement("div", {
+    style: {
+      color: C.gray,
+      fontSize: 13,
+      padding: 10,
+      textAlign: "center"
+    }
+  }, "No wins recorded this period") : null))));
+}
+
+// ══════════════════════════════════════════════════════
+// PAGE: Location Detail (Men's or Women's)
+// ══════════════════════════════════════════════════════
+function LocationPage({
+  loc,
+  range,
+  prevRange,
+  occ,
+  intakes,
+  discharges,
+  caseMeetings,
+  infractions,
+  guestWins
+}) {
+  const isMens = loc === "mens";
+  const locVal = LOC_CHOICE[loc];
+  const cap = CAPACITY[loc];
+  const count = isMens ? occ.men : occ.women;
+  const pct = cap > 0 ? Math.round(count / cap * 100) : 0;
+  const fi = intakes.filter(r => inRange(r.date, range) && r.location === locVal);
+  const fd = discharges.filter(r => inRange(r.date, range) && r.location === locVal);
+  const fcm = caseMeetings.filter(r => inRange(r.date, range) && r.location === locVal);
+  const finf = infractions.filter(r => inRange(r.date, range));
+  const fgw = guestWins.filter(r => inRange(r.date, range));
+  const pi = intakes.filter(r => inRange(r.date, prevRange) && r.location === locVal);
+  const heroOverlay = React.createElement(React.Fragment, null, React.createElement("div", {
+    style: {
+      display: "inline-block",
+      background: "rgba(17,43,116,0.75)",
+      border: "1px solid rgba(255,255,255,0.15)",
+      borderRadius: 8,
+      padding: "10px 14px",
+      marginBottom: 14,
+      backdropFilter: "blur(10px)",
+      WebkitBackdropFilter: "blur(10px)"
+    }
+  }, React.createElement("div", {
+    style: {
+      fontSize: 9,
+      textTransform: "uppercase",
+      letterSpacing: "0.06em",
+      color: "rgba(255,255,255,0.55)",
+      fontWeight: 500,
+      marginBottom: 4
+    }
+  }, "Current census"), React.createElement("div", {
+    style: {
+      fontSize: 32,
+      fontWeight: 700,
+      color: "#fff",
+      fontFamily: NF
+    }
+  }, count + " / " + cap), React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: "rgba(255,255,255,0.5)",
+      marginTop: 2
+    }
+  }, pct + "% occupancy")), React.createElement("div", {
+    style: {
+      fontSize: 24,
+      fontWeight: 700,
+      color: "#fff",
+      lineHeight: 1.15,
+      textShadow: "0 1px 8px rgba(0,0,0,0.3)",
+      marginTop: 8
+    }
+  }, isMens ? "Men's shelter" : "Women's shelter"), React.createElement("div", {
+    style: {
+      fontSize: 13,
+      color: "rgba(255,255,255,0.7)",
+      marginTop: 4,
+      textShadow: "0 1px 4px rgba(0,0,0,0.2)"
+    }
+  }, "Davies Shelters — Rome, GA"));
+  return React.createElement(HeroPage, {
+    heroUrl: isMens ? HEROES.mens : HEROES.womens,
+    heroOverlay
+  }, React.createElement("div", {
+    style: {
+      display: "grid",
+      gridTemplateColumns: "repeat(3,minmax(0,1fr))",
+      gap: 8,
+      flexShrink: 0
+    }
+  }, React.createElement(KpiCard, {
+    label: "Intakes",
+    value: fi.length,
+    delta: fi.length - pi.length > 0 ? "+" + (fi.length - pi.length) + " vs last" : "same as last",
+    deltaColor: fi.length > pi.length ? C.green : C.gray
+  }), React.createElement(KpiCard, {
+    label: "Discharges",
+    value: fd.length
+  }), React.createElement(KpiCard, {
+    label: "Infractions",
+    value: finf.length,
+    deltaColor: finf.length > 0 ? C.red : C.green,
+    delta: finf.length === 0 ? "None" : "Action needed"
+  })), React.createElement("div", {
+    style: {
+      display: "grid",
+      gridTemplateColumns: "1fr 1fr",
+      gap: 10,
+      flex: 1,
+      minHeight: 0
+    }
+  }, React.createElement(Card, {
+    title: "Guest activity"
+  }, React.createElement(StatRow, {
+    icon: "\u2193",
+    label: "Intakes",
+    value: fi.length
+  }), React.createElement(StatRow, {
+    icon: "\u2191",
+    label: "Discharges",
+    value: fd.length
+  }), React.createElement(StatRow, {
+    icon: "\u2691",
+    label: "Infractions",
+    value: finf.length,
+    deltaColor: finf.length > 0 ? C.red : C.gray
+  }), React.createElement(StatRow, {
+    icon: "\u2605",
+    label: "Guest wins",
+    value: fgw.length,
+    deltaColor: fgw.length > 0 ? C.green : C.gray
+  })), React.createElement(Card, {
+    title: "Case meetings (" + fcm.length + ")"
+  }, fcm.slice(0, 5).map((r, i) => React.createElement("div", {
+    key: i,
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 6,
+      padding: "3px 0",
+      borderBottom: "1px solid rgba(241,245,249,0.6)",
+      fontSize: 13
+    }
+  }, React.createElement("span", {
+    style: {
+      color: C.slate,
+      flex: 1
+    }
+  }, r.guest_name || "Guest"), React.createElement("span", {
+    style: {
+      color: C.gray,
+      minWidth: 44
+    }
+  }, fmtDate(r.date)), React.createElement(PhaseBadge, {
+    phase: r.phase_label || "—"
+  }))), fcm.length === 0 ? React.createElement("div", {
+    style: {
+      color: C.gray,
+      fontSize: 13,
+      padding: 10,
+      textAlign: "center"
+    }
+  }, "No meetings") : null), React.createElement(Card, {
+    title: "Recent intakes & discharges",
+    style: {
+      gridColumn: "span 2"
+    }
+  }, [...fi.map(r => ({
+    ...r,
+    type: "Intake"
+  })), ...fd.map(r => ({
+    ...r,
+    type: "Discharge"
+  }))].sort((a, b) => (b.date || "").localeCompare(a.date || "")).slice(0, 6).map((r, i) => React.createElement("div", {
+    key: i,
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 6,
+      padding: "3px 0",
+      borderBottom: "1px solid rgba(241,245,249,0.6)",
+      fontSize: 13
+    }
+  }, React.createElement(TypeBadge, {
+    type: r.type
+  }), React.createElement("span", {
+    style: {
+      color: C.gray,
+      minWidth: 44
+    }
+  }, fmtDate(r.date)), React.createElement("span", {
+    style: {
+      color: C.slate,
+      flex: 1
+    }
+  }, r.notes || "—"))), fi.length + fd.length === 0 ? React.createElement("div", {
+    style: {
+      color: C.gray,
+      fontSize: 13,
+      padding: 10,
+      textAlign: "center"
+    }
+  }, "No activity this period") : null)));
+}
+
+// ══════════════════════════════════════════════════════
+// PAGE: Finance
+// ══════════════════════════════════════════════════════
+function FinancePage({
+  range,
+  prevRange,
+  banking,
+  donations
+}) {
+  const fb = banking.filter(r => inRange(r.date, range));
+  const fd = donations.filter(r => inRange(r.date, range));
+  const pb = banking.filter(r => inRange(r.date, prevRange));
+  const pd = donations.filter(r => inRange(r.date, prevRange));
+  const income = fb.filter(r => r.amount > 0).reduce((s, r) => s + r.amount, 0);
+  const expenses = fb.filter(r => r.amount < 0).reduce((s, r) => s + Math.abs(r.amount), 0);
+  const donTotal = fd.reduce((s, r) => s + (r.amount || 0), 0);
+  const donCount = fd.length;
+  const recurDon = fd.filter(r => r.recurring).length;
+  const avgGift = donCount > 0 ? Math.round(donTotal / donCount) : 0;
+  const prevIncome = pb.filter(r => r.amount > 0).reduce((s, r) => s + r.amount, 0);
+  const prevDonTotal = pd.reduce((s, r) => s + (r.amount || 0), 0);
+
+  // Unique donors
+  const donorSet = new Set(fd.map(r => r.donor_name).filter(Boolean));
+
+  // Top donors
+  const donorTotals = {};
+  fd.forEach(r => {
+    if (r.donor_name) {
+      donorTotals[r.donor_name] = (donorTotals[r.donor_name] || 0) + (r.amount || 0);
+    }
+  });
+  const topDonors = Object.entries(donorTotals).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const heroOverlay = React.createElement(React.Fragment, null, React.createElement("div", {
+    style: {
+      display: "inline-block",
+      background: "rgba(17,43,116,0.75)",
+      border: "1px solid rgba(255,255,255,0.15)",
+      borderRadius: 8,
+      padding: "10px 14px",
+      marginBottom: 14,
+      backdropFilter: "blur(10px)",
+      WebkitBackdropFilter: "blur(10px)"
+    }
+  }, React.createElement("div", {
+    style: {
+      fontSize: 9,
+      textTransform: "uppercase",
+      letterSpacing: "0.06em",
+      color: "rgba(255,255,255,0.55)",
+      fontWeight: 500,
+      marginBottom: 4
+    }
+  }, "Period donations"), React.createElement("div", {
+    style: {
+      fontSize: 32,
+      fontWeight: 700,
+      color: "#fff",
+      fontFamily: NF
+    }
+  }, fmtMoney(donTotal)), React.createElement("div", {
+    style: {
+      fontSize: 10,
+      color: "rgba(255,255,255,0.5)",
+      marginTop: 2
+    }
+  }, donCount + " gifts \u00B7 " + donorSet.size + " donors")), React.createElement("div", {
+    style: {
+      fontSize: 24,
+      fontWeight: 700,
+      color: "#fff",
+      lineHeight: 1.15,
+      textShadow: "0 1px 8px rgba(0,0,0,0.3)",
+      marginTop: 8
+    }
+  }, "Financial", "summary"), React.createElement("div", {
+    style: {
+      fontSize: 13,
+      color: "rgba(255,255,255,0.7)",
+      marginTop: 4,
+      textShadow: "0 1px 4px rgba(0,0,0,0.2)"
+    }
+  }, "Davies Shelters — Rome, GA"));
+  return React.createElement(HeroPage, {
+    heroUrl: HEROES.finance,
+    heroOverlay
+  }, React.createElement("div", {
+    style: {
+      display: "grid",
+      gridTemplateColumns: "repeat(4,minmax(0,1fr))",
+      gap: 8,
+      flexShrink: 0
+    }
+  }, React.createElement(KpiCard, {
+    label: "Income",
+    value: fmtK(income),
+    delta: income > prevIncome ? "Up vs prior" : "",
+    deltaColor: C.green
+  }), React.createElement(KpiCard, {
+    label: "Expenses",
+    value: fmtK(expenses)
+  }), React.createElement(KpiCard, {
+    label: "Donations",
+    value: fmtK(donTotal),
+    delta: donTotal > prevDonTotal ? "+" + fmtK(donTotal - prevDonTotal) : "",
+    deltaColor: donTotal >= prevDonTotal ? C.green : C.gray
+  }), React.createElement(KpiCard, {
+    label: "Donors",
+    value: donorSet.size
+  })), React.createElement("div", {
+    style: {
+      display: "grid",
+      gridTemplateColumns: "1fr 1fr",
+      gap: 10,
+      flex: 1,
+      minHeight: 0
+    }
+  }, React.createElement(Card, {
+    title: "Donation breakdown"
+  }, React.createElement(StatRow, {
+    label: "Total donations",
+    value: fmtMoney(donTotal)
+  }), React.createElement(StatRow, {
+    label: "Recurring gifts",
+    value: recurDon
+  }), React.createElement(StatRow, {
+    label: "One-time gifts",
+    value: donCount - recurDon
+  }), React.createElement(StatRow, {
+    label: "Avg gift size",
+    value: fmtMoney(avgGift)
+  }), React.createElement(StatRow, {
+    label: "Unique donors",
+    value: donorSet.size
+  })), React.createElement(Card, {
+    title: "Top donors"
+  }, topDonors.map(([name, total], i) => React.createElement("div", {
+    key: i,
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 6,
+      padding: "4px 0",
+      borderBottom: "1px solid rgba(241,245,249,0.6)",
+      fontSize: 13
+    }
+  }, React.createElement("span", {
+    style: {
+      fontWeight: 600,
+      color: C.gray,
+      width: 16,
+      textAlign: "right"
+    }
+  }, i + 1), React.createElement("span", {
+    style: {
+      color: C.slate,
+      flex: 1,
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap"
+    }
+  }, name), React.createElement("span", {
+    style: {
+      fontWeight: 600,
+      color: C.textNavy
+    }
+  }, fmtMoney(total)))), topDonors.length === 0 ? React.createElement("div", {
+    style: {
+      color: C.gray,
+      fontSize: 13,
+      padding: 10,
+      textAlign: "center"
+    }
+  }, "No donations this period") : null), React.createElement(Card, {
+    title: "Banking summary",
+    style: {
+      gridColumn: "span 2"
+    }
+  }, React.createElement("div", {
+    style: {
+      display: "grid",
+      gridTemplateColumns: "repeat(4,1fr)",
+      gap: 6,
+      marginBottom: 8
+    }
+  }, React.createElement(FinMini, {
+    label: "Income",
+    value: fmtK(income)
+  }), React.createElement(FinMini, {
+    label: "Expenses",
+    value: fmtK(expenses)
+  }), React.createElement(FinMini, {
+    label: "Net",
+    value: fmtK(income - expenses)
+  }), React.createElement(FinMini, {
+    label: "Transactions",
+    value: fb.length
+  })), fb.sort((a, b) => (b.date || "").localeCompare(a.date || "")).slice(0, 5).map((r, i) => React.createElement("div", {
+    key: i,
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 6,
+      padding: "3px 0",
+      borderBottom: "1px solid rgba(241,245,249,0.6)",
+      fontSize: 13
+    }
+  }, React.createElement("span", {
+    style: {
+      color: C.gray,
+      minWidth: 44
+    }
+  }, fmtDate(r.date)), React.createElement("span", {
+    style: {
+      color: C.slate,
+      flex: 1,
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap"
+    }
+  }, r.name || "—"), React.createElement("span", {
+    style: {
+      fontWeight: 600,
+      color: r.amount >= 0 ? C.textNavy : C.textNavy
+    }
+  }, r.amount >= 0 ? "+" + fmtMoney(r.amount) : "-" + fmtMoney(Math.abs(r.amount))))))));
+}
+
+// ══════════════════════════════════════════════════════
+// APP — Main component
+// ══════════════════════════════════════════════════════
+function App() {
+  const [loading, setLoading] = useState(true);
+  const [view, setView] = useState("shelter");
+  const [rangeMode, setRangeMode] = useState("week"); // week | lastweek | mtd | custom
+  const [customStart, setCustomStart] = useState("");
+  const [customEnd, setCustomEnd] = useState("");
+
+  // Data
+  const [occ, setOcc] = useState({
+    men: 0,
+    women: 0,
+    updatedAt: null
+  });
+  const [intakes, setIntakes] = useState([]);
+  const [discharges, setDischarges] = useState([]);
+  const [caseMeetings, setCaseMeetings] = useState([]);
+  const [infractions, setInfractions] = useState([]);
+  const [guestWins, setGuestWins] = useState([]);
+  const [phaseChanges, setPhaseChanges] = useState([]);
+  const [banking, setBanking] = useState([]);
+  const [donations, setDonations] = useState([]);
+
+  // Computed range
+  const range = useMemo(() => {
+    if (rangeMode === "week") return getWeekRange(0);
+    if (rangeMode === "lastweek") return getWeekRange(-1);
+    if (rangeMode === "mtd") return getMTDRange();
+    if (rangeMode === "ytd") return getYTDRange();
+    if (rangeMode === "custom" && customStart && customEnd) return {
+      start: customStart,
+      end: customEnd,
+      label: fmtDate(customStart) + " – " + fmtDate(customEnd)
+    };
+    return getWeekRange(0);
+  }, [rangeMode, customStart, customEnd]);
+  const prevRange = useMemo(() => {
+    if (rangeMode === "week") return getWeekRange(-1);
+    if (rangeMode === "lastweek") return getWeekRange(-2);
+    // For MTD/YTD, no simple "previous" — return null
+    return null;
+  }, [rangeMode]);
+
+  // Load data
+  useEffect(() => {
+    Promise.all([sGet("shelter_occupancy"), sGet("cache_guest_intakes"), sGet("cache_discharges"), sGet("cache_casemeetings"), sGet("cache_infractions"), sGet("cache_guest_wins"), sGet("cache_phase_changes"), sGet("finance_banking"), sGet("finance_donations")]).then(([occR, intR, disR, cmR, infR, gwR, pcR, bnkR, donR]) => {
+      const o = occR[0] || {
+        men: 0,
+        women: 0,
+        updated_at: null
+      };
+      setOcc({
+        men: o.men || 0,
+        women: o.women || 0,
+        updatedAt: o.updated_at
+      });
+      // Normalize: map each table's date/location columns to uniform .date, .location, .location_label
+      // Intakes: shelter_location = choice value (614130000/614130001), shelter_location_label = label
+      setIntakes((intR || []).map(r => ({
+        ...r,
+        date: r.intake_date,
+        location: r.shelter_location,
+        location_label: r.shelter_location_label || r.shelter_location
+      })));
+      // Discharges: shelter_location = label text ("Mens Shelter"), shelter_location_label = null
+      // Normalize location to choice values for filtering, keep label for display
+      setDischarges((disR || []).map(r => {
+        const loc = r.shelter_location || "";
+        const isM = loc.toLowerCase().includes("men") && !loc.toLowerCase().includes("women");
+        const isW = loc.toLowerCase().includes("women");
+        return {
+          ...r,
+          date: r.discharge_date,
+          location: isM ? "614130000" : isW ? "614130001" : "",
+          location_label: loc || r.shelter_location_label || "—"
+        };
+      }));
+      setCaseMeetings((cmR || []).map(r => ({
+        ...r,
+        date: r.meeting_date,
+        location: r.shelter_location,
+        location_label: r.shelter_location_label || r.shelter_location,
+        notes: r.subject
+      })));
+      setInfractions((infR || []).map(r => ({
+        ...r,
+        date: r.infraction_date,
+        location_label: r.shelter_location_label
+      })));
+      setGuestWins((gwR || []).map(r => ({
+        ...r,
+        date: r.win_date,
+        location_label: r.shelter_location_label
+      })));
+      setPhaseChanges(pcR || []);
+      setBanking(bnkR || []);
+      setDonations(donR || []);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
+  const GREETINGS = ["Hi, Matt!", "Welcome back, Matt!", "Good to see you, Matt!", "Hey Matt, here's your snapshot", "Matt, here's what's happening"];
+  const greeting = useMemo(() => GREETINGS[Math.floor(Math.random() * GREETINGS.length)], []);
+  if (loading) {
+    return React.createElement("div", {
+      style: {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        height: "100vh",
+        fontFamily: "'Montserrat',system-ui,sans-serif",
+        background: C.lgray
+      }
+    }, React.createElement("div", {
+      style: {
+        textAlign: "center"
+      }
+    }, React.createElement("div", {
+      style: {
+        fontSize: 18,
+        fontWeight: 700,
+        color: C.textNavy
+      }
+    }, "MERIDIAN KEYSTONE"), React.createElement("div", {
+      style: {
+        fontSize: 11,
+        color: C.gray,
+        marginTop: 4
+      }
+    }, "Loading dashboard data...")));
+  }
+  const NAV = [{
+    id: "shelter",
+    label: "Overview"
+  }, {
+    id: "mens",
+    label: "Men's"
+  }, {
+    id: "womens",
+    label: "Women's"
+  }, {
+    id: "finance",
+    label: "Finance"
+  }];
+  return React.createElement("div", {
+    style: {
+      fontFamily: "'Montserrat',system-ui,sans-serif",
+      color: C.slate,
+      display: "flex",
+      flexDirection: "column",
+      height: "100vh",
+      background: C.lgray
+    }
+  },
+  // Nav bar — bigger
+  React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      padding: "12px 24px",
+      background: C.navy,
+      color: "#fff",
+      flexShrink: 0
+    }
+  }, React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 14
+    }
+  }, React.createElement("img", {
+    src: LOGO,
+    alt: "Davies Shelters",
+    style: {
+      height: 38,
+      objectFit: "contain",
+      filter: "brightness(0) invert(1)"
+    }
+  }), React.createElement("div", {
+    style: {
+      borderLeft: "1px solid rgba(255,255,255,0.2)",
+      paddingLeft: 14
+    }
+  }, React.createElement("div", {
+    style: {
+      fontSize: 16,
+      fontWeight: 700,
+      letterSpacing: "0.04em"
+    }
+  }, "MERIDIAN KEYSTONE"), React.createElement("div", {
+    style: {
+      fontSize: 10,
+      opacity: 0.5,
+      letterSpacing: "0.05em",
+      marginTop: 2
+    }
+  }, "Executive director weekly report"))),
+  // Page tabs
+  React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 3
+    }
+  }, NAV.map(n => React.createElement("button", {
+    key: n.id,
+    onClick: () => setView(n.id),
+    style: {
+      background: view === n.id ? "rgba(255,255,255,0.15)" : "transparent",
+      border: "1px solid " + (view === n.id ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.12)"),
+      borderRadius: 5,
+      color: view === n.id ? "#fff" : "rgba(255,255,255,0.6)",
+      padding: "6px 14px",
+      fontSize: 12,
+      fontFamily: "'Montserrat',sans-serif",
+      cursor: "pointer",
+      fontWeight: view === n.id ? 600 : 400
+    }
+  }, n.label))),
+  // Date range
+  React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 4,
+      alignItems: "center"
+    }
+  }, [{
+    id: "week",
+    l: "This week"
+  }, {
+    id: "lastweek",
+    l: "Last week"
+  }, {
+    id: "mtd",
+    l: "MTD"
+  }, {
+    id: "ytd",
+    l: "YTD"
+  }].map(d => React.createElement("button", {
+    key: d.id,
+    onClick: () => setRangeMode(d.id),
+    style: {
+      background: rangeMode === d.id ? "rgba(255,255,255,0.12)" : "transparent",
+      border: "1px solid " + (rangeMode === d.id ? "rgba(255,255,255,0.35)" : "rgba(255,255,255,0.18)"),
+      borderRadius: 5,
+      color: rangeMode === d.id ? "#fff" : "rgba(255,255,255,0.65)",
+      padding: "5px 12px",
+      fontSize: 11,
+      fontFamily: "'Montserrat',sans-serif",
+      cursor: "pointer",
+      fontWeight: 500
+    }
+  }, d.l)), React.createElement("span", {
+    style: {
+      fontSize: 10,
+      color: "rgba(255,255,255,0.4)",
+      marginLeft: 6
+    }
+  }, range.label))),
+  // Page content
+  view === "shelter" ? React.createElement(ShelterPage, {
+    range,
+    prevRange,
+    occ,
+    intakes,
+    discharges,
+    caseMeetings,
+    infractions,
+    guestWins,
+    phaseChanges,
+    greeting
+  }) : view === "mens" ? React.createElement(LocationPage, {
+    loc: "mens",
+    range,
+    prevRange,
+    occ,
+    intakes,
+    discharges,
+    caseMeetings,
+    infractions,
+    guestWins
+  }) : view === "womens" ? React.createElement(LocationPage, {
+    loc: "womens",
+    range,
+    prevRange,
+    occ,
+    intakes,
+    discharges,
+    caseMeetings,
+    infractions,
+    guestWins
+  }) : view === "finance" ? React.createElement(FinancePage, {
+    range,
+    prevRange,
+    banking,
+    donations
+  }) : null);
+}
+    ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+  </script>
+</body>
+</html>

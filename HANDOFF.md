@@ -6,14 +6,18 @@
 ## ▶ DO NEXT
 Decide the canonical Rectrix Caedere / Aftermath Atlas naming, then connect the Project Registry to live project rows.
 - ⚠️ The registry currently uses **Rectrix Caedere** for the campaign, brand, and public site; **Aftermath Atlas** for the analytics app; and **Aftermath Meridian** only for its database. Confirm that is the durable naming scheme before data integration.
-- Add a git remote once the standalone-versus-subroute location is resolved. The scaffold is committed locally but has nowhere to push, so nothing here is backed up off this machine.
-- ⚠️ Decide first whether this belongs under `TheLittlestAskew/SystemHorizon` **or** as a subroute of `taylorritchie/systemhorizon/`. The `taylorritchie` handoff has an open item to repoint `systemhorizon-build` at the subroute and archive the standalone repo, so these two plans conflict. Resolve that before creating a remote.
+- Remote: `origin` is `TheLittlestAskew/SystemHorizon`. The prior standalone HTML control panel is preserved as `meridian-keystone.html` while the Vite dashboard is the active entry point.
 - `README.md` is still the stock Vite template text; it describes React+Vite, not System Horizon.
 
 ---
 
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
+
+### 2026-06-23 09:37 ET · Claude chat
+- **Changed:** Enabled handoff in the prior single-file SystemHorizon control panel, now preserved in this repository history.
+- **Commit:** `docs: enable repo handoff`
+- **Next:** Superseded by the current Vite dashboard return point.
 
 ### 2026-07-26 22:48 ET · Codex
 - **Changed:** Replaced the four placeholder projects with the 16-project portfolio registry: real areas, statuses, health, metrics, summaries, return points, and project-specific field notes.

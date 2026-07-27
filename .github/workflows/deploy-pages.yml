@@ -1,3 +1,4 @@
+# Pushes to main are the explicit source of truth for Pages deployments.
 name: Deploy System Horizon to GitHub Pages
 
 on:

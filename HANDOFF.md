@@ -4,7 +4,7 @@
 > Handoff is **enabled** for this repo. Every change updates the DO NEXT block below and prepends a log entry.
 
 ## ▶ DO NEXT
-Sign back in and confirm the restored portfolio records persist after a refresh.
+Open Career and confirm the live job pipeline matches Septentrion's Job Ops panel.
 - Naming is locked: **Rectrix Caedere** is the campaign and brand; **Aftermath Meridian** is the live website/app; **Aftermath Atlas** is its Supabase data layer.
 - Remote: `origin` is `TheLittlestAskew/SystemHorizon`. The prior standalone HTML control panel is preserved as `meridian-keystone.html` while the Vite dashboard is the active entry point.
 - `README.md` is still the stock Vite template text; it describes React+Vite, not System Horizon.
@@ -13,6 +13,13 @@ Sign back in and confirm the restored portfolio records persist after a refresh.
 
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
+
+### 2026-07-27 16:42 ET · Codex
+- **Changed:** Replaced the duplicate private Career tracker with the live Claude Code job pipeline.
+  Career now reads the same `dashboard_jobs` view as Septentrion, including job status, match, recommendation, deadline, source link, and GDOL activity.
+- **Commit:** `9695309`
+- **Next:** Open Career and confirm the live job pipeline matches Septentrion's Job Ops panel.
+- **Watch out:** Full job-description text is not exposed by `dashboard_jobs`; System Horizon intentionally uses the same safe read surface as Septentrion.
 
 ### 2026-07-27 16:27 ET · Codex
 - **Changed:** Fixed the private portfolio handoff: an empty owner-scoped registry now initializes from the checked-in 16-project portfolio on first sign-in.
@@ -104,12 +111,5 @@ Sign back in and confirm the restored portfolio records persist after a refresh.
 - **Commit:** `f9fa32e`
 - **Next:** Review the light modular color balance and identify the next dashboard module to build.
 - **Watch out:** This repository still has no Git remote, so the update is committed locally but not banked off-machine.
-
-### 2026-07-26 13:25 ET · Codex
-- **Changed:** Shifted the dashboard to a rounded, midnight-neon field-console system.
-  Replaced pale surfaces with cyan, blue, violet, pink, and orange signals while preserving the dashboard’s working behavior.
-- **Commit:** `5c91dcb`
-- **Next:** Review the neon direction in-browser and tune any modules that feel too bright.
-- **Watch out:** This repository still has no Git remote, so the refinement is committed locally but not banked off-machine.
 
 Earlier entries archived in `handoff-archive/2026-07.md`.

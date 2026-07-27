@@ -4,7 +4,7 @@
 > Handoff is **enabled** for this repo. Every change updates the DO NEXT block below and prepends a log entry.
 
 ## ▶ DO NEXT
-Create a System Horizon account, load the portfolio registry, and confirm the records persist after signing out and back in.
+Add your first application and work-search contact, then confirm the weekly three-contact meter updates.
 - Naming is locked: **Rectrix Caedere** is the campaign and brand; **Aftermath Meridian** is the live website/app; **Aftermath Atlas** is its Supabase data layer.
 - Remote: `origin` is `TheLittlestAskew/SystemHorizon`. The prior standalone HTML control panel is preserved as `meridian-keystone.html` while the Vite dashboard is the active entry point.
 - `README.md` is still the stock Vite template text; it describes React+Vite, not System Horizon.
@@ -13,6 +13,12 @@ Create a System Horizon account, load the portfolio registry, and confirm the re
 
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
+
+### 2026-07-27 16:15 ET · Codex
+- **Changed:** Added the private Career screen: application capture, pipeline counts, and weekly GA DOL work-search contact meter.
+  Created owner-only applications and contact tables in Rectrix Caedere Supabase and recorded the migration locally.
+- **Commit:** `f633f58`
+- **Next:** Add your first application and work-search contact, then confirm the weekly meter updates.
 
 ### 2026-07-27 16:01 ET · Codex
 - **Changed:** Moved the Project Registry onto a new owner-only `horizon_projects` table in Rectrix Caedere Supabase.

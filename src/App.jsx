@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { supabase } from './supabase'
 import './App.css'
 
 const navItems = [
@@ -27,6 +28,14 @@ const initialProjects = [
   { id: 'fantasy-football', name: 'Fantasy Football', area: 'Learning', kind: 'app + learning', status: 'Active', health: 'Yellow', tone: 'violet', metric: 'ESPN league tracker', signal: 45, summary: 'A season-long ESPN league tracker that doubles as a guided coding project.', nextAction: 'Verify the product scope, then make the next feature checklist concrete.', details: ['The app is both a tool and a learning vehicle.', 'GitHub access and guided practice are recent work.', 'Keep learning goals visible alongside build progress.'] },
   { id: 'learn-javascript', name: 'Learn JavaScript', area: 'Learning', kind: 'learning', status: 'Active', health: 'Idle', tone: 'violet', metric: 'Ongoing skill track', signal: 30, summary: 'The deliberate JavaScript practice track behind the apps you are learning to build and maintain.', nextAction: 'Log the next concept or exercise as a visible return point.', details: ['Self-rated as beginner, with strong editing and systems instincts.', 'Future view: concepts learned, exercises, and consistency.', 'Optional home tile only if a study streak becomes useful.'] },
 ]
+
+function projectFromRow(row) {
+  return { id: row.id, name: row.name, area: row.area, kind: row.kind ?? 'project', status: row.status, health: row.health, tone: row.health === 'Green' ? 'cyan' : row.health === 'Yellow' || row.health === 'Red' ? 'coral' : 'violet', metric: row.metric_value ?? 'No metric yet', signal: row.signal ?? 0, summary: row.description ?? 'No description yet.', nextAction: row.next_action ?? 'Choose the next honest move.', details: row.notes ?? [] }
+}
+
+function projectToRow(project) {
+  return { name: project.name, description: project.summary, area: project.area, status: project.status, kind: project.kind, health: project.health, metric_value: project.metric, next_action: project.nextAction, notes: project.details, signal: project.signal, last_activity: new Date().toISOString() }
+}
 
 function Button({ tone = 'quiet', className = '', children, ...props }) {
   return <button className={`button ${tone} ${className}`} {...props}>{children}</button>
@@ -57,7 +66,7 @@ function DotMatrix({ completed = 18, total = 35 }) {
   </div>
 }
 
-function ProjectRegistry({ projects, selectedProjectId, onSelectProject, onAddProject }) {
+function ProjectRegistry({ projects, selectedProjectId, onSelectProject, onAddProject, onSeedProjects }) {
   const [filter, setFilter] = useState('All')
   const [isAdding, setIsAdding] = useState(false)
   const [projectName, setProjectName] = useState('')
@@ -65,7 +74,7 @@ function ProjectRegistry({ projects, selectedProjectId, onSelectProject, onAddPr
   const selectedProject = projects.find((project) => project.id === selectedProjectId) ?? projects[0]
   const visibleProjects = filter === 'All' ? projects : projects.filter((project) => project.status === filter)
 
-  function submitProject(event) {
+  async function submitProject(event) {
     event.preventDefault()
     const cleanName = projectName.trim()
     if (!cleanName) {
@@ -81,10 +90,14 @@ function ProjectRegistry({ projects, selectedProjectId, onSelectProject, onAddPr
       setFormError('Use at least one letter or number in the name.')
       return
     }
-    onAddProject({ id, name: cleanName, area: 'Unsorted', kind: 'project', status: 'Idea', health: 'Idle', tone: 'violet', metric: 'No metric yet', summary: 'A newly registered project awaiting its first useful description.', nextAction: 'Add a clear purpose and first return point.', details: ['Add the work this project represents.', 'Choose the one next action that makes it real.'], signal: 12 })
-    setProjectName('')
-    setFormError('')
-    setIsAdding(false)
+    try {
+      await onAddProject({ name: cleanName, area: 'Unsorted', kind: 'project', status: 'Idea', health: 'Idle', tone: 'violet', metric: 'No metric yet', summary: 'A newly registered project awaiting its first useful description.', nextAction: 'Add a clear purpose and first return point.', details: ['Add the work this project represents.', 'Choose the one next action that makes it real.'], signal: 12 })
+      setProjectName('')
+      setFormError('')
+      setIsAdding(false)
+    } catch (error) {
+      setFormError(error.message || 'The project could not be saved.')
+    }
   }
 
   return <section className="registry-view" aria-labelledby="registry-heading">
@@ -112,12 +125,12 @@ function ProjectRegistry({ projects, selectedProjectId, onSelectProject, onAddPr
 
     <div className="registry-layout">
       <div className="registry-list" aria-label="Registered projects">
-        {visibleProjects.map((project) => <button className={selectedProject.id === project.id ? 'registry-row selected' : 'registry-row'} key={project.id} type="button" onClick={() => onSelectProject(project.id)}>
+        {visibleProjects.map((project) => <button className={selectedProject?.id === project.id ? 'registry-row selected' : 'registry-row'} key={project.id} type="button" onClick={() => onSelectProject(project.id)}>
           <Signal tone={project.tone} />
           <span><strong>{project.name}</strong><small>{project.area} · {project.metric}</small></span>
           <b>{project.status}</b>
         </button>)}
-        {visibleProjects.length === 0 && <p className="empty-state">No projects match that signal yet.</p>}
+        {visibleProjects.length === 0 && <div className="empty-state"><p>No project records yet.</p><Button tone="coral" type="button" onClick={onSeedProjects}>Load portfolio registry</Button></div>}
       </div>
       {selectedProject && <article className="project-inspector" aria-live="polite">
         <div className="inspector-topline"><span>{selectedProject.area} · {selectedProject.kind}</span><span>{selectedProject.health} health</span></div>
@@ -136,6 +149,27 @@ function ProjectRegistry({ projects, selectedProjectId, onSelectProject, onAddPr
       </article>}
     </div>
   </section>
+}
+
+function AccessGate() {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [message, setMessage] = useState('')
+  const [isWorking, setIsWorking] = useState(false)
+
+  async function submit(mode) {
+    setMessage('')
+    if (!email.trim() || password.length < 8) {
+      setMessage('Use your email and a password of at least 8 characters.')
+      return
+    }
+    setIsWorking(true)
+    const result = mode === 'signup' ? await supabase.auth.signUp({ email: email.trim(), password }) : await supabase.auth.signInWithPassword({ email: email.trim(), password })
+    setIsWorking(false)
+    setMessage(result.error ? result.error.message : mode === 'signup' && !result.data.session ? 'Check your email to confirm the account, then sign in.' : '')
+  }
+
+  return <main className="access-gate"><div><p className="eyebrow">Private system access</p><h1>System Horizon</h1><p>Your project and career data is owner-only in Supabase.</p><label>Email<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" /></label><label>Password<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" /></label><div><Button tone="coral" type="button" disabled={isWorking} onClick={() => submit('signin')}>Sign in</Button><Button type="button" disabled={isWorking} onClick={() => submit('signup')}>Create account</Button></div>{message && <p role="alert">{message}</p>}</div></main>
 }
 
 function Horizon({ projects, onProjects }) {
@@ -271,14 +305,49 @@ function ScaffoldView({ view, onOpenProjects }) {
 
 function App() {
   const [activeView, setActiveView] = useState('Horizon')
-  const [projects, setProjects] = useState(initialProjects)
-  const [selectedProjectId, setSelectedProjectId] = useState(initialProjects[0].id)
+  const [session, setSession] = useState(null)
+  const [projects, setProjects] = useState([])
+  const [selectedProjectId, setSelectedProjectId] = useState(null)
+  const [databaseError, setDatabaseError] = useState('')
   const greeting = useMemo(() => new Date().getHours() < 12 ? 'Morning field check' : new Date().getHours() < 18 ? 'Afternoon field check' : 'Evening field check', [])
 
-  function addProject(project) {
-    setProjects((current) => [...current, project])
-    setSelectedProjectId(project.id)
+  async function loadProjects() {
+    const { data, error } = await supabase.from('horizon_projects').select('*').order('last_activity', { ascending: false, nullsFirst: false })
+    if (error) throw error
+    const mapped = data.map(projectFromRow)
+    setProjects(mapped)
+    setSelectedProjectId((current) => current && mapped.some((project) => project.id === current) ? current : mapped[0]?.id ?? null)
   }
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setSession(data.session))
+    const { data: subscription } = supabase.auth.onAuthStateChange((_event, nextSession) => setSession(nextSession))
+    return () => subscription.subscription.unsubscribe()
+  }, [])
+
+  useEffect(() => {
+    if (!session) return
+    loadProjects().catch((error) => setDatabaseError(error.message || 'Could not load project records.'))
+  }, [session])
+
+  async function addProject(project) {
+    const { data, error } = await supabase.from('horizon_projects').insert(projectToRow(project)).select().single()
+    if (error) throw error
+    const saved = projectFromRow(data)
+    setProjects((current) => [saved, ...current])
+    setSelectedProjectId(saved.id)
+  }
+
+  async function seedProjects() {
+    const { error } = await supabase.from('horizon_projects').upsert(initialProjects.map(projectToRow), { onConflict: 'owner,name' })
+    if (error) {
+      setDatabaseError(error.message || 'Could not load the portfolio registry.')
+      return
+    }
+    await loadProjects()
+  }
+
+  if (!session) return <AccessGate />
 
   return <div className="app-provider">
     <div className="app-shell">
@@ -291,9 +360,10 @@ function App() {
       <main className="main-content">
         <header className="topbar">
           <div><span>{greeting}</span><h1>{activeView === 'Horizon' ? 'System Horizon' : activeView}</h1></div>
-          <div className="topbar-tools"><label className="search-field"><span>Search</span><input aria-label="Search System Horizon" placeholder="Find a system" /></label><DateReadout /></div>
+          <div className="topbar-tools"><label className="search-field"><span>Search</span><input aria-label="Search System Horizon" placeholder="Find a system" /></label><Button type="button" onClick={() => supabase.auth.signOut()}>Sign out</Button><DateReadout /></div>
         </header>
-        {activeView === 'Projects' ? <ProjectRegistry projects={projects} selectedProjectId={selectedProjectId} onSelectProject={setSelectedProjectId} onAddProject={addProject} /> : activeView === 'Horizon' ? <Horizon projects={projects} onProjects={() => setActiveView('Projects')} /> : <ScaffoldView view={activeView} onOpenProjects={() => setActiveView('Projects')} />}
+        {databaseError && <p className="database-error" role="alert">Database error: {databaseError}</p>}
+        {activeView === 'Projects' ? <ProjectRegistry projects={projects} selectedProjectId={selectedProjectId} onSelectProject={setSelectedProjectId} onAddProject={addProject} onSeedProjects={seedProjects} /> : activeView === 'Horizon' ? <Horizon projects={projects} onProjects={() => setActiveView('Projects')} /> : <ScaffoldView view={activeView} onOpenProjects={() => setActiveView('Projects')} />}
       </main>
     </div>
   </div>

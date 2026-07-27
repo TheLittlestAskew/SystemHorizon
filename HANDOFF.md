@@ -4,7 +4,7 @@
 > Handoff is **enabled** for this repo. Every change updates the DO NEXT block below and prepends a log entry.
 
 ## ▶ DO NEXT
-In GitHub, set **Settings → Pages → Build and deployment → Source** to **GitHub Actions**, then confirm the first System Horizon deployment completes.
+Confirm the freshly triggered GitHub Actions Pages deployment replaces the former branch deployment.
 - Once the site is live, decide the canonical Rectrix Caedere / Aftermath Atlas naming before connecting the Project Registry to live project rows.
 - ⚠️ The registry currently uses **Rectrix Caedere** for the campaign, brand, and public site; **Aftermath Atlas** for the analytics app; and **Aftermath Meridian** only for its database. Confirm that is the durable naming scheme before data integration.
 - Remote: `origin` is `TheLittlestAskew/SystemHorizon`. The prior standalone HTML control panel is preserved as `meridian-keystone.html` while the Vite dashboard is the active entry point.
@@ -14,6 +14,11 @@ In GitHub, set **Settings → Pages → Build and deployment → Source** to **G
 
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
+
+### 2026-07-27 15:21 ET · Codex
+- **Changed:** Triggered a fresh GitHub Pages deployment after the publishing source was switched to GitHub Actions.
+- **Commit:** `277680b`
+- **Next:** Confirm the Actions artifact replaces the prior branch deployment.
 
 ### 2026-07-26 23:18 ET · Codex
 - **Changed:** Added the GitHub Pages deployment workflow and Vite project base path; added the missing npm lockfile so the cloud build is reproducible.

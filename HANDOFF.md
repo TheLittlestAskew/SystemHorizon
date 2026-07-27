@@ -4,7 +4,7 @@
 > Handoff is **enabled** for this repo. Every change updates the DO NEXT block below and prepends a log entry.
 
 ## ▶ DO NEXT
-Add your first application and work-search contact, then confirm the weekly three-contact meter updates.
+Sign back in and confirm the restored portfolio records persist after a refresh.
 - Naming is locked: **Rectrix Caedere** is the campaign and brand; **Aftermath Meridian** is the live website/app; **Aftermath Atlas** is its Supabase data layer.
 - Remote: `origin` is `TheLittlestAskew/SystemHorizon`. The prior standalone HTML control panel is preserved as `meridian-keystone.html` while the Vite dashboard is the active entry point.
 - `README.md` is still the stock Vite template text; it describes React+Vite, not System Horizon.
@@ -13,6 +13,12 @@ Add your first application and work-search contact, then confirm the weekly thre
 
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
+
+### 2026-07-27 16:27 ET · Codex
+- **Changed:** Fixed the private portfolio handoff: an empty owner-scoped registry now initializes from the checked-in 16-project portfolio on first sign-in.
+  This prevents the temporary built-in list from appearing to vanish after authentication.
+- **Commit:** `89564d9`
+- **Next:** Sign back in and confirm the restored portfolio records persist after a refresh.
 
 ### 2026-07-27 16:19 ET · Codex
 - **Changed:** Added persistent application-stage controls for Discovered, Applied, Interview, Offer, Rejected, and Archived.
@@ -105,12 +111,5 @@ Add your first application and work-search contact, then confirm the weekly thre
 - **Commit:** `5c91dcb`
 - **Next:** Review the neon direction in-browser and tune any modules that feel too bright.
 - **Watch out:** This repository still has no Git remote, so the refinement is committed locally but not banked off-machine.
-
-### 2026-07-26 13:14 ET · Codex
-- **Changed:** Rebuilt the Horizon and Project Registry surfaces as a bioluminescent field-console dashboard.
-  Added responsive instrument modules, tactile controls, project signal states, capture feedback, and the new palette system.
-- **Commit:** `77c9a9d`
-- **Next:** Resolve the standalone-versus-subroute destination, add the approved remote, then push the dashboard work.
-- **Watch out:** This repository still has no Git remote, so the redesign is committed locally but not banked off-machine.
 
 Earlier entries archived in `handoff-archive/2026-07.md`.

@@ -4,8 +4,8 @@
 > Handoff is **enabled** for this repo. Every change updates the DO NEXT block below and prepends a log entry.
 
 ## ▶ DO NEXT
-Decide the canonical Rectrix Caedere / Aftermath Atlas naming before connecting the Project Registry to live project rows.
-- ⚠️ The registry currently uses **Rectrix Caedere** for the campaign, brand, and public site; **Aftermath Atlas** for the analytics app; and **Aftermath Meridian** only for its database. Confirm that is the durable naming scheme before data integration.
+Connect the Project Registry to live project rows.
+- Naming is locked: **Rectrix Caedere** is the campaign and brand; **Aftermath Meridian** is the live website/app; **Aftermath Atlas** is its Supabase data layer.
 - Remote: `origin` is `TheLittlestAskew/SystemHorizon`. The prior standalone HTML control panel is preserved as `meridian-keystone.html` while the Vite dashboard is the active entry point.
 - `README.md` is still the stock Vite template text; it describes React+Vite, not System Horizon.
 
@@ -13,6 +13,11 @@ Decide the canonical Rectrix Caedere / Aftermath Atlas naming before connecting 
 
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
+
+### 2026-07-27 15:31 ET · Codex
+- **Changed:** Locked the Aftermath naming across the registry: Aftermath Meridian is the live analytics website, and Aftermath Atlas is its Supabase data layer.
+- **Commit:** `c0476d4`
+- **Next:** Connect the Project Registry to live project rows.
 
 ### 2026-07-27 15:25 ET · Codex
 - **Changed:** Verified the GitHub Actions artifact replaced the prior branch deployment. The live page now loads the built React bundle and stylesheet, renders the app root, and reports no console errors.

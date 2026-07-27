@@ -7,7 +7,8 @@ const navItems = [
   ['Projects', '02'],
   ['Flow', '03'],
   ['Calendar', '04'],
-  ['Archive', '05'],
+  ['Career', '05'],
+  ['Archive', '06'],
 ]
 
 const initialProjects = [
@@ -149,6 +150,50 @@ function ProjectRegistry({ projects, selectedProjectId, onSelectProject, onAddPr
       </article>}
     </div>
   </section>
+}
+
+function CareerView({ applications, contacts, onAddApplication, onAddContact }) {
+  const [company, setCompany] = useState('')
+  const [role, setRole] = useState('')
+  const [score, setScore] = useState('')
+  const [organization, setOrganization] = useState('')
+  const [contactType, setContactType] = useState('Application')
+  const [formError, setFormError] = useState('')
+  const weekStart = new Date()
+  weekStart.setDate(weekStart.getDate() - weekStart.getDay())
+  weekStart.setHours(0, 0, 0, 0)
+  const weeklyContacts = contacts.filter((contact) => new Date(`${contact.contact_date}T00:00:00`) >= weekStart).length
+  const activeApplications = applications.filter((application) => !['Rejected', 'Archived'].includes(application.status))
+
+  async function submitApplication(event) {
+    event.preventDefault()
+    if (!company.trim() || !role.trim()) {
+      setFormError('Add both the company and role.')
+      return
+    }
+    try {
+      await onAddApplication({ company: company.trim(), role: role.trim(), score: score ? Number(score) : null })
+      setCompany('')
+      setRole('')
+      setScore('')
+      setFormError('')
+    } catch (error) { setFormError(error.message || 'The application could not be saved.') }
+  }
+
+  async function submitContact(event) {
+    event.preventDefault()
+    if (!organization.trim()) {
+      setFormError('Name the organization or person you contacted.')
+      return
+    }
+    try {
+      await onAddContact({ organization: organization.trim(), contact_type: contactType })
+      setOrganization('')
+      setFormError('')
+    } catch (error) { setFormError(error.message || 'The work-search contact could not be saved.') }
+  }
+
+  return <section className="career-view" aria-labelledby="career-heading"><header className="view-header"><div><p className="eyebrow">Career operations / 05</p><h2 id="career-heading">Job search field</h2><p>Applications, compliance, and the next move that earns its place.</p></div></header><div className="career-grid"><article className="career-panel compliance-panel"><span>This week’s work search</span><strong>{weeklyContacts}<small>/3 contacts</small></strong><p>{weeklyContacts >= 3 ? 'GA DOL contact requirement met for this week.' : `${3 - weeklyContacts} more contact${3 - weeklyContacts === 1 ? '' : 's'} needed this week.`}</p><form onSubmit={submitContact}><label>Organization or contact<input value={organization} onChange={(event) => setOrganization(event.target.value)} placeholder="Employer, recruiter, or network contact" /></label><label>Contact type<select value={contactType} onChange={(event) => setContactType(event.target.value)}>{['Application', 'Employer contact', 'Networking', 'Interview', 'Follow-up'].map((type) => <option key={type}>{type}</option>)}</select></label><Button tone="coral" type="submit">Log contact</Button></form></article><article className="career-panel"><span>Active applications</span><strong>{activeApplications.length}</strong><p>Discovered, applied, or moving through interviews.</p><div className="career-statuses">{['Discovered', 'Applied', 'Interview', 'Offer'].map((status) => <div key={status}><small>{status}</small><b>{applications.filter((application) => application.status === status).length}</b></div>)}</div></article></div><div className="career-workbench"><form className="career-form" onSubmit={submitApplication}><div><label>Company<input value={company} onChange={(event) => setCompany(event.target.value)} placeholder="Organization" /></label><label>Role<input value={role} onChange={(event) => setRole(event.target.value)} placeholder="Job title" /></label><label>Match score<input type="number" min="0" max="100" value={score} onChange={(event) => setScore(event.target.value)} placeholder="Optional" /></label><Button tone="coral" type="submit">Add application</Button></div>{formError && <p role="alert">{formError}</p>}</form><section className="application-list" aria-label="Applications"><div className="instrument-heading"><span>Application pipeline</span><b>{applications.length}</b></div>{applications.length ? applications.map((application) => <article key={application.id}><div><strong>{application.company}</strong><span>{application.role}</span></div><small>{application.status}{application.score ? ` · ${application.score}%` : ''}</small></article>) : <p className="empty-state">No applications yet. Add the first one above.</p>}</section></div></section>
 }
 
 function AccessGate() {
@@ -308,6 +353,8 @@ function App() {
   const [session, setSession] = useState(null)
   const [projects, setProjects] = useState([])
   const [selectedProjectId, setSelectedProjectId] = useState(null)
+  const [applications, setApplications] = useState([])
+  const [contacts, setContacts] = useState([])
   const [databaseError, setDatabaseError] = useState('')
   const greeting = useMemo(() => new Date().getHours() < 12 ? 'Morning field check' : new Date().getHours() < 18 ? 'Afternoon field check' : 'Evening field check', [])
 
@@ -319,6 +366,14 @@ function App() {
     setSelectedProjectId((current) => current && mapped.some((project) => project.id === current) ? current : mapped[0]?.id ?? null)
   }
 
+  async function loadCareerData() {
+    const [applicationResult, contactResult] = await Promise.all([supabase.from('horizon_applications').select('*').order('discovered_at', { ascending: false }), supabase.from('horizon_work_search_contacts').select('*').order('contact_date', { ascending: false })])
+    if (applicationResult.error) throw applicationResult.error
+    if (contactResult.error) throw contactResult.error
+    setApplications(applicationResult.data)
+    setContacts(contactResult.data)
+  }
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
     const { data: subscription } = supabase.auth.onAuthStateChange((_event, nextSession) => setSession(nextSession))
@@ -327,7 +382,7 @@ function App() {
 
   useEffect(() => {
     if (!session) return
-    loadProjects().catch((error) => setDatabaseError(error.message || 'Could not load project records.'))
+    Promise.all([loadProjects(), loadCareerData()]).catch((error) => setDatabaseError(error.message || 'Could not load private records.'))
   }, [session])
 
   async function addProject(project) {
@@ -347,6 +402,18 @@ function App() {
     await loadProjects()
   }
 
+  async function addApplication(application) {
+    const { data, error } = await supabase.from('horizon_applications').insert(application).select().single()
+    if (error) throw error
+    setApplications((current) => [data, ...current])
+  }
+
+  async function addContact(contact) {
+    const { data, error } = await supabase.from('horizon_work_search_contacts').insert(contact).select().single()
+    if (error) throw error
+    setContacts((current) => [data, ...current])
+  }
+
   if (!session) return <AccessGate />
 
   return <div className="app-provider">
@@ -363,7 +430,7 @@ function App() {
           <div className="topbar-tools"><label className="search-field"><span>Search</span><input aria-label="Search System Horizon" placeholder="Find a system" /></label><Button type="button" onClick={() => supabase.auth.signOut()}>Sign out</Button><DateReadout /></div>
         </header>
         {databaseError && <p className="database-error" role="alert">Database error: {databaseError}</p>}
-        {activeView === 'Projects' ? <ProjectRegistry projects={projects} selectedProjectId={selectedProjectId} onSelectProject={setSelectedProjectId} onAddProject={addProject} onSeedProjects={seedProjects} /> : activeView === 'Horizon' ? <Horizon projects={projects} onProjects={() => setActiveView('Projects')} /> : <ScaffoldView view={activeView} onOpenProjects={() => setActiveView('Projects')} />}
+        {activeView === 'Projects' ? <ProjectRegistry projects={projects} selectedProjectId={selectedProjectId} onSelectProject={setSelectedProjectId} onAddProject={addProject} onSeedProjects={seedProjects} /> : activeView === 'Career' ? <CareerView applications={applications} contacts={contacts} onAddApplication={addApplication} onAddContact={addContact} /> : activeView === 'Horizon' ? <Horizon projects={projects} onProjects={() => setActiveView('Projects')} /> : <ScaffoldView view={activeView} onOpenProjects={() => setActiveView('Projects')} />}
       </main>
     </div>
   </div>

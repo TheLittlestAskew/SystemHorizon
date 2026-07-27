@@ -4,7 +4,9 @@
 > Handoff is **enabled** for this repo. Every change updates the DO NEXT block below and prepends a log entry.
 
 ## ▶ DO NEXT
-Add a git remote. The scaffold is committed locally but has nowhere to push, so nothing here is backed up off this machine.
+Decide the canonical Rectrix Caedere / Aftermath Atlas naming, then connect the Project Registry to live project rows.
+- ⚠️ The registry currently uses **Rectrix Caedere** for the campaign, brand, and public site; **Aftermath Atlas** for the analytics app; and **Aftermath Meridian** only for its database. Confirm that is the durable naming scheme before data integration.
+- Add a git remote once the standalone-versus-subroute location is resolved. The scaffold is committed locally but has nowhere to push, so nothing here is backed up off this machine.
 - ⚠️ Decide first whether this belongs under `TheLittlestAskew/SystemHorizon` **or** as a subroute of `taylorritchie/systemhorizon/`. The `taylorritchie` handoff has an open item to repoint `systemhorizon-build` at the subroute and archive the standalone repo, so these two plans conflict. Resolve that before creating a remote.
 - `README.md` is still the stock Vite template text; it describes React+Vite, not System Horizon.
 
@@ -12,6 +14,13 @@ Add a git remote. The scaffold is committed locally but has nowhere to push, so 
 
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
+
+### 2026-07-26 22:48 ET · Codex
+- **Changed:** Replaced the four placeholder projects with the 16-project portfolio registry: real areas, statuses, health, metrics, summaries, return points, and project-specific field notes.
+  The selected-project panel now exposes useful project context instead of an abstract signal score.
+- **Commit:** `2d12c4e`
+- **Next:** Decide the canonical RC / Aftermath naming before connecting the registry to live project rows.
+- **Watch out:** Aftermath Atlas has known branch and migration debt; System Horizon has a missing JSX-source warning. Both are deliberately surfaced in the registry.
 
 ### 2026-07-26 20:31 ET · Codex
 - **Changed:** Completed the navigation scaffold for Flow, Calendar, and Archive.

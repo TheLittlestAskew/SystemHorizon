@@ -4,7 +4,7 @@
 > Handoff is **enabled** for this repo. Every change updates the DO NEXT block below and prepends a log entry.
 
 ## ▶ DO NEXT
-Connect the Project Registry to live project rows.
+Create a System Horizon account, load the portfolio registry, and confirm the records persist after signing out and back in.
 - Naming is locked: **Rectrix Caedere** is the campaign and brand; **Aftermath Meridian** is the live website/app; **Aftermath Atlas** is its Supabase data layer.
 - Remote: `origin` is `TheLittlestAskew/SystemHorizon`. The prior standalone HTML control panel is preserved as `meridian-keystone.html` while the Vite dashboard is the active entry point.
 - `README.md` is still the stock Vite template text; it describes React+Vite, not System Horizon.
@@ -13,6 +13,13 @@ Connect the Project Registry to live project rows.
 
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
+
+### 2026-07-27 16:01 ET · Codex
+- **Changed:** Moved the Project Registry onto a new owner-only `horizon_projects` table in Rectrix Caedere Supabase.
+  Added private email/password access, a one-click portfolio import, explicit database errors, and the checked-in migration record.
+- **Commit:** `776c4c3`
+- **Next:** Create a System Horizon account, load the portfolio registry, and confirm the records persist after signing out and back in.
+- **Watch out:** The job tracker is not yet in this database; only the shared secure foundation and project registry are live.
 
 ### 2026-07-27 15:31 ET · Codex
 - **Changed:** Locked the Aftermath naming across the registry: Aftermath Meridian is the live analytics website, and Aftermath Atlas is its Supabase data layer.

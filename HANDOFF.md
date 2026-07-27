@@ -13,6 +13,13 @@ Add a git remote. The scaffold is committed locally but has nowhere to push, so 
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
 
+### 2026-07-26 20:31 ET · Codex
+- **Changed:** Completed the navigation scaffold for Flow, Calendar, and Archive.
+  Each now has a distinct responsive destination, explicit connection status, and an honest placeholder structure ready for real data and behavior.
+- **Commit:** `266197c`
+- **Next:** Choose the first scaffold to connect to real data and behavior.
+- **Watch out:** Production build and lint pass. The local browser automation probe timed out, so click through Flow, Calendar, and Archive in the app before deep implementation.
+
 ### 2026-07-26 16:53 ET · Codex
 - **Changed:** Removed navy as a dashboard base color.
   Rebuilt depth with true black and charcoal, while the hero and active signals now use electric blue, cyan, violet, orange, yellow, and signal-red.

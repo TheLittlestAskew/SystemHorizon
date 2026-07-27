@@ -14,6 +14,12 @@ Decide the canonical Rectrix Caedere / Aftermath Atlas naming, then connect the 
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
 
+### 2026-07-26 23:00 ET · Codex
+- **Changed:** Connected the local Vite dashboard to `TheLittlestAskew/SystemHorizon` and safely merged its unrelated legacy history.
+  Preserved the prior control panel as `meridian-keystone.html`; the Vite `index.html` remains the active entry point.
+- **Commit:** `ff2075c`
+- **Next:** Decide the canonical RC / Aftermath naming before connecting the registry to live project rows.
+
 ### 2026-06-23 09:37 ET · Claude chat
 - **Changed:** Enabled handoff in the prior single-file SystemHorizon control panel, now preserved in this repository history.
 - **Commit:** `docs: enable repo handoff`

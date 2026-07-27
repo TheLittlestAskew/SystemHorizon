@@ -368,9 +368,16 @@ function App() {
   async function loadProjects() {
     const { data, error } = await supabase.from('horizon_projects').select('*').order('last_activity', { ascending: false, nullsFirst: false })
     if (error) throw error
-    const mapped = data.map(projectFromRow)
+    const projectRows = data.length ? data : await initializePortfolioRegistry()
+    const mapped = projectRows.map(projectFromRow)
     setProjects(mapped)
     setSelectedProjectId((current) => current && mapped.some((project) => project.id === current) ? current : mapped[0]?.id ?? null)
+  }
+
+  async function initializePortfolioRegistry() {
+    const { data, error } = await supabase.from('horizon_projects').upsert(initialProjects.map(projectToRow), { onConflict: 'owner,name' }).select()
+    if (error) throw error
+    return data
   }
 
   async function loadCareerData() {
@@ -401,8 +408,9 @@ function App() {
   }
 
   async function seedProjects() {
-    const { error } = await supabase.from('horizon_projects').upsert(initialProjects.map(projectToRow), { onConflict: 'owner,name' })
-    if (error) {
+    try {
+      await initializePortfolioRegistry()
+    } catch (error) {
       setDatabaseError(error.message || 'Could not load the portfolio registry.')
       return
     }

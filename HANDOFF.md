@@ -4,7 +4,7 @@
 > Handoff is **enabled** for this repo. Every change updates the DO NEXT block below and prepends a log entry.
 
 ## ▶ DO NEXT
-Open Career and confirm the live job pipeline matches Septentrion's Job Ops panel.
+Sign in and confirm the Career view renders correctly with live data: check the weekly contact count, the new "A-rated leads" section (only shows if a job is ≥85% match, status Discovered/Saved, and not past deadline — may be empty right now), and the unreported-last-week alert (only shows if applicable).
 - Naming is locked: **Rectrix Caedere** is the campaign and brand; **Aftermath Meridian** is the live website/app; **Aftermath Atlas** is its Supabase data layer.
 - Remote: `origin` is `TheLittlestAskew/SystemHorizon`. The prior standalone HTML control panel is preserved as `meridian-keystone.html` while the Vite dashboard is the active entry point.
 - `README.md` is still the stock Vite template text; it describes React+Vite, not System Horizon.
@@ -13,6 +13,16 @@ Open Career and confirm the live job pipeline matches Septentrion's Job Ops pane
 
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
+
+### 2026-08-10 17:43 ET · Claude chat
+- **Changed:** Compared Career's GDOL logic against Septentrion's Job Ops panel (`dashboard/collectors/jobs.js`, read directly from the local vault) and found they diverged despite both reading `dashboard_jobs`. Fixed:
+  - Bounded the weekly contact count to the same Sun–Sat GDOL window Septentrion uses (was previously open-ended, comparing local-time Date objects instead of the bounded UTC date-string window).
+  - Surfaced an "unreported last week" alert — `ws_reported` was already being fetched from Supabase but never displayed, so a real GA DOL compliance gap (a logged contact still not reported) could go unnoticed. This was the most important gap found.
+  - Added an "A-rated leads" section (match ≥85%, status Discovered/Saved, not past deadline, sorted by match) — previously Career had no equivalent to Septentrion's actionable-leads highlighting.
+  - Added an "applications logged this week" count next to the contact meter.
+  - Also updated the `systemhorizon-build` skill and the project's master-context doc, both of which still described the retired single-file Babel/`control-panel.html` architecture.
+- **Commit:** `4bcfbea`
+- **Next:** Sign in and visually confirm Career renders correctly (see DO NEXT above). No zero-rows safeguard was added for `dashboard_jobs` (Septentrion treats an empty result as a likely RLS/config failure and disables the panel; Career currently just shows "no jobs" either way) — worth adding later if it causes confusion.
 
 ### 2026-07-27 16:42 ET · Codex
 - **Changed:** Replaced the duplicate private Career tracker with the live Claude Code job pipeline.

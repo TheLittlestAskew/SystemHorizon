@@ -153,16 +153,52 @@ function ProjectRegistry({ projects, selectedProjectId, onSelectProject, onAddPr
   </section>
 }
 
+// GDOL weeks end on Saturday. Mirrors Septentrion's dashboard/collectors/jobs.js
+// so the two panels agree on what "this week" and "last week" mean.
+function gdolWeekEnding(now = new Date()) {
+  const d = new Date(now)
+  d.setDate(d.getDate() + ((6 - d.getDay() + 7) % 7))
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
+function gdolWeekWindow(weekEnding) {
+  const end = new Date(`${weekEnding}T00:00:00Z`)
+  const start = new Date(end)
+  start.setUTCDate(start.getUTCDate() - 6)
+  return { start: start.toISOString().slice(0, 10), end: weekEnding }
+}
+
+function shiftDays(dateStr, days) {
+  const d = new Date(`${dateStr}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() + days)
+  return d.toISOString().slice(0, 10)
+}
+
+function inGdolWindow(dateStr, win) {
+  return !!dateStr && dateStr >= win.start && dateStr <= win.end
+}
+
+const A_RATED_STATUS = new Set(['Discovered', 'Saved'])
+const UNREPORTED_STATUS = new Set(['Applied', 'Interview'])
+
 function CareerView({ jobs, jobError }) {
   const now = new Date()
-  const weekStart = new Date(now)
-  weekStart.setDate(now.getDate() - now.getDay())
-  weekStart.setHours(0, 0, 0, 0)
-  const weeklyContacts = jobs.filter((job) => job.ws_activity_date && new Date(`${job.ws_activity_date}T00:00:00`) >= weekStart).length
+  const weekEnding = gdolWeekEnding(now)
+  const thisWeek = gdolWeekWindow(weekEnding)
+  const prevWeek = gdolWeekWindow(shiftDays(weekEnding, -7))
+  const today = now.toISOString().slice(0, 10)
+
+  const weeklyContacts = jobs.filter((job) => inGdolWindow(job.ws_activity_date, thisWeek)).length
+  const appliedThisWeek = jobs.filter((job) => inGdolWindow(job.submitted, thisWeek) || inGdolWindow(job.ws_activity_date, thisWeek)).length
+  const unreportedLastWeek = jobs.filter((job) => UNREPORTED_STATUS.has(job.status) && job.ws_reported === false && inGdolWindow(job.ws_activity_date, prevWeek)).length
+  const aRated = jobs
+    .filter((job) => typeof job.match_percent === 'number' && job.match_percent >= 85 && A_RATED_STATUS.has(job.status) && (!job.deadline || job.deadline >= today))
+    .sort((a, b) => b.match_percent - a.match_percent)
   const activeJobs = jobs.filter((job) => !['Rejected', 'Archived', 'Withdrawn'].includes(job.status))
   const safeUrl = (url) => { try { const parsed = new URL(url); return ['http:', 'https:'].includes(parsed.protocol) ? url : '' } catch { return '' } }
 
-  return <section className="career-view" aria-labelledby="career-heading"><header className="view-header"><div><p className="eyebrow">Career operations / 05</p><h2 id="career-heading">Job search field</h2><p>Live readout from the Claude Code job pipeline. Update jobs through that workflow, not this dashboard.</p></div></header>{jobError ? <p className="database-error" role="alert">Job pipeline error: {jobError}</p> : <><div className="career-grid"><article className="career-panel compliance-panel"><span>This week’s work search</span><strong>{weeklyContacts}<small>/3 contacts</small></strong><p>{weeklyContacts >= 3 ? 'GA DOL contact requirement met for this week.' : `${3 - weeklyContacts} more contact${3 - weeklyContacts === 1 ? '' : 's'} needed this week.`}</p><p className="career-source">Source: Claude Code → dashboard_jobs</p></article><article className="career-panel"><span>Active applications</span><strong>{activeJobs.length}</strong><p>Live pipeline data, without a second System Horizon tracker.</p><div className="career-statuses">{['Discovered', 'Docs Created', 'Applied', 'Interview'].map((status) => <div key={status}><small>{status}</small><b>{jobs.filter((job) => job.status === status).length}</b></div>)}</div></article></div><div className="career-workbench"><section className="application-list" aria-label="Applications"><div className="instrument-heading"><span>Automated application pipeline</span><b>{jobs.length}</b></div>{jobs.length ? jobs.map((job) => { const postUrl = safeUrl(job.post_url); return <article key={job.id}><div><strong>{job.title || 'Untitled role'}</strong><span>{job.organization || 'Organization unknown'}{job.location ? ` · ${job.location}` : ''}</span><small>{job.recommendation ? `${job.recommendation} recommendation` : 'No recommendation yet'}{job.deadline ? ` · Due ${job.deadline}` : ''}</small></div><div className="application-status"><b>{job.status || 'Unknown'}</b>{typeof job.match_percent === 'number' ? <small>{job.match_percent}% match</small> : null}{postUrl ? <a href={postUrl} target="_blank" rel="noreferrer">Open posting</a> : null}</div></article> }) : <p className="empty-state">No jobs are currently visible in the pipeline.</p>}</section></div></>}</section>
+  return <section className="career-view" aria-labelledby="career-heading"><header className="view-header"><div><p className="eyebrow">Career operations / 05</p><h2 id="career-heading">Job search field</h2><p>Live readout from the Claude Code job pipeline. Update jobs through that workflow, not this dashboard.</p></div></header>{jobError ? <p className="database-error" role="alert">Job pipeline error: {jobError}</p> : <>{unreportedLastWeek > 0 && <p className="database-error" role="alert">{unreportedLastWeek} work-search contact{unreportedLastWeek === 1 ? '' : 's'} from last week still {unreportedLastWeek === 1 ? 'needs' : 'need'} to be reported to GA DOL.</p>}<div className="career-grid"><article className="career-panel compliance-panel"><span>This week’s work search</span><strong>{weeklyContacts}<small>/3 contacts</small></strong><p>{weeklyContacts >= 3 ? 'GA DOL contact requirement met for this week.' : `${3 - weeklyContacts} more contact${3 - weeklyContacts === 1 ? '' : 's'} needed this week.`}</p><p className="career-source">{appliedThisWeek} application{appliedThisWeek === 1 ? '' : 's'} logged this week · Source: Claude Code → dashboard_jobs</p></article><article className="career-panel"><span>Active applications</span><strong>{activeJobs.length}</strong><p>Live pipeline data, without a second System Horizon tracker.</p><div className="career-statuses">{['Discovered', 'Docs Created', 'Applied', 'Interview'].map((status) => <div key={status}><small>{status}</small><b>{jobs.filter((job) => job.status === status).length}</b></div>)}</div></article></div><div className="career-workbench">{aRated.length > 0 && <section className="application-list" aria-label="A-rated leads"><div className="instrument-heading"><span>A-rated leads (≥85% match, still open)</span><b>{aRated.length}</b></div>{aRated.map((job) => { const postUrl = safeUrl(job.post_url); return <article key={job.id}><div><strong>{job.title || 'Untitled role'}</strong><span>{job.organization || 'Organization unknown'}{job.location ? ` · ${job.location}` : ''}</span><small>{job.recommendation ? `${job.recommendation} recommendation` : 'No recommendation yet'}{job.deadline ? ` · Due ${job.deadline}` : ''}</small></div><div className="application-status"><b>{job.status || 'Unknown'}</b><small>{job.match_percent}% match</small>{postUrl ? <a href={postUrl} target="_blank" rel="noreferrer">Open posting</a> : null}</div></article> })}</section>}<section className="application-list" aria-label="Applications"><div className="instrument-heading"><span>Automated application pipeline</span><b>{jobs.length}</b></div>{jobs.length ? jobs.map((job) => { const postUrl = safeUrl(job.post_url); return <article key={job.id}><div><strong>{job.title || 'Untitled role'}</strong><span>{job.organization || 'Organization unknown'}{job.location ? ` · ${job.location}` : ''}</span><small>{job.recommendation ? `${job.recommendation} recommendation` : 'No recommendation yet'}{job.deadline ? ` · Due ${job.deadline}` : ''}</small></div><div className="application-status"><b>{job.status || 'Unknown'}</b>{typeof job.match_percent === 'number' ? <small>{job.match_percent}% match</small> : null}{postUrl ? <a href={postUrl} target="_blank" rel="noreferrer">Open posting</a> : null}</div></article> }) : <p className="empty-state">No jobs are currently visible in the pipeline.</p>}</section></div></>}</section>
 }
 
 function AccessGate() {

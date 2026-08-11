@@ -39,6 +39,22 @@ function projectToRow(project) {
   return { name: project.name, description: project.summary, area: project.area, status: project.status, kind: project.kind, health: project.health, metric_value: project.metric, next_action: project.nextAction, notes: project.details, signal: project.signal, last_activity: new Date().toISOString() }
 }
 
+function taskFromRow(row) {
+  return { id: row.id, projectId: row.project_id, name: row.name, status: row.status, notes: row.notes ?? '', createdAt: row.created_at, completedAt: row.completed_at }
+}
+
+function taskToRow(task) {
+  return { project_id: task.projectId ?? null, name: task.name, status: task.status, notes: task.notes || null }
+}
+
+function eventFromRow(row) {
+  return { id: row.id, projectId: row.project_id, title: row.title, date: row.event_date, startTime: row.start_time, endTime: row.end_time, notes: row.notes ?? '' }
+}
+
+function eventToRow(event) {
+  return { project_id: event.projectId ?? null, title: event.title, event_date: event.date, start_time: event.startTime || null, end_time: event.endTime || null, notes: event.notes || null }
+}
+
 function Button({ tone = 'quiet', className = '', children, ...props }) {
   return <button className={`button ${tone} ${className}`} {...props}>{children}</button>
 }
@@ -68,7 +84,7 @@ function DotMatrix({ completed = 18, total = 35 }) {
   </div>
 }
 
-function ProjectRegistry({ projects, selectedProjectId, onSelectProject, onAddProject, onSeedProjects }) {
+function ProjectRegistry({ projects, selectedProjectId, onSelectProject, onAddProject, onSeedProjects, onOpenProject }) {
   const [filter, setFilter] = useState('All')
   const [isAdding, setIsAdding] = useState(false)
   const [projectName, setProjectName] = useState('')
@@ -148,8 +164,68 @@ function ProjectRegistry({ projects, selectedProjectId, onSelectProject, onAddPr
           <span>Field notes</span>
           <ul>{selectedProject.details.map((detail) => <li key={detail}>{detail}</li>)}</ul>
         </section>
+        <Button tone="coral" className="open-project-page" type="button" onClick={() => onOpenProject(selectedProject.id)}>Open project page</Button>
       </article>}
     </div>
+  </section>
+}
+
+function TaskRow({ task, projectName, onStatusChange, onDelete }) {
+  return <article className="task-row">
+    <div><strong>{task.name}</strong>{projectName ? <span>{projectName}</span> : null}{task.notes ? <small>{task.notes}</small> : null}</div>
+    <div className="task-controls">
+      <select aria-label={`Status for ${task.name}`} value={task.status} onChange={(event) => onStatusChange(task.id, event.target.value)}>
+        {['Active', 'Waiting', 'Parked', 'Done'].map((status) => <option key={status} value={status}>{status}</option>)}
+      </select>
+      <button type="button" onClick={() => onDelete(task.id)} aria-label={`Delete ${task.name}`}>×</button>
+    </div>
+  </article>
+}
+
+function ProjectDetailView({ project, tasks, onBack, onAddTask, onUpdateTaskStatus, onDeleteTask }) {
+  const [taskName, setTaskName] = useState('')
+  const projectTasks = tasks.filter((task) => task.projectId === project.id)
+  const openTasks = projectTasks.filter((task) => task.status !== 'Done')
+  const doneTasks = projectTasks.filter((task) => task.status === 'Done')
+
+  function submitTask(event) {
+    event.preventDefault()
+    const cleanName = taskName.trim()
+    if (!cleanName) return
+    onAddTask({ projectId: project.id, name: cleanName, status: 'Active', notes: '' })
+    setTaskName('')
+  }
+
+  return <section className="project-page" aria-labelledby="project-page-heading">
+    <button className="back-link" type="button" onClick={onBack}>← Back to registry</button>
+    <header className="view-header project-page-header">
+      <div>
+        <p className="eyebrow">{project.area} · {project.kind}</p>
+        <h2 id="project-page-heading">{project.name}</h2>
+        <p>{project.summary}</p>
+      </div>
+      <div className="project-page-badges"><span><Signal tone={project.tone} /> {project.status}</span><span>{project.health} health</span></div>
+    </header>
+    <div className="signal-meter"><span style={{ width: `${project.signal}%` }} /></div>
+    <div className="project-page-grid">
+      <article className="career-panel"><span>Next action</span><p>{project.nextAction}</p></article>
+      <article className="career-panel"><span>Headline</span><p>{project.metric}</p></article>
+    </div>
+    <section className="project-page-notes" aria-label={`${project.name} field notes`}>
+      <span>Field notes</span>
+      <ul>{project.details.map((detail) => <li key={detail}>{detail}</li>)}</ul>
+    </section>
+    <section className="task-board" aria-label={`${project.name} tasks`}>
+      <div className="instrument-heading"><span>Tasks</span><b>{openTasks.length} open</b></div>
+      <form className="task-form" onSubmit={submitTask}>
+        <input value={taskName} onChange={(event) => setTaskName(event.target.value)} placeholder="Add a task for this project" />
+        <Button tone="coral" type="submit">Add</Button>
+      </form>
+      <div className="task-list">
+        {openTasks.length ? openTasks.map((task) => <TaskRow key={task.id} task={task} onStatusChange={onUpdateTaskStatus} onDelete={onDeleteTask} />) : <p className="empty-state">No open tasks. Add the first one above.</p>}
+      </div>
+      {doneTasks.length > 0 && <details className="task-done-list"><summary>{doneTasks.length} done</summary>{doneTasks.map((task) => <TaskRow key={task.id} task={task} onStatusChange={onUpdateTaskStatus} onDelete={onDeleteTask} />)}</details>}
+    </section>
   </section>
 }
 
@@ -286,69 +362,159 @@ function Horizon({ projects, onProjects }) {
   </>
 }
 
-function ScaffoldView({ view, onOpenProjects }) {
-  const views = {
-    Flow: {
-      code: '03',
-      title: 'Flow board',
-      description: 'A single place to decide what is active, waiting, parked, or done.',
-      primary: 'Active queue',
-      primaryItems: ['Define the System Horizon data model', 'Choose the next Septentrion connection'],
-      secondary: 'Waiting room',
-      secondaryItems: ['Aftermath Meridian workflow', 'Career priorities review'],
-      note: 'Later, this becomes the drag-and-drop working queue. For now, the states and ownership are scaffolded.',
-    },
-    Calendar: {
-      code: '04',
-      title: 'Calendar field',
-      description: 'A time-aware view for commitments, build blocks, and the space around them.',
-      primary: 'Today’s frame',
-      primaryItems: ['10:00   Build block', '13:30   Admin orbit', '16:00   Close the loop'],
-      secondary: 'Planning horizon',
-      secondaryItems: ['This week', 'Next week', 'Someday, not scheduled'],
-      note: 'Later, this will connect scheduled work, capacity, and the real calendar. Nothing is assumed or synced yet.',
-    },
-    Archive: {
-      code: '05',
-      title: 'Archive field',
-      description: 'The retrieval layer for handoffs, decisions, artifacts, and settled work.',
-      primary: 'Retrieval paths',
-      primaryItems: ['Project handoffs', 'Decision records', 'Reference artifacts'],
-      secondary: 'Archive status',
-      secondaryItems: ['No source connected yet', 'Ready for Septentrion index', 'Search stays local until linked'],
-      note: 'Later, this becomes the doorway into durable project memory. This scaffold deliberately does not pretend the archive is connected.',
-    },
+function FlowView({ tasks, projects, onOpenProjects, onAddTask, onUpdateTaskStatus, onDeleteTask }) {
+  const [taskName, setTaskName] = useState('')
+  const [taskProjectId, setTaskProjectId] = useState('')
+  const columns = ['Active', 'Waiting', 'Parked', 'Done']
+  const projectName = (id) => projects.find((project) => project.id === id)?.name
+
+  function submitTask(event) {
+    event.preventDefault()
+    const cleanName = taskName.trim()
+    if (!cleanName) return
+    onAddTask({ projectId: taskProjectId || null, name: cleanName, status: 'Active', notes: '' })
+    setTaskName('')
   }
-  const current = views[view] ?? views.Flow
 
-  return <section className="scaffold-view" aria-labelledby="scaffold-heading">
-    <header className="view-header scaffold-header">
-      <div>
-        <p className="eyebrow">System index / {current.code}</p>
-        <h2 id="scaffold-heading">{current.title}</h2>
-        <p>{current.description}</p>
-      </div>
-      {view === 'Flow' ? <Button tone="coral" onClick={onOpenProjects}>Open projects</Button> : <span className="scaffold-status">Scaffold ready</span>}
+  return <section className="flow-view" aria-labelledby="flow-heading">
+    <header className="view-header">
+      <div><p className="eyebrow">System index / 03</p><h2 id="flow-heading">Flow board</h2><p>Every open thread across every project, sorted by what state it is actually in.</p></div>
+      <Button tone="coral" onClick={onOpenProjects}>Open registry</Button>
     </header>
+    <form className="flow-quick-add" onSubmit={submitTask}>
+      <input value={taskName} onChange={(event) => setTaskName(event.target.value)} placeholder="New task or thread" />
+      <select aria-label="Attach to project" value={taskProjectId} onChange={(event) => setTaskProjectId(event.target.value)}>
+        <option value="">No project</option>
+        {projects.map((project) => <option key={project.id} value={project.id}>{project.name}</option>)}
+      </select>
+      <Button tone="coral" type="submit">Add to flow</Button>
+    </form>
+    <div className="flow-columns">
+      {columns.map((status) => {
+        const columnTasks = tasks.filter((task) => task.status === status)
+        return <div className="flow-column" key={status}>
+          <div className="instrument-heading"><span>{status}</span><b>{columnTasks.length}</b></div>
+          <div className="flow-column-list">
+            {columnTasks.length ? columnTasks.map((task) => <TaskRow key={task.id} task={task} projectName={projectName(task.projectId)} onStatusChange={onUpdateTaskStatus} onDelete={onDeleteTask} />) : <p className="empty-state">Nothing here.</p>}
+          </div>
+        </div>
+      })}
+    </div>
+  </section>
+}
 
-    <div className="scaffold-grid">
-      <article className="scaffold-card primary-card">
-        <div className="instrument-heading"><span>{current.primary}</span><b>01</b></div>
-        <div className="scaffold-list">
-          {current.primaryItems.map((item, index) => <div key={item}><Signal tone={index === 0 ? 'cyan' : 'violet'} /><span>{item}</span><small>{String(index + 1).padStart(2, '0')}</small></div>)}
+function CalendarView({ events, projects, onAddEvent, onDeleteEvent }) {
+  const [cursor, setCursor] = useState(() => { const date = new Date(); date.setDate(1); return date })
+  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [title, setTitle] = useState('')
+  const [time, setTime] = useState('')
+
+  const year = cursor.getFullYear()
+  const month = cursor.getMonth()
+  const monthLabel = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(cursor)
+  const firstWeekday = new Date(year, month, 1).getDay()
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+  const cells = [...Array.from({ length: firstWeekday }, () => null), ...Array.from({ length: daysInMonth }, (_, index) => index + 1)]
+  const dateKey = (day) => `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+  const eventsFor = (dateStr) => events.filter((event) => event.date === dateStr)
+  const projectName = (id) => projects.find((project) => project.id === id)?.name
+  const selectedEvents = eventsFor(selectedDate)
+  const todayKey = new Date().toISOString().slice(0, 10)
+
+  function shiftMonth(delta) {
+    const next = new Date(cursor)
+    next.setMonth(next.getMonth() + delta)
+    setCursor(next)
+  }
+
+  function submitEvent(event) {
+    event.preventDefault()
+    const cleanTitle = title.trim()
+    if (!cleanTitle) return
+    onAddEvent({ title: cleanTitle, date: selectedDate, startTime: time.trim() || null, endTime: null, projectId: null, notes: '' })
+    setTitle('')
+    setTime('')
+  }
+
+  return <section className="calendar-view" aria-labelledby="calendar-heading">
+    <header className="view-header">
+      <div><p className="eyebrow">System index / 04</p><h2 id="calendar-heading">Calendar field</h2><p>Commitments, build blocks, and the space around them.</p></div>
+      <div className="month-nav"><button type="button" onClick={() => shiftMonth(-1)} aria-label="Previous month">‹</button><span>{monthLabel}</span><button type="button" onClick={() => shiftMonth(1)} aria-label="Next month">›</button></div>
+    </header>
+    <div className="calendar-grid" role="grid" aria-label={monthLabel}>
+      {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((label) => <div className="calendar-weekday" key={label}>{label}</div>)}
+      {cells.map((day, index) => {
+        if (day === null) return <div className="calendar-cell empty" key={`empty-${index}`} />
+        const dateStr = dateKey(day)
+        const dayEvents = eventsFor(dateStr)
+        return <button className={`calendar-cell${dateStr === selectedDate ? ' selected' : ''}${dateStr === todayKey ? ' today' : ''}`} key={dateStr} type="button" onClick={() => setSelectedDate(dateStr)}>
+          <span>{day}</span>
+          {dayEvents.length > 0 && <i aria-hidden="true">{dayEvents.length}</i>}
+        </button>
+      })}
+    </div>
+    <div className="calendar-workbench">
+      <article className="career-panel">
+        <span>{new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'short', day: 'numeric' }).format(new Date(`${selectedDate}T00:00:00`))}</span>
+        <form className="event-form" onSubmit={submitEvent}>
+          <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="New event" />
+          <input value={time} onChange={(event) => setTime(event.target.value)} placeholder="10:00 AM" />
+          <Button tone="coral" type="submit">Add</Button>
+        </form>
+        <div className="event-list">
+          {selectedEvents.length ? selectedEvents.map((event) => <div className="event-row" key={event.id}><div><strong>{event.title}</strong>{event.startTime ? <small>{event.startTime}</small> : null}{event.projectId ? <small>{projectName(event.projectId)}</small> : null}</div><button type="button" onClick={() => onDeleteEvent(event.id)} aria-label={`Delete ${event.title}`}>×</button></div>) : <p className="empty-state">Nothing scheduled.</p>}
         </div>
       </article>
-      <article className="scaffold-card secondary-card">
-        <div className="instrument-heading"><span>{current.secondary}</span><b>02</b></div>
-        <div className="scaffold-list">
-          {current.secondaryItems.map((item, index) => <div key={item}><span className="scaffold-mark">{index + 1}</span><span>{item}</span></div>)}
-        </div>
-      </article>
-      <article className="scaffold-card note-card">
-        <div className="instrument-heading"><span>Connection status</span><b>03</b></div>
-        <p>{current.note}</p>
-        <span className="connection-note"><Signal tone="coral" /> Not connected yet</span>
-      </article>
+    </div>
+  </section>
+}
+
+const ARCHIVE_REPOS = ['SystemHorizon', 'ashfall_vault', 'rectrixcaedere', 'taylorritchie', 'sitl_vault', 'pacts_power_vault']
+
+function parseHandoffEntries(markdown, repo) {
+  const blocks = markdown.split(/\n### /).slice(1)
+  return blocks.map((block) => {
+    const [headerLine, ...rest] = block.split('\n')
+    const body = rest.join('\n')
+    const headerMatch = headerLine.match(/^(\S+\s+\S+\s+\S+)\s*·\s*(.+)$/)
+    const timestamp = headerMatch ? headerMatch[1] : headerLine.trim()
+    const source = headerMatch ? headerMatch[2].trim() : ''
+    const changedMatch = body.match(/\*\*Changed:\*\*\s*([\s\S]*?)(?:\n- \*\*|\n\n|$)/)
+    const summary = (changedMatch ? changedMatch[1] : body).replace(/\s+/g, ' ').trim().slice(0, 240)
+    return { repo, timestamp, source, summary }
+  })
+}
+
+function ArchiveView() {
+  const [entries, setEntries] = useState([])
+  const [status, setStatus] = useState('loading')
+
+  useEffect(() => {
+    let cancelled = false
+    Promise.allSettled(ARCHIVE_REPOS.map((repo) =>
+      fetch(`https://raw.githubusercontent.com/TheLittlestAskew/${repo}/main/HANDOFF.md`).then((response) => {
+        if (!response.ok) throw new Error(`${repo}: HTTP ${response.status}`)
+        return response.text()
+      }).then((text) => parseHandoffEntries(text, repo))
+    )).then((results) => {
+      if (cancelled) return
+      const merged = results.flatMap((result) => result.status === 'fulfilled' ? result.value : [])
+      merged.sort((a, b) => (a.timestamp < b.timestamp ? 1 : -1))
+      setEntries(merged.slice(0, 40))
+      setStatus(merged.length ? 'ready' : 'empty')
+    })
+    return () => { cancelled = true }
+  }, [])
+
+  return <section className="archive-view" aria-labelledby="archive-heading">
+    <header className="view-header"><div><p className="eyebrow">System index / 06</p><h2 id="archive-heading">Archive field</h2><p>Live pull of the most recent HANDOFF.md entries from every repo with handoff enabled.</p></div></header>
+    {status === 'loading' && <p className="empty-state">Pulling repo handoffs…</p>}
+    {status === 'empty' && <p className="database-error" role="alert">Could not read any HANDOFF.md files. Check network access to raw.githubusercontent.com.</p>}
+    <div className="archive-feed">
+      {entries.map((entry, index) => <article className="archive-entry" key={`${entry.repo}-${index}`}>
+        <div className="archive-entry-meta"><b>{entry.repo}</b><span>{entry.timestamp}</span>{entry.source ? <span>{entry.source}</span> : null}</div>
+        <p>{entry.summary}</p>
+      </article>)}
     </div>
   </section>
 }
@@ -358,6 +524,8 @@ function App() {
   const [session, setSession] = useState(null)
   const [projects, setProjects] = useState([])
   const [selectedProjectId, setSelectedProjectId] = useState(null)
+  const [tasks, setTasks] = useState([])
+  const [events, setEvents] = useState([])
   const [jobs, setJobs] = useState([])
   const [jobError, setJobError] = useState('')
   const [databaseError, setDatabaseError] = useState('')
@@ -376,6 +544,18 @@ function App() {
     const { data, error } = await supabase.from('horizon_projects').upsert(initialProjects.map(projectToRow), { onConflict: 'owner,name' }).select()
     if (error) throw error
     return data
+  }
+
+  async function loadTasks() {
+    const { data, error } = await supabase.from('horizon_tasks').select('*').order('created_at', { ascending: false })
+    if (error) throw error
+    setTasks((data ?? []).map(taskFromRow))
+  }
+
+  async function loadEvents() {
+    const { data, error } = await supabase.from('horizon_events').select('*').order('event_date', { ascending: true })
+    if (error) throw error
+    setEvents((data ?? []).map(eventFromRow))
   }
 
   async function loadJobPipeline() {
@@ -397,7 +577,7 @@ function App() {
 
   useEffect(() => {
     if (!session) return
-    Promise.all([loadProjects(), loadJobPipeline()]).catch((error) => setDatabaseError(error.message || 'Could not load private records.'))
+    Promise.all([loadProjects(), loadTasks(), loadEvents(), loadJobPipeline()]).catch((error) => setDatabaseError(error.message || 'Could not load private records.'))
   }, [session])
 
   async function addProject(project) {
@@ -418,23 +598,69 @@ function App() {
     await loadProjects()
   }
 
+  function openProject(projectId) {
+    setSelectedProjectId(projectId)
+    setActiveView('ProjectDetail')
+  }
+
+  async function addTask(task) {
+    const { data, error } = await supabase.from('horizon_tasks').insert(taskToRow(task)).select().single()
+    if (error) { setDatabaseError(error.message || 'Could not save the task.'); return }
+    setTasks((current) => [taskFromRow(data), ...current])
+  }
+
+  async function updateTaskStatus(id, status) {
+    const patch = { status, completed_at: status === 'Done' ? new Date().toISOString() : null }
+    const { data, error } = await supabase.from('horizon_tasks').update(patch).eq('id', id).select().single()
+    if (error) { setDatabaseError(error.message || 'Could not update the task.'); return }
+    const saved = taskFromRow(data)
+    setTasks((current) => current.map((task) => task.id === id ? saved : task))
+  }
+
+  async function deleteTask(id) {
+    setTasks((current) => current.filter((task) => task.id !== id))
+    const { error } = await supabase.from('horizon_tasks').delete().eq('id', id)
+    if (error) { setDatabaseError(error.message || 'Could not delete the task.'); await loadTasks() }
+  }
+
+  async function addEvent(event) {
+    const { data, error } = await supabase.from('horizon_events').insert(eventToRow(event)).select().single()
+    if (error) { setDatabaseError(error.message || 'Could not save the event.'); return }
+    setEvents((current) => [...current, eventFromRow(data)].sort((a, b) => a.date < b.date ? -1 : 1))
+  }
+
+  async function deleteEvent(id) {
+    setEvents((current) => current.filter((event) => event.id !== id))
+    const { error } = await supabase.from('horizon_events').delete().eq('id', id)
+    if (error) { setDatabaseError(error.message || 'Could not delete the event.'); await loadEvents() }
+  }
+
   if (!session) return <AccessGate />
+
+  const selectedProject = projects.find((project) => project.id === selectedProjectId)
+  const pageTitle = activeView === 'Horizon' ? 'System Horizon' : activeView === 'ProjectDetail' ? (selectedProject?.name ?? 'Project') : activeView
 
   return <div className="app-provider">
     <div className="app-shell">
       <aside className="side-nav" aria-label="Primary navigation">
         <button className="brand-mark" type="button" aria-label="Open Horizon" onClick={() => setActiveView('Horizon')}><span>SH</span><i aria-hidden="true" /></button>
-        <nav>{navItems.map(([label, code]) => <button className={activeView === label ? 'nav-item active' : 'nav-item'} key={label} type="button" onClick={() => setActiveView(label)}><span>{code}</span><b>{label}</b></button>)}</nav>
+        <nav>{navItems.map(([label, code]) => <button className={activeView === label || (activeView === 'ProjectDetail' && label === 'Projects') ? 'nav-item active' : 'nav-item'} key={label} type="button" onClick={() => setActiveView(label)}><span>{code}</span><b>{label}</b></button>)}</nav>
         <div className="nav-footer"><Signal /><span>Sync stable</span></div>
       </aside>
 
       <main className="main-content">
         <header className="topbar">
-          <div><span>{greeting}</span><h1>{activeView === 'Horizon' ? 'System Horizon' : activeView}</h1></div>
+          <div><span>{greeting}</span><h1>{pageTitle}</h1></div>
           <div className="topbar-tools"><label className="search-field"><span>Search</span><input aria-label="Search System Horizon" placeholder="Find a system" /></label><Button type="button" onClick={() => supabase.auth.signOut()}>Sign out</Button><DateReadout /></div>
         </header>
         {databaseError && <p className="database-error" role="alert">Database error: {databaseError}</p>}
-        {activeView === 'Projects' ? <ProjectRegistry projects={projects} selectedProjectId={selectedProjectId} onSelectProject={setSelectedProjectId} onAddProject={addProject} onSeedProjects={seedProjects} /> : activeView === 'Career' ? <CareerView jobs={jobs} jobError={jobError} /> : activeView === 'Horizon' ? <Horizon projects={projects} onProjects={() => setActiveView('Projects')} /> : <ScaffoldView view={activeView} onOpenProjects={() => setActiveView('Projects')} />}
+        {activeView === 'ProjectDetail' && selectedProject ? <ProjectDetailView project={selectedProject} tasks={tasks} onBack={() => setActiveView('Projects')} onAddTask={addTask} onUpdateTaskStatus={updateTaskStatus} onDeleteTask={deleteTask} />
+          : activeView === 'Projects' ? <ProjectRegistry projects={projects} selectedProjectId={selectedProjectId} onSelectProject={setSelectedProjectId} onAddProject={addProject} onSeedProjects={seedProjects} onOpenProject={openProject} />
+          : activeView === 'Flow' ? <FlowView tasks={tasks} projects={projects} onOpenProjects={() => setActiveView('Projects')} onAddTask={addTask} onUpdateTaskStatus={updateTaskStatus} onDeleteTask={deleteTask} />
+          : activeView === 'Calendar' ? <CalendarView events={events} projects={projects} onAddEvent={addEvent} onDeleteEvent={deleteEvent} />
+          : activeView === 'Career' ? <CareerView jobs={jobs} jobError={jobError} />
+          : activeView === 'Archive' ? <ArchiveView />
+          : <Horizon projects={projects} onProjects={() => setActiveView('Projects')} />}
       </main>
     </div>
   </div>

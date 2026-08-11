@@ -4,7 +4,7 @@
 > Handoff is **enabled** for this repo. Every change updates the DO NEXT block below and prepends a log entry.
 
 ## ▶ DO NEXT
-Sign in and confirm the Career view renders correctly with live data: check the weekly contact count, the new "A-rated leads" section (only shows if a job is ≥85% match, status Discovered/Saved, and not past deadline — may be empty right now), and the unreported-last-week alert (only shows if applicable).
+Sign in and visually confirm the new build: open a project from the registry ("Open project page" button in the inspector) and add a test task; check Flow shows that same task in its Active column and that moving it between columns via the status dropdown persists on refresh; check Calendar renders the current month, add a test event, and confirm it shows on the right day; check Archive loads entries from at least SystemHorizon's own HANDOFF.md (client-side fetch to raw.githubusercontent.com — if nothing loads, check for CORS/network errors in the browser console). Also still pending from last session: visual confirmation of the Career GDOL fix (weekly contact count, A-rated leads section, unreported-last-week alert).
 - Naming is locked: **Rectrix Caedere** is the campaign and brand; **Aftermath Meridian** is the live website/app; **Aftermath Atlas** is its Supabase data layer.
 - Remote: `origin` is `TheLittlestAskew/SystemHorizon`. The prior standalone HTML control panel is preserved as `meridian-keystone.html` while the Vite dashboard is the active entry point.
 - `README.md` is still the stock Vite template text; it describes React+Vite, not System Horizon.
@@ -13,6 +13,19 @@ Sign in and confirm the Career view renders correctly with live data: check the 
 
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
+
+### 2026-08-11 17:36 ET · Claude chat
+- **Changed:** Built out the three remaining scaffolded views plus a new per-project page, per Tayls' "build all of them" direction.
+  - New Supabase tables `horizon_tasks` (project-scoped, statuses Active/Waiting/Parked/Done, RLS mirrors `horizon_projects`) and `horizon_events` (date/time, optional project link, same RLS pattern), both reusing the existing `set_horizon_updated_at()` trigger.
+  - **ProjectDetailView:** a dedicated full page per project, reached via a new "Open project page" button in the registry inspector — summary, next action, headline, field notes, and a real task list scoped to that project with add/status-change/delete.
+  - **Flow:** now a real cross-project kanban over `horizon_tasks`, four columns by status, quick-add attachable to any project or none. Replaces the scaffold.
+  - **Calendar:** a plain month grid over `horizon_events` (no external calendar library) — click a day, add/delete events. Replaces the scaffold.
+  - **Archive:** live client-side pull of `HANDOFF.md` from every repo with handoff enabled (SystemHorizon, ashfall_vault, rectrixcaedere, taylorritchie, sitl_vault, pacts_power_vault — confirmed via HTTP check, the other three repos in Tayls' stack 404 and are correctly excluded), parsed into entries and merged into one feed sorted by timestamp. Replaces the scaffold.
+  - Removed `ScaffoldView` entirely (dead code once all three real views existed) and its now-unused CSS.
+  - New shared `TaskRow` component used by both the project page and Flow.
+- **Commit:** `737d4f8` (App.jsx), `7c926fc` (App.css)
+- **Next:** Visual QA per DO NEXT above — none of Flow, Calendar, Archive, or the project detail pages have been opened in the live app yet this session.
+- **Watch out:** `push_files` timed out twice on the combined App.jsx+App.css payload (~93KB); fell back to two sequential `create_or_update_file` calls. If editing both files together again, expect to need the same fallback.
 
 ### 2026-08-10 17:43 ET · Claude chat
 - **Changed:** Compared Career's GDOL logic against Septentrion's Job Ops panel (`dashboard/collectors/jobs.js`, read directly from the local vault) and found they diverged despite both reading `dashboard_jobs`. Fixed:

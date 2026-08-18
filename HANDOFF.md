@@ -14,6 +14,12 @@ Sign in and visually confirm the new build: open a project from the registry ("O
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
 
+### 2026-08-18 01:36 ET · Codex
+- **Changed:** Recorded three future private organizers in the System Horizon registry: GitHub/local-mirror freshness and banking checks, prescription/refill and doctor-topic tracking, and family Christmas gift notes.
+- **Commit:** `20ed369`
+- **Next:** Decide which private organizer belongs in the next System Horizon build.
+- **Watch out:** Health and family records need owner-only storage and should never be exposed through public repo data or the archive feed.
+
 ### 2026-08-18 01:28 ET · Codex
 - **Changed:** Recorded two future System Horizon capabilities in the project registry: a local Walmart/Kroger/Publix grocery comparison with recommended carts, and a desktop brain-dump capture widget that routes notes to the right Horizon area.
 - **Commit:** `215b4d8`

@@ -14,6 +14,12 @@ Sign in and visually confirm the new build: open a project from the registry ("O
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
 
+### 2026-08-18 01:28 ET · Codex
+- **Changed:** Recorded two future System Horizon capabilities in the project registry: a local Walmart/Kroger/Publix grocery comparison with recommended carts, and a desktop brain-dump capture widget that routes notes to the right Horizon area.
+- **Commit:** `215b4d8`
+- **Next:** Decide whether the grocery page or desktop capture widget should be the next System Horizon build.
+- **Watch out:** Price coverage, item matching, and cart automation all depend on retailer-supported access and must be verified before implementation.
+
 ### 2026-08-11 17:36 ET · Claude chat
 - **Changed:** Built out the three remaining scaffolded views plus a new per-project page, per Tayls' "build all of them" direction.
   - New Supabase tables `horizon_tasks` (project-scoped, statuses Active/Waiting/Parked/Done, RLS mirrors `horizon_projects`) and `horizon_events` (date/time, optional project link, same RLS pattern), both reusing the existing `set_horizon_updated_at()` trigger.

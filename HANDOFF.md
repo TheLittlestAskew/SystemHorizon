@@ -4,7 +4,7 @@
 > Handoff is **enabled** for this repo. Every change updates the DO NEXT block below and prepends a log entry.
 
 ## ▶ DO NEXT
-Sign in and visually confirm the new build: open a project from the registry ("Open project page" button in the inspector) and add a test task; check Flow shows that same task in its Active column and that moving it between columns via the status dropdown persists on refresh; check Calendar renders the current month, add a test event, and confirm it shows on the right day; check Archive loads entries from at least SystemHorizon's own HANDOFF.md (client-side fetch to raw.githubusercontent.com — if nothing loads, check for CORS/network errors in the browser console). Also still pending from last session: visual confirmation of the Career GDOL fix (weekly contact count, A-rated leads section, unreported-last-week alert).
+Fix the stale live-URL reference wherever it's written down (project master-context doc, any bookmarks/notes) — the correct live URL is `https://thelittlestaskew.github.io/SystemHorizon/`, not `taylorritchie.github.io/SystemHorizon/` (that account never owned this repo's Pages site and 404s). Once that's corrected, decide which of Codex's three recorded future capabilities to build next: the grocery price-comparison page, the desktop brain-dump capture widget, or one of the three private organizers (GitHub/local-mirror freshness, prescription/refill tracking, family Christmas gift notes).
 - Naming is locked: **Rectrix Caedere** is the campaign and brand; **Aftermath Meridian** is the live website/app; **Aftermath Atlas** is its Supabase data layer.
 - Remote: `origin` is `TheLittlestAskew/SystemHorizon`. The prior standalone HTML control panel is preserved as `meridian-keystone.html` while the Vite dashboard is the active entry point.
 - `README.md` is still the stock Vite template text; it describes React+Vite, not System Horizon.
@@ -13,6 +13,17 @@ Sign in and visually confirm the new build: open a project from the registry ("O
 
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
+
+### 2026-08-20 15:52 ET · Claude chat
+- **Changed:** Ran the full visual QA pass carried over from the 08-11 and 08-10 sessions' DO NEXT, live in the browser (Claude in Chrome) signed in as owner.
+  - Found and confirmed the root cause of a reported 404: the live app was being reached at `taylorritchie.github.io/SystemHorizon`, which was never correct — GitHub Pages serves from the owning account, and `origin` has been `TheLittlestAskew/SystemHorizon` since the 2026-07-26 migration. Correct URL is `https://thelittlestaskew.github.io/SystemHorizon/`, confirmed live and loading clean.
+  - Project → Flow: opened Ashfall Britannia's project page, added a test task, confirmed it appeared in Flow's Active column, moved it to Waiting via the status dropdown, confirmed the move persisted after a hard refresh. Task then deleted (test artifact cleanup).
+  - Calendar: current month (August 2026) rendered correctly with today (the 20th) highlighted; added a test event on today, confirmed it showed under the day panel and persisted after refresh. Event then deleted (test artifact cleanup).
+  - Archive: loaded live within a few seconds, no CORS/network errors — pulling entries from ashfall_vault, sitl_vault, and SystemHorizon's own HANDOFF.md, sorted newest-first as designed.
+  - Career: all four GDOL fixes from 08-10 confirmed rendering correctly — "1 work-search contact from last week still needs to be reported to GA DOL" alert, "0/3 contacts" bounded weekly meter, "0 applications logged this week" count, and a populated A-rated leads section sorted by match %.
+- **Commit:** none (verification pass only, no code changes; both test artifacts removed via the UI before session close)
+- **Next:** See DO NEXT above — correct the stale URL reference at the source, then pick the next build from Codex's three recorded ideas.
+- **Watch out:** The Flow status dropdown occasionally needed a second click/keypress to register in browser automation — page interaction lag, not a reproduced app bug; the underlying persistence worked correctly once the change landed.
 
 ### 2026-08-18 01:36 ET · Codex
 - **Changed:** Recorded three future private organizers in the System Horizon registry: GitHub/local-mirror freshness and banking checks, prescription/refill and doctor-topic tracking, and family Christmas gift notes.

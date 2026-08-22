@@ -4,15 +4,26 @@
 > Handoff is **enabled** for this repo. Every change updates the DO NEXT block below and prepends a log entry.
 
 ## ▶ DO NEXT
-Fix the stale live-URL reference wherever it's written down (project master-context doc, any bookmarks/notes) — the correct live URL is `https://thelittlestaskew.github.io/SystemHorizon/`, not `taylorritchie.github.io/SystemHorizon/` (that account never owned this repo's Pages site and 404s). Once that's corrected, decide which of Codex's three recorded future capabilities to build next: the grocery price-comparison page, the desktop brain-dump capture widget, or one of the three private organizers (GitHub/local-mirror freshness, prescription/refill tracking, family Christmas gift notes).
+Sign in and confirm the new Mirrors panel: fill in `scripts/mirror-freshness/.env` (see that folder's README) with the System Horizon login and the anon key already in `src/supabase.js`, run `node mirror-freshness-sync.mjs` once manually, then open the Mirrors tab and confirm all nine repos show up with sensible uncommitted/ahead/behind counts. Also still open: fix the stale live-URL reference wherever it's written down outside this repo (project master-context doc, any bookmarks/notes) — the correct live URL is `https://thelittlestaskew.github.io/SystemHorizon/`, not `taylorritchie.github.io/SystemHorizon/`.
 - Naming is locked: **Rectrix Caedere** is the campaign and brand; **Aftermath Meridian** is the live website/app; **Aftermath Atlas** is its Supabase data layer.
 - Remote: `origin` is `TheLittlestAskew/SystemHorizon`. The prior standalone HTML control panel is preserved as `meridian-keystone.html` while the Vite dashboard is the active entry point.
 - `README.md` is still the stock Vite template text; it describes React+Vite, not System Horizon.
+- The Supabase project behind System Horizon is actually named `aftermath-atlas-dev` (id `drtvlcgyjlofaffbwael`) despite the `horizon_*` table naming — same project `src/supabase.js` already points at, just noting the name mismatch so it isn't confused for a different project later.
 
 ---
 
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
+
+### 2026-08-22 14:40 ET · Claude chat
+- **Changed:** Built the mirror-freshness checks feature end to end (Tayls picked this from Codex's three recorded private-organizer ideas).
+  - New Supabase table `horizon_repo_health` (same project as the other `horizon_*` tables), owner-scoped RLS matching `horizon_projects`' exact policy pattern, unique on `(owner, repo_name)` for upserts.
+  - **Standalone local sync script** at `scripts/mirror-freshness/` (`mirror-freshness-sync.mjs` + `mirror-freshness-sync.config.json` + README): walks Tayls' nine local repo mirrors, runs `git status`/`fetch`/`rev-list --left-right --count` per repo, reads each repo's local `HANDOFF.md` for its newest entry timestamp, signs in to Supabase as the System Horizon owner account (not a service-role key), and upserts one row per repo. Zero npm dependencies — built-in `fetch` and `child_process`. Designed per Tayls' explicit ask to stay decoupled from the in-progress Septentrion/AI-ops centralization, so it can be run standalone via `node`, headless via Claude Code (`claude -p "/mirror-freshness-sync"`, same pattern as the existing `/septentrion-sync`), or folded into whatever the revamp produces later.
+  - **New "Mirrors" nav view** (`MirrorsView` in `App.jsx`) reading `horizon_repo_health` client-side only — no git or filesystem access from the browser. Flags uncommitted work, unpushed/behind commit counts, and "unbanked handoff" (local HEAD commit newer than the repo's last local HANDOFF.md entry, since the sync script's timestamp parsing treats "ET" as fixed EDT — a documented approximation, off by up to an hour during EST months). Sorted worst-first. Repos without a local mirror path just show "no local mirror on this machine" instead of stale/wrong data. Nav renumbered: Mirrors is 06, Archive moved to 07.
+  - Confirmed via `apply_migration`/`execute_sql` on the Supabase MCP that the RLS policy text on the new table is byte-for-byte the same shape as `horizon_projects`' four policies before writing them.
+- **Commit:** `f4af584` (sync script), `effc59f` (config), `76d56b9` (README), `6b44423` (.gitignore), `c18ccf0` (App.jsx), `5a53dc8` (App.css)
+- **Next:** See DO NEXT above — the panel will show "No repo health data yet" until the sync script is run at least once with real credentials, since nobody's local machine has run it yet.
+- **Watch out:** `push_files` timed out again on a 4-file combined payload (same known trap as the 08-11 session) — fell back to four sequential `create_or_update_file` calls, no data lost. Also: the local repo paths were provided as a screenshot/table with the `septentrion` row's remote column visually cut off (`TheLittlestAskew/septentrion`); if that repo's actual remote name differs, the config's `name` field should be corrected to match — it currently assumes `septentrion` (lowercase, matching the given remote), not `Septentrion` (the local folder's capitalization).
 
 ### 2026-08-20 15:52 ET · Claude chat
 - **Changed:** Ran the full visual QA pass carried over from the 08-11 and 08-10 sessions' DO NEXT, live in the browser (Claude in Chrome) signed in as owner.

@@ -1,13 +1,3 @@
 {
-  "repos": [
-    { "name": "taylorritchie", "localPath": "C:\\Users\\theli\\taylorritchie" },
-    { "name": "claude-artifacts", "localPath": "C:\\Users\\theli\\claude-artifacts" },
-    { "name": "nonprofit-power-platform-ecosystem", "localPath": "C:\\Users\\theli\\nonprofit-power-platform-ecosystem" },
-    { "name": "aftermath-atlas", "localPath": "C:\\Users\\theli\\Obsidian Vaults\\aftermath-atlas" },
-    { "name": "ashfall_vault", "localPath": "C:\\Users\\theli\\Obsidian Vaults\\ashfall_vault" },
-    { "name": "sitl_vault", "localPath": "C:\\Users\\theli\\Obsidian Vaults\\sitl_vault" },
-    { "name": "wtff_vault", "localPath": "C:\\Users\\theli\\Obsidian Vaults\\wtff_vault" },
-    { "name": "pacts_power_vault", "localPath": "C:\\Users\\theli\\Obsidian Vaults\\pacts_power_vault" },
-    { "name": "septentrion", "localPath": "C:\\Users\\theli\\Obsidian Vaults\\Septentrion" }
-  ]
+  "_moved": "This config now lives at Scripts/mirror-freshness/mirror-freshness-sync.config.json in the TheLittlestAskew/septentrion repo. This stub is left here because the tool used to write this file doesn't have delete permission on this repo."
 }

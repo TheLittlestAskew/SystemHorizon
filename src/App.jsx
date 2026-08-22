@@ -9,7 +9,8 @@ const navItems = [
   ['Flow', '03'],
   ['Calendar', '04'],
   ['Career', '05'],
-  ['Archive', '06'],
+  ['Mirrors', '06'],
+  ['Archive', '07'],
 ]
 
 const initialProjects = [
@@ -53,6 +54,10 @@ function eventFromRow(row) {
 
 function eventToRow(event) {
   return { project_id: event.projectId ?? null, title: event.title, event_date: event.date, start_time: event.startTime || null, end_time: event.endTime || null, notes: event.notes || null }
+}
+
+function repoHealthFromRow(row) {
+  return { id: row.id, repoName: row.repo_name, localPath: row.local_path, hasLocalMirror: row.has_local_mirror, uncommittedCount: row.uncommitted_count, aheadCount: row.ahead_count, behindCount: row.behind_count, localHeadSha: row.local_head_sha, localHeadAt: row.local_head_at, remoteHeadSha: row.remote_head_sha, lastHandoffAt: row.last_handoff_at, checkError: row.check_error, checkedAt: row.checked_at }
 }
 
 function Button({ tone = 'quiet', className = '', children, ...props }) {
@@ -507,7 +512,7 @@ function ArchiveView() {
   }, [])
 
   return <section className="archive-view" aria-labelledby="archive-heading">
-    <header className="view-header"><div><p className="eyebrow">System index / 06</p><h2 id="archive-heading">Archive field</h2><p>Live pull of the most recent HANDOFF.md entries from every repo with handoff enabled.</p></div></header>
+    <header className="view-header"><div><p className="eyebrow">System index / 07</p><h2 id="archive-heading">Archive field</h2><p>Live pull of the most recent HANDOFF.md entries from every repo with handoff enabled.</p></div></header>
     {status === 'loading' && <p className="empty-state">Pulling repo handoffs…</p>}
     {status === 'empty' && <p className="database-error" role="alert">Could not read any HANDOFF.md files. Check network access to raw.githubusercontent.com.</p>}
     <div className="archive-feed">
@@ -515,6 +520,64 @@ function ArchiveView() {
         <div className="archive-entry-meta"><b>{entry.repo}</b><span>{entry.timestamp}</span>{entry.source ? <span>{entry.source}</span> : null}</div>
         <p>{entry.summary}</p>
       </article>)}
+    </div>
+  </section>
+}
+
+function relativeTime(iso) {
+  if (!iso) return 'never'
+  const diffMs = Date.now() - new Date(iso).getTime()
+  const minutes = Math.round(diffMs / 60000)
+  if (minutes < 1) return 'just now'
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.round(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.round(hours / 24)
+  return `${days}d ago`
+}
+
+function repoStatusFlags(repo) {
+  if (!repo.hasLocalMirror) return { flags: [repo.checkError || 'No local mirror on this machine'], tone: 'violet' }
+  const flags = []
+  if (repo.checkError) flags.push(repo.checkError)
+  if (repo.uncommittedCount > 0) flags.push(`${repo.uncommittedCount} uncommitted change${repo.uncommittedCount === 1 ? '' : 's'}`)
+  if (repo.aheadCount > 0) flags.push(`${repo.aheadCount} unpushed commit${repo.aheadCount === 1 ? '' : 's'}`)
+  if (repo.behindCount > 0) flags.push(`${repo.behindCount} commit${repo.behindCount === 1 ? '' : 's'} behind remote`)
+  if (repo.localHeadAt && repo.lastHandoffAt && repo.localHeadAt > repo.lastHandoffAt) flags.push('Unbanked handoff')
+  return { flags, tone: flags.length ? 'coral' : 'cyan' }
+}
+
+function MirrorsView({ repoHealth }) {
+  const rows = [...repoHealth].sort((a, b) => {
+    const aFlags = repoStatusFlags(a).flags.length
+    const bFlags = repoStatusFlags(b).flags.length
+    if (aFlags !== bFlags) return bFlags - aFlags
+    return a.repoName.localeCompare(b.repoName)
+  })
+
+  return <section className="mirrors-view" aria-labelledby="mirrors-heading">
+    <header className="view-header">
+      <div>
+        <p className="eyebrow">System index / 06</p>
+        <h2 id="mirrors-heading">Mirror freshness</h2>
+        <p>GitHub repos and local mirrors, checked for uncommitted work, unpushed commits, commits behind, and unbanked handoffs.</p>
+      </div>
+    </header>
+    {rows.length === 0 && <p className="empty-state">No repo health data yet. Run the mirror-freshness sync script (scripts/mirror-freshness/) to populate this panel.</p>}
+    <div className="mirrors-list">
+      {rows.map((repo) => {
+        const { flags, tone } = repoStatusFlags(repo)
+        return <article className="mirror-row" key={repo.id}>
+          <div className="mirror-row-heading">
+            <Signal tone={tone} />
+            <strong>{repo.repoName}</strong>
+            <small>checked {relativeTime(repo.checkedAt)}</small>
+          </div>
+          {flags.length > 0
+            ? <ul className="mirror-flags">{flags.map((flag) => <li key={flag}>{flag}</li>)}</ul>
+            : <p className="mirror-clean">Clean — matches remote, nothing uncommitted, handoff banked.</p>}
+        </article>
+      })}
     </div>
   </section>
 }
@@ -528,6 +591,7 @@ function App() {
   const [events, setEvents] = useState([])
   const [jobs, setJobs] = useState([])
   const [jobError, setJobError] = useState('')
+  const [repoHealth, setRepoHealth] = useState([])
   const [databaseError, setDatabaseError] = useState('')
   const greeting = useMemo(() => new Date().getHours() < 12 ? 'Morning field check' : new Date().getHours() < 18 ? 'Afternoon field check' : 'Evening field check', [])
 
@@ -569,6 +633,12 @@ function App() {
     setJobError('')
   }
 
+  async function loadRepoHealth() {
+    const { data, error } = await supabase.from('horizon_repo_health').select('*').order('repo_name', { ascending: true })
+    if (error) throw error
+    setRepoHealth((data ?? []).map(repoHealthFromRow))
+  }
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
     const { data: subscription } = supabase.auth.onAuthStateChange((_event, nextSession) => setSession(nextSession))
@@ -577,7 +647,7 @@ function App() {
 
   useEffect(() => {
     if (!session) return
-    Promise.all([loadProjects(), loadTasks(), loadEvents(), loadJobPipeline()]).catch((error) => setDatabaseError(error.message || 'Could not load private records.'))
+    Promise.all([loadProjects(), loadTasks(), loadEvents(), loadJobPipeline(), loadRepoHealth()]).catch((error) => setDatabaseError(error.message || 'Could not load private records.'))
   }, [session])
 
   async function addProject(project) {
@@ -659,6 +729,7 @@ function App() {
           : activeView === 'Flow' ? <FlowView tasks={tasks} projects={projects} onOpenProjects={() => setActiveView('Projects')} onAddTask={addTask} onUpdateTaskStatus={updateTaskStatus} onDeleteTask={deleteTask} />
           : activeView === 'Calendar' ? <CalendarView events={events} projects={projects} onAddEvent={addEvent} onDeleteEvent={deleteEvent} />
           : activeView === 'Career' ? <CareerView jobs={jobs} jobError={jobError} />
+          : activeView === 'Mirrors' ? <MirrorsView repoHealth={repoHealth} />
           : activeView === 'Archive' ? <ArchiveView />
           : <Horizon projects={projects} onProjects={() => setActiveView('Projects')} />}
       </main>

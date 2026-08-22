@@ -122,6 +122,18 @@ button { -webkit-tap-highlight-color: transparent; }
 .archive-feed { display:grid; gap:12px; margin-top:24px; }
 .archive-entry { padding:18px 20px; border:1px solid rgb(121 135 158 / .23); border-radius:18px; background:#fff; }.archive-entry-meta { display:flex; gap:12px; align-items:baseline; margin-bottom:8px; }.archive-entry-meta b { font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:#ff501f; }.archive-entry-meta span { color:#8b98ac; font:10px 'Cascadia Mono', Consolas, monospace; text-transform:uppercase; }.archive-entry p { margin:0; color:#3f4a5c; font-size:13px; line-height:1.5; }
 
+/* Mirrors: GitHub repo and local-mirror freshness pulled from horizon_repo_health, populated by the local sync script in scripts/mirror-freshness/. */
+.mirrors-view { padding-top:44px; }
+.mirrors-list { display:grid; gap:12px; margin-top:24px; }
+.mirror-row { padding:18px 20px; border:1px solid rgb(121 135 158 / .23); border-radius:18px; background:#fff; }
+.mirror-row-heading { display:flex; align-items:center; gap:10px; }
+.mirror-row-heading strong { font-size:14px; text-transform:uppercase; letter-spacing:.02em; }
+.mirror-row-heading small { margin-left:auto; color:#8b98ac; font:10px 'Cascadia Mono', Consolas, monospace; text-transform:uppercase; }
+.mirror-flags { display:grid; gap:6px; margin:12px 0 0; padding:0; list-style:none; }
+.mirror-flags li { position:relative; padding-left:16px; color:#a92c00; font-size:12px; line-height:1.4; }
+.mirror-flags li::before { position:absolute; top:.45em; left:0; width:6px; height:6px; border-radius:50%; background:#ff501f; content:''; }
+.mirror-clean { margin:12px 0 0; color:#3b9a4c; font-size:12px; }
+
 /* Project registry: portfolio detail belongs beside the index, not behind a generic card. */
 .project-detail-notes { margin-top:28px; padding-top:17px; border-top:1px solid rgb(255 255 255 / .16); }
 .project-detail-notes > span { color:#b9c7e6; font:10px 'Cascadia Mono', Consolas, monospace; letter-spacing:.08em; text-transform:uppercase; }

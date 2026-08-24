@@ -4,7 +4,7 @@
 > Handoff is **enabled** for this repo. Every change updates the DO NEXT block below and prepends a log entry.
 
 ## ▶ DO NEXT
-Sign in and confirm the Mirrors panel once the sync script has been run at least once: set up `.env` and run `node mirror-freshness-sync.mjs` from `Scripts/mirror-freshness/` in the **septentrion** vault repo (not this repo — the script lives there now, see 2026-08-22 log entries below), then open the Mirrors tab here and confirm all nine repos show up with sensible uncommitted/ahead/behind counts. Also still open: fix the stale live-URL reference wherever it's written down outside this repo (project master-context doc, any bookmarks/notes) — the correct live URL is `https://thelittlestaskew.github.io/SystemHorizon/`, not `taylorritchie.github.io/SystemHorizon/`.
+Fix the stale live-URL reference wherever it's written down outside this repo (project master-context doc, any bookmarks/notes) — the correct live URL is `https://thelittlestaskew.github.io/SystemHorizon/`, not `taylorritchie.github.io/SystemHorizon/`. The master context doc also still describes the retired single-file Babel/`control-panel.html` pipeline instead of the current React+Vite+GitHub Actions architecture — both need correcting at the source (Notion).
 - Naming is locked: **Rectrix Caedere** is the campaign and brand; **Aftermath Meridian** is the live website/app; **Aftermath Atlas** is its Supabase data layer.
 - Remote: `origin` is `TheLittlestAskew/SystemHorizon`. The prior standalone HTML control panel is preserved as `meridian-keystone.html` while the Vite dashboard is the active entry point.
 - `README.md` is still the stock Vite template text; it describes React+Vite, not System Horizon.
@@ -15,6 +15,13 @@ Sign in and confirm the Mirrors panel once the sync script has been run at least
 
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
+
+### 2026-08-24 ET · Claude chat
+- **Changed:** Verified the mirror-freshness sync end to end. Tayls set up `.env` in `Scripts/mirror-freshness/` in the septentrion vault repo with real Supabase credentials and her System Horizon login, ran `node mirror-freshness-sync.mjs` locally, and confirmed all nine repos populated in the Mirrors tab (nav 06) with no errors and no "no local mirror" flags. This closes the item that's been sitting in DO NEXT since 2026-08-22.
+  - Also trimmed this log to the last 15 entries per the repo-handoff skill's maintenance step — it had grown to 23 entries with several duplicated/out-of-order 2026-07-26 sessions. The 8 oldest were moved to `handoff-archive/2026-07.md`.
+- **Commit:** none (verification pass only — no code changed; this HANDOFF.md update is the only write)
+- **Next:** See DO NEXT above — the stale live-URL and retired-architecture references in the Notion master context doc are the only open item.
+- **Watch out:** None.
 
 ### 2026-08-22 19:10 ET · Claude chat
 - **Changed:** Relocated the mirror-freshness sync script out of this repo and into `TheLittlestAskew/septentrion` at `Scripts/mirror-freshness/`, per Tayls' direction — the scheduled local automation (07:30 `septentrion-sync` and friends) already runs from that vault, so the script belongs there rather than requiring a separate local clone of this repo just to run one script.
@@ -107,77 +114,4 @@ Sign in and confirm the Mirrors panel once the sync script has been run at least
 - **Commit:** `f633f58`
 - **Next:** Add your first application and work-search contact, then confirm the weekly meter updates.
 
-### 2026-07-27 16:01 ET · Codex
-- **Changed:** Moved the Project Registry onto a new owner-only `horizon_projects` table in Rectrix Caedere Supabase.
-  Added private email/password access, a one-click portfolio import, explicit database errors, and the checked-in migration record.
-- **Commit:** `776c4c3`
-- **Next:** Create a System Horizon account, load the portfolio registry, and confirm the records persist after signing out and back in.
-- **Watch out:** The job tracker is not yet in this database; only the shared secure foundation and project registry are live.
-
-### 2026-07-27 15:31 ET · Codex
-- **Changed:** Locked the Aftermath naming across the registry: Aftermath Meridian is the live analytics website, and Aftermath Atlas is its Supabase data layer.
-- **Commit:** `c0476d4`
-- **Next:** Connect the Project Registry to live project rows.
-
-### 2026-07-27 15:25 ET · Codex
-- **Changed:** Verified the GitHub Actions artifact replaced the prior branch deployment. The live page now loads the built React bundle and stylesheet, renders the app root, and reports no console errors.
-- **Commit:** `f82c3d5`
-- **Next:** Decide the canonical RC / Aftermath naming before connecting the registry to live project rows.
-
-### 2026-07-27 15:21 ET · Codex
-- **Changed:** Triggered a fresh GitHub Pages deployment after the publishing source was switched to GitHub Actions.
-- **Commit:** `277680b`
-- **Next:** Confirm the Actions artifact replaces the prior branch deployment.
-
-### 2026-07-26 23:18 ET · Codex
-- **Changed:** Added the GitHub Pages deployment workflow and Vite project base path; added the missing npm lockfile so the cloud build is reproducible.
-- **Commit:** `8b45ea5`
-- **Next:** Set Pages to GitHub Actions and confirm the first deployment completes.
-
-### 2026-07-26 23:00 ET · Codex
-- **Changed:** Connected the local Vite dashboard to `TheLittlestAskew/SystemHorizon` and safely merged its unrelated legacy history.
-  Preserved the prior control panel as `meridian-keystone.html`; the Vite `index.html` remains the active entry point.
-- **Commit:** `ff2075c`
-- **Next:** Decide the canonical RC / Aftermath naming before connecting the registry to live project rows.
-
-### 2026-06-23 09:37 ET · Claude chat
-- **Changed:** Enabled handoff in the prior single-file SystemHorizon control panel, now preserved in this repository history.
-- **Commit:** `docs: enable repo handoff`
-- **Next:** Superseded by the current Vite dashboard return point.
-
-### 2026-07-26 22:48 ET · Codex
-- **Changed:** Replaced the four placeholder projects with the 16-project portfolio registry: real areas, statuses, health, metrics, summaries, return points, and project-specific field notes.
-  The selected-project panel now exposes useful project context instead of an abstract signal score.
-- **Commit:** `2d12c4e`
-- **Next:** Decide the canonical RC / Aftermath naming before connecting the registry to live project rows.
-- **Watch out:** Aftermath Atlas has known branch and migration debt; System Horizon has a missing JSX-source warning. Both are deliberately surfaced in the registry.
-
-### 2026-07-26 20:31 ET · Codex
-- **Changed:** Completed the navigation scaffold for Flow, Calendar, and Archive.
-  Each now has a distinct responsive destination, explicit connection status, and an honest placeholder structure ready for real data and behavior.
-- **Commit:** `266197c`
-- **Next:** Choose the first scaffold to connect to real data and behavior.
-- **Watch out:** Production build and lint pass. The local browser automation probe timed out, so click through Flow, Calendar, and Archive in the app before deep implementation.
-
-### 2026-07-26 16:53 ET · Codex
-- **Changed:** Removed navy as a dashboard base color.
-  Rebuilt depth with true black and charcoal, while the hero and active signals now use electric blue, cyan, violet, orange, yellow, and signal-red.
-- **Commit:** `f1ab94e`
-- **Next:** Review the black-and-spectrum contrast before expanding the next dashboard module.
-- **Watch out:** This repository still has no Git remote, so the correction is committed locally but not banked off-machine.
-
-### 2026-07-26 14:17 ET · Codex
-- **Changed:** Intensified the replacement palette across the dashboard: electric blue, cyan, violet, orange, yellow, and signal-red now appear as clear active states and module accents.
-  Kept white, black, gray, and slate as the only neutral surfaces, with no pink UI color introduced.
-- **Commit:** `54314d4`
-- **Next:** Review the saturated palette in-browser and choose the next dashboard module to expand.
-- **Watch out:** This repository still has no Git remote, so the refinement is committed locally but not banked off-machine.
-
-### 2026-07-26 13:58 ET · Codex
-- **Changed:** Rebalanced the dashboard around a light-slate canvas and modular white, charcoal, gradient, and translucent panels.
-  Removed pink from the active palette, using cyan, blue, violet, orange, yellow, and lime only as intentional signals.
-- **Commit:** `f9fa32e`
-- **Next:** Review the light modular color balance and identify the next dashboard module to build.
-- **Watch out:** This repository still has no Git remote, so the update is committed locally but not banked off-machine.
-
-Earlier entries archived in `handoff-archive/2026-07.md`.
+> Older entries archived in `handoff-archive/2026-07.md`.

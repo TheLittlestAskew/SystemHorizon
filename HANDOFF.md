@@ -4,17 +4,24 @@
 > Handoff is **enabled** for this repo. Every change updates the DO NEXT block below and prepends a log entry.
 
 ## ▶ DO NEXT
-Fix the stale live-URL reference wherever it's written down outside this repo (project master-context doc, any bookmarks/notes) — the correct live URL is `https://thelittlestaskew.github.io/SystemHorizon/`, not `taylorritchie.github.io/SystemHorizon/`. The master context doc also still describes the retired single-file Babel/`control-panel.html` pipeline instead of the current React+Vite+GitHub Actions architecture — both need correcting at the source (Notion).
+No open items right now — pick the next build from Codex's recorded private-organizer ideas (prescription/refill tracking, family Christmas gift notes) or from Tayls' direction.
 - Naming is locked: **Rectrix Caedere** is the campaign and brand; **Aftermath Meridian** is the live website/app; **Aftermath Atlas** is its Supabase data layer.
 - Remote: `origin` is `TheLittlestAskew/SystemHorizon`. The prior standalone HTML control panel is preserved as `meridian-keystone.html` while the Vite dashboard is the active entry point.
 - `README.md` is still the stock Vite template text; it describes React+Vite, not System Horizon.
 - The Supabase project behind System Horizon is actually named `aftermath-atlas-dev` (id `drtvlcgyjlofaffbwael`) despite the `horizon_*` table naming — same project `src/supabase.js` already points at, just noting the name mismatch so it isn't confused for a different project later.
 - **The mirror-freshness sync script does not live in this repo.** It's in `TheLittlestAskew/septentrion` at `Scripts/mirror-freshness/`, because that's where Tayls' scheduled local automation already runs from. `scripts/mirror-freshness/` in *this* repo now contains only pointer stubs saying where it went — do not edit or run those files, they're placeholders (this repo's write access can't delete files, so they couldn't be removed outright).
+- **The project master context doc is no longer in Notion — Tayls doesn't use Notion anymore.** It now lives as `SystemHorizon_Master_Context.md` in this Claude Project's knowledge (uploaded 2026-08-24, corrected to reflect the current React+Vite+GitHub Actions architecture and the live URL). Don't point anyone back to a Notion link for it.
 
 ---
 
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
+
+### 2026-08-24 ET · Claude chat
+- **Changed:** Closed out the last open DO NEXT item. Rewrote the project master context doc from scratch (verified against live repo state — package.json, src/supabase.js, file tree — rather than trusting the old doc's claims): corrected the live URL, replaced the retired single-file Babel/`control-panel.html` pipeline description with the actual React+Vite+GitHub Actions architecture, corrected the nav/page list, and added a GitHub MCP traps section. Tayls confirmed she no longer uses Notion (where the old doc lived), so the corrected doc was uploaded directly to this Claude Project's knowledge instead as `SystemHorizon_Master_Context.md` — no more manual paste-every-session, and no Notion link to maintain or go stale again.
+- **Commit:** none (Project Knowledge upload, not a repo change; this HANDOFF.md update is the only repo write)
+- **Next:** See DO NEXT above — no open items, pick the next build.
+- **Watch out:** None.
 
 ### 2026-08-24 ET · Claude chat
 - **Changed:** Verified the mirror-freshness sync end to end. Tayls set up `.env` in `Scripts/mirror-freshness/` in the septentrion vault repo with real Supabase credentials and her System Horizon login, ran `node mirror-freshness-sync.mjs` locally, and confirmed all nine repos populated in the Mirrors tab (nav 06) with no errors and no "no local mirror" flags. This closes the item that's been sitting in DO NEXT since 2026-08-22.

@@ -12,6 +12,7 @@ const navItems = [
   ['Mirrors', '06'],
   ['Archive', '07'],
   ['Swift', '08'],
+  ['Travel', '09'],
 ]
 
 const initialProjects = [
@@ -88,6 +89,14 @@ function formatSwiftPrice(cents, currency) {
   } catch {
     return `$${(cents / 100).toFixed(2)}`
   }
+}
+
+function travelFromRow(row) {
+  return { id: row.id, tripName: row.trip_name, route: row.route, departDate: row.depart_date, returnDate: row.return_date, priceCents: row.price_cents, currency: row.currency, checkedOn: row.checked_on, notes: row.notes }
+}
+
+function travelToRow(entry) {
+  return { trip_name: entry.tripName, route: entry.route || null, depart_date: entry.departDate || null, return_date: entry.returnDate || null, price_cents: entry.priceCents, currency: entry.currency || 'USD', checked_on: entry.checkedOn, notes: entry.notes || null }
 }
 
 function Button({ tone = 'quiet', className = '', children, ...props }) {
@@ -830,6 +839,110 @@ function SwiftView({ watches, collection, events, onAddCollectionItem, onUpdateC
   </section>
 }
 
+function daysUntil(dateStr) {
+  if (!dateStr) return null
+  const target = new Date(`${dateStr}T00:00:00`)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return Math.round((target - today) / 86400000)
+}
+
+function TravelEntryRow({ entry, isLowest, onDelete }) {
+  return <article className="swift-item-row">
+    <div>
+      <strong>{formatSwiftPrice(entry.priceCents, entry.currency)}</strong>
+      <span>checked {entry.checkedOn}{entry.route ? ` · ${entry.route}` : ''}</span>
+      {entry.notes && <small>{entry.notes}</small>}
+    </div>
+    <div className="swift-event-badge-group">
+      {isLowest && <span className="swift-badge logged">Lowest seen</span>}
+      <button type="button" onClick={() => onDelete(entry.id)} aria-label={`Delete price check from ${entry.checkedOn}`}>×</button>
+    </div>
+  </article>
+}
+
+function TravelView({ entries, onAdd, onDelete }) {
+  const [isAdding, setIsAdding] = useState(false)
+  const [form, setForm] = useState({ tripName: '', route: '', departDate: '', returnDate: '', priceDollars: '', checkedOn: new Date().toISOString().slice(0, 10), notes: '' })
+  const [formError, setFormError] = useState('')
+
+  function updateField(field, value) {
+    setForm((current) => ({ ...current, [field]: value }))
+  }
+
+  async function submit(event) {
+    event.preventDefault()
+    const cleanTrip = form.tripName.trim()
+    const priceNum = Number(form.priceDollars)
+    if (!cleanTrip) { setFormError('Give the trip a name first.'); return }
+    if (!form.priceDollars.trim() || Number.isNaN(priceNum) || priceNum <= 0) { setFormError('Enter a valid price.'); return }
+    try {
+      await onAdd({
+        tripName: cleanTrip,
+        route: form.route.trim() || null,
+        departDate: form.departDate || null,
+        returnDate: form.returnDate || null,
+        priceCents: Math.round(priceNum * 100),
+        currency: 'USD',
+        checkedOn: form.checkedOn || new Date().toISOString().slice(0, 10),
+        notes: form.notes.trim() || null,
+      })
+      setForm((current) => ({ ...current, priceDollars: '', notes: '', checkedOn: new Date().toISOString().slice(0, 10) }))
+      setFormError('')
+      setIsAdding(false)
+    } catch (error) {
+      setFormError(error.message || 'The price check could not be saved.')
+    }
+  }
+
+  const trips = new Map()
+  for (const entry of entries) {
+    if (!trips.has(entry.tripName)) trips.set(entry.tripName, [])
+    trips.get(entry.tripName).push(entry)
+  }
+
+  return <section className="travel-view" aria-labelledby="travel-heading">
+    <header className="view-header">
+      <div>
+        <p className="eyebrow">System index / 09</p>
+        <h2 id="travel-heading">Travel field</h2>
+        <p>Manual price log for trips you're watching. Log a price whenever you check, and the lowest seen gets flagged.</p>
+      </div>
+      <Button tone="coral" type="button" onClick={() => setIsAdding((open) => !open)}>{isAdding ? 'Close' : 'Log a price'}</Button>
+    </header>
+
+    {isAdding && <form className="swift-item-form" onSubmit={submit}>
+      <input value={form.tripName} onChange={(event) => updateField('tripName', event.target.value)} placeholder="Trip name (e.g. PAX Unplugged)" autoFocus />
+      <input value={form.route} onChange={(event) => updateField('route', event.target.value)} placeholder="Route (e.g. ATL-PHL round trip)" />
+      <input type="date" value={form.departDate} onChange={(event) => updateField('departDate', event.target.value)} aria-label="Depart date" />
+      <input type="date" value={form.returnDate} onChange={(event) => updateField('returnDate', event.target.value)} aria-label="Return date" />
+      <input value={form.priceDollars} onChange={(event) => updateField('priceDollars', event.target.value)} placeholder="Price (USD)" inputMode="decimal" />
+      <input type="date" value={form.checkedOn} onChange={(event) => updateField('checkedOn', event.target.value)} aria-label="Checked on" />
+      <input className="swift-item-notes" value={form.notes} onChange={(event) => updateField('notes', event.target.value)} placeholder="Notes (airline, times, source site)" />
+      <Button tone="coral" type="submit">Save price check</Button>
+      {formError && <p role="alert">{formError}</p>}
+    </form>}
+
+    {trips.size === 0 && <p className="empty-state">No price checks logged yet. Log the first one above.</p>}
+
+    {[...trips.entries()].map(([tripName, tripEntries]) => {
+      const sorted = [...tripEntries].sort((a, b) => (a.checkedOn < b.checkedOn ? 1 : -1))
+      const lowestCents = Math.min(...tripEntries.map((entry) => entry.priceCents))
+      const first = tripEntries[0]
+      const departIn = daysUntil(first.departDate)
+      return <section key={tripName} className="swift-event-section">
+        <div className="instrument-heading">
+          <span>{tripName}{first.route ? ` · ${first.route}` : ''}</span>
+          <b>{tripEntries.length} check{tripEntries.length === 1 ? '' : 's'}{departIn != null && departIn >= 0 ? ` · ${departIn}d to departure` : ''}</b>
+        </div>
+        <div className="swift-collection-list">
+          {sorted.map((entry) => <TravelEntryRow key={entry.id} entry={entry} isLowest={entry.priceCents === lowestCents} onDelete={onDelete} />)}
+        </div>
+      </section>
+    })}
+  </section>
+}
+
 function App() {
   const [activeView, setActiveView] = useState('Horizon')
   const [session, setSession] = useState(null)
@@ -843,6 +956,7 @@ function App() {
   const [swiftWatch, setSwiftWatch] = useState([])
   const [swiftCollection, setSwiftCollection] = useState([])
   const [swiftEvents, setSwiftEvents] = useState([])
+  const [travelWatch, setTravelWatch] = useState([])
   const [databaseError, setDatabaseError] = useState('')
   const greeting = useMemo(() => new Date().getHours() < 12 ? 'Morning field check' : new Date().getHours() < 18 ? 'Afternoon field check' : 'Evening field check', [])
 
@@ -908,6 +1022,12 @@ function App() {
     setSwiftEvents((data ?? []).map(swiftEventFromRow))
   }
 
+  async function loadTravelWatch() {
+    const { data, error } = await supabase.from('horizon_travel_watch').select('*').order('checked_on', { ascending: false })
+    if (error) throw error
+    setTravelWatch((data ?? []).map(travelFromRow))
+  }
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
     const { data: subscription } = supabase.auth.onAuthStateChange((_event, nextSession) => setSession(nextSession))
@@ -916,7 +1036,7 @@ function App() {
 
   useEffect(() => {
     if (!session) return
-    Promise.all([loadProjects(), loadTasks(), loadEvents(), loadJobPipeline(), loadRepoHealth(), loadSwiftWatch(), loadSwiftCollection(), loadSwiftEvents()]).catch((error) => setDatabaseError(error.message || 'Could not load private records.'))
+    Promise.all([loadProjects(), loadTasks(), loadEvents(), loadJobPipeline(), loadRepoHealth(), loadSwiftWatch(), loadSwiftCollection(), loadSwiftEvents(), loadTravelWatch()]).catch((error) => setDatabaseError(error.message || 'Could not load private records.'))
   }, [session])
 
   async function addProject(project) {
@@ -1005,6 +1125,18 @@ function App() {
     if (error) { setDatabaseError(error.message || 'Could not delete the event.'); await loadSwiftEvents() }
   }
 
+  async function addTravelEntry(entry) {
+    const { data, error } = await supabase.from('horizon_travel_watch').insert(travelToRow(entry)).select().single()
+    if (error) throw error
+    setTravelWatch((current) => [travelFromRow(data), ...current])
+  }
+
+  async function deleteTravelEntry(id) {
+    setTravelWatch((current) => current.filter((entry) => entry.id !== id))
+    const { error } = await supabase.from('horizon_travel_watch').delete().eq('id', id)
+    if (error) { setDatabaseError(error.message || 'Could not delete the price check.'); await loadTravelWatch() }
+  }
+
   if (!session) return <AccessGate />
 
   const selectedProject = projects.find((project) => project.id === selectedProjectId)
@@ -1032,6 +1164,7 @@ function App() {
           : activeView === 'Mirrors' ? <MirrorsView repoHealth={repoHealth} />
           : activeView === 'Archive' ? <ArchiveView />
           : activeView === 'Swift' ? <SwiftView watches={swiftWatch} collection={swiftCollection} events={swiftEvents} onAddCollectionItem={addSwiftCollectionItem} onUpdateCollectionStatus={updateSwiftCollectionStatus} onDeleteCollectionItem={deleteSwiftCollectionItem} onAddEvent={addSwiftEvent} onDeleteEvent={deleteSwiftEvent} />
+          : activeView === 'Travel' ? <TravelView entries={travelWatch} onAdd={addTravelEntry} onDelete={deleteTravelEntry} />
           : <Horizon projects={projects} onProjects={() => setActiveView('Projects')} />}
       </main>
     </div>

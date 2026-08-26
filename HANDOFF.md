@@ -1,37 +1,41 @@
 # HANDOFF — System Horizon
 
-> React + Vite dashboard shell for the Septentrion system: Horizon / Projects / Flow / Calendar / Mirrors / Archive views over the project registry, handoffs, and return points.
+> React + Vite dashboard shell for the Septentrion system: Horizon / Projects / Flow / Calendar / Mirrors / Archive / Swift views over the project registry, handoffs, and return points.
 > Handoff is **enabled** for this repo. Every change updates the DO NEXT block below and prepends a log entry.
 
 ## ▶ DO NEXT
-**Build the Swift view.** The database layer is done and verified (2026-08-25); only the UI remains. This is a clean, self-contained build — start a fresh session for it, because `App.jsx` is 51.8KB and `App.css` is 47.2KB and this repo has a documented large-payload write trap (see Watch out below).
+**Visual QA the Swift view, then build the Swiftwatch local sync script.** The UI is built and pushed (2026-08-26); it has not been opened in the live app yet.
 
-Scope, as Tayls specified it:
-- **One "Swift" nav item with three tabs** — Watch / Collection / Calendar.
-- **Add and edit in-app** for both collection items and calendar events (not read-only).
+1. Sign in to the live app and open the new **Swift** nav item (08). Confirm the three tabs render: Watch, Collection, Calendar.
+2. Collection and Calendar tabs are add/edit in-app — add a test item and a test event, confirm they persist and the status/predicted dropdowns update correctly.
+3. Watch tab is read-only and will show its empty state (`No Swiftwatch data yet...`) until the local sync script exists — that's expected, not a bug.
+4. Once the UI is confirmed, build the **Swiftwatch sync script**: a small local script in `TheLittlestAskew/septentrion` under `Scripts/`, following the exact pattern of `Scripts/mirror-freshness/` — signs in to Supabase as the owner account (not a service-role key), reads Swiftwatch's local state (changedetection → Apprise → ntfy → BurntToast chain), and upserts into `horizon_swift_watch` keyed on `(owner, watch_name)`. Do **not** put this script in the SystemHorizon repo.
 
-Three tables already exist in `aftermath-atlas-dev` (`drtvlcgyjlofaffbwael`), all owner-scoped with RLS byte-identical to `horizon_repo_health`'s four-policy shape, plus `set_horizon_updated_at()` triggers:
-
-- **`horizon_swift_watch`** — Swiftwatch sensor status. `watch_name` (unique per owner), `url`, `interval_minutes`, `last_checked_at`, `last_changed_at`, `change_count`, `status` (ok/stale/error), `last_error`, `notes`.
-- **`horizon_swift_collection`** — `item_name`, `category` (vinyl/cd/cassette/apparel/book/accessory/other), `era`, `variant`, `status` (owned/wishlist/available/sold_out/preorder), `priority` (1 = grail … 5 = idle curiosity), `price_cents`, `currency`, `url`, `image_url`, `acquired_on`, `quantity`, `notes`. Indexed on `(owner, status)`.
-- **`horizon_swift_events`** — `title`, `event_date`, `kind` (anniversary/release/tour/birthday/numerology/announcement/other), `era`, `recurring` (annual anniversaries), `significance` (1 = major … 5 = minor), `predicted` + `confidence` (0-100), `source`, `notes`. Indexed on `(owner, event_date)`.
-
-Design note carried from the spec conversation: **`predicted` exists specifically so forecasts never get displayed as facts.** The Swift work is a prediction project; the UI must visually distinguish a logged historical date from a guess, and show `confidence` wherever `predicted` is true.
-
-**Architecture gap to solve for the Watch tab:** Swiftwatch runs *locally* (changedetection → Apprise → ntfy → BurntToast on Tayls' machine). The dashboard is a web app and cannot read it directly. This is the same gap mirror-freshness had, and it should be solved the same proven way: a small local sync script in `TheLittlestAskew/septentrion` under `Scripts/` that signs in to Supabase as the owner account and upserts into `horizon_swift_watch`, run from the existing scheduled local automation. Do **not** put that script in this repo — see the mirror-freshness entry below for why.
+Design note carried forward: **`predicted` + `confidence` on `horizon_swift_events` exist specifically so forecasts never render as facts.** The Swift Calendar tab shows a "Predicted · N%" badge for forecasts and a "Logged" badge for real dates — keep that distinction if the UI changes.
 
 Standing repo notes:
 - Naming is locked: **Rectrix Caedere** is the campaign and brand; **Aftermath Meridian** is the live website/app; **Aftermath Atlas** is its Supabase data layer.
 - Remote: `origin` is `TheLittlestAskew/SystemHorizon`. The prior standalone HTML control panel is preserved as `meridian-keystone.html`.
 - `README.md` is still the stock Vite template text.
 - The Supabase project is named `aftermath-atlas-dev` (id `drtvlcgyjlofaffbwael`) despite the `horizon_*` table naming — same project `src/supabase.js` points at.
-- **The mirror-freshness sync script is not in this repo.** It's in `TheLittlestAskew/septentrion` at `Scripts/mirror-freshness/`. `scripts/mirror-freshness/` here contains only pointer stubs — do not edit or run them.
+- **The mirror-freshness sync script is not in this repo.** It's in `TheLittlestAskew/septentrion` at `Scripts/mirror-freshness/`. `scripts/mirror-freshness/` here contains only pointer stubs — do not edit or run them. **The Swiftwatch sync script should follow this exact same pattern and location.**
 - **The master context doc is not in Notion.** It's `SystemHorizon_Master_Context.md` in the Claude Project knowledge.
 
 ---
 
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
+
+### 2026-08-26 ET · Claude chat
+- **Changed:** Built the Swift view UI — the piece deliberately deferred from the 2026-08-25 session. New nav item `Swift` (08) with three tabs:
+  - **Watch** — read-only display of `horizon_swift_watch` rows (status dot, last checked/changed, change count, interval, target URL, errors, notes). Shows an explanatory empty state until the local sync script exists.
+  - **Collection** — add/edit/delete against `horizon_swift_collection`. Status filter pills (wishlist/owned/available/preorder/sold_out), inline status dropdown per row (mirrors the existing `TaskRow` pattern), add form covers category/era/variant/priority/price/link/notes.
+  - **Calendar** — add/delete against `horizon_swift_events`, split into Upcoming/Past sections. Each row carries a **Logged** or **Predicted · N%** badge — the `predicted`/`confidence` design note from the schema session is now visually enforced, not just documented.
+  - Read `App.jsx` (51.8KB) and `App.css` (47.2KB) fresh from the repo rather than trusting prior-session content, per the standing "verify against live repo" practice. Pushed both files sequentially via `create_or_update_file` (not `push_files`) per the documented large-payload trap — combined payload here was ~121KB, larger than the ~93KB that has timed out before.
+  - Syntax-checked with `@babel/parser` and compiled with `@babel/core` + `@babel/preset-react` locally before pushing either file.
+- **Commit:** `9fba319` (App.jsx), `02a7564` (App.css)
+- **Next:** See DO NEXT above — visual QA, then the Swiftwatch sync script.
+- **Watch out:** The Watch tab will look empty/broken until the sync script exists and has run at least once. That's expected — don't mistake it for a UI bug during QA.
 
 ### 2026-08-25 ET · Claude chat
 - **Changed:** Created the Swift data layer — three tables, twelve RLS policies, three triggers, two indexes — via `apply_migration` on the Supabase MCP (`create_horizon_swift_tables`). Verified afterward with `execute_sql` that each table carries exactly four policies. Checked `horizon_repo_health`'s existing policy text first and matched its `((select auth.uid()) = owner)` shape rather than inventing a variant.

@@ -4,7 +4,7 @@
 > Handoff is **enabled** for this repo. Every change updates the DO NEXT block below and prepends a log entry.
 
 ## ▶ DO NEXT
-**Three things, in any order — none blocks the others:**
+**Three active things, in any order — none blocks the others — plus one deferred item below:**
 
 1. **Visual QA the Swift view live.** Browser automation wasn't available this session (Claude in Chrome wasn't connected), so the UI hasn't been opened in the live app yet. Sign in, open the **Swift** nav item (08), confirm all three tabs render, and add a test Collection item and a test Calendar event to confirm they persist.
 2. **Finish Swiftwatch sync setup.** The script itself is built and pushed to `TheLittlestAskew/septentrion` at `Scripts/swiftwatch-sync/` (built against changedetection.io's real REST API, `GET /api/v1/watch/<uuid>` + `/history`, not guessed local file paths). What's left is Tayls-only local setup, documented in that folder's README:
@@ -17,6 +17,10 @@
    - A Claude Code skill wrapper at `~/.claude/skills/swiftwatch-sync/SKILL.md` still needs to be written, same shape as the `mirror-freshness-sync` one, if headless `/swiftwatch-sync` runs are wanted
 
 3. **Visual QA the Travel view live.** Same situation as Swift — built this session without browser automation connected. Sign in, open the **Travel** nav item (09), log a test price check for a trip, confirm it saves and the "Lowest seen" badge flags correctly when a second lower price is logged for the same trip name.
+
+**Deferred, explicitly ordered after item 2 above — do not start until Swiftwatch sync is finished and confirmed working:**
+
+4. **Automate Travel price checks.** Tayls tried logging a price and expected the app to fetch it automatically — it doesn't; `TravelView` is a manual log by design (that was the deliberate B-not-A choice this session, to avoid stacking two unconfigured local-script setups on her at once). Once Swiftwatch's local setup (item 2) is confirmed working end to end, build Travel watching the same way: a changedetection.io watch pointed at a Google Flights search URL, plus a sync script following the `swiftwatch-sync` pattern exactly (zero npm deps, `.env`-next-to-script, `--self-test` mode, owner sign-in Supabase upsert). The open problem specific to this one: there's no clean public API for live flight prices, and change-detection alone only tells you *that* the page changed, not the new price — the sync script will need actual price-parsing logic against whatever page structure Google Flights (or Kayak) serves, which is messier than Swiftwatch's job (that one only needed a change count, not a parsed value). Scope that parsing approach before starting, don't guess at a DOM selector cold.
 
 Design note carried forward: **`predicted` + `confidence` on `horizon_swift_events` exist specifically so forecasts never render as facts.** The Swift Calendar tab shows a "Predicted · N%" badge for forecasts and a "Logged" badge for real dates — keep that distinction if the UI changes.
 
@@ -32,6 +36,12 @@ Standing repo notes:
 
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
+
+### 2026-08-26 ET · Claude chat (continued)
+- **Changed:** Corrected a UX mismatch found immediately after the Travel field shipped: Tayls tried logging a price expecting the app to fetch it automatically. Clarified in chat that `TravelView` is manual-log by design, offered the automated changedetection.io alternative (same pattern as Swiftwatch), and she chose to defer it until Swiftwatch's own setup is finished rather than take on two unconfigured local scripts at once. No code changed — this entry only records the decision so it isn't lost. Added DO NEXT item 4 (deferred, explicitly gated on item 2) with the specific problem this one will face that Swiftwatch didn't: no public flight-price API, so the sync script needs real price-parsing logic, not just a change-detected boolean.
+- **Commit:** none (chat decision only; this HANDOFF.md update is the only repo write)
+- **Next:** See DO NEXT above.
+- **Watch out:** Don't start item 4 early just because it's a small ask later — it's explicitly gated on item 2 being confirmed working, per Tayls' own call.
 
 ### 2026-08-26 ET · Claude chat (continued)
 - **Changed:** Built the Travel field — new nav item `Travel` (09), single-panel manual price log for trips being watched (starting use case: PAX Unplugged flights, ATL↔PHL, Dec 3–6).

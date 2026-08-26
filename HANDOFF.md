@@ -1,10 +1,10 @@
 # HANDOFF — System Horizon
 
-> React + Vite dashboard shell for the Septentrion system: Horizon / Projects / Flow / Calendar / Mirrors / Archive / Swift views over the project registry, handoffs, and return points.
+> React + Vite dashboard shell for the Septentrion system: Horizon / Projects / Flow / Calendar / Mirrors / Archive / Swift / Travel views over the project registry, handoffs, and return points.
 > Handoff is **enabled** for this repo. Every change updates the DO NEXT block below and prepends a log entry.
 
 ## ▶ DO NEXT
-**Two things, in either order — neither blocks the other:**
+**Three things, in any order — none blocks the others:**
 
 1. **Visual QA the Swift view live.** Browser automation wasn't available this session (Claude in Chrome wasn't connected), so the UI hasn't been opened in the live app yet. Sign in, open the **Swift** nav item (08), confirm all three tabs render, and add a test Collection item and a test Calendar event to confirm they persist.
 2. **Finish Swiftwatch sync setup.** The script itself is built and pushed to `TheLittlestAskew/septentrion` at `Scripts/swiftwatch-sync/` (built against changedetection.io's real REST API, `GET /api/v1/watch/<uuid>` + `/history`, not guessed local file paths). What's left is Tayls-only local setup, documented in that folder's README:
@@ -15,6 +15,8 @@
    - Run `node swiftwatch-sync.mjs` manually once, confirm rows land in Swift > Watch
    - Once confirmed, schedule it (Task Scheduler, every 30–60 min — no dependency on the 07:30 `septentrion-sync` job)
    - A Claude Code skill wrapper at `~/.claude/skills/swiftwatch-sync/SKILL.md` still needs to be written, same shape as the `mirror-freshness-sync` one, if headless `/swiftwatch-sync` runs are wanted
+
+3. **Visual QA the Travel view live.** Same situation as Swift — built this session without browser automation connected. Sign in, open the **Travel** nav item (09), log a test price check for a trip, confirm it saves and the "Lowest seen" badge flags correctly when a second lower price is logged for the same trip name.
 
 Design note carried forward: **`predicted` + `confidence` on `horizon_swift_events` exist specifically so forecasts never render as facts.** The Swift Calendar tab shows a "Predicted · N%" badge for forecasts and a "Logged" badge for real dates — keep that distinction if the UI changes.
 
@@ -30,6 +32,17 @@ Standing repo notes:
 
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
+
+### 2026-08-26 ET · Claude chat (continued)
+- **Changed:** Built the Travel field — new nav item `Travel` (09), single-panel manual price log for trips being watched (starting use case: PAX Unplugged flights, ATL↔PHL, Dec 3–6).
+  - New Supabase table `horizon_travel_watch` (trip_name, route, depart_date, return_date, price_cents, currency, checked_on, notes), RLS matching `horizon_swift_watch`'s exact four-policy pattern (verified via `pg_policies` before writing the migration, and again after — 4/4).
+  - `TravelView` groups logged price entries by trip name, flags the lowest-seen price per trip with a badge, and shows days-to-departure once a depart date is logged. No trip metadata table — route/dates live on each log row, kept from whichever entry is newest.
+  - Deliberately reused existing `swift-item-form` / `swift-item-row` / `swift-event-badge-group` CSS classes rather than adding new ones, so `App.css` (51.8KB) didn't need to be touched at all — only `App.jsx` was read and pushed.
+  - Went with the simpler of two options offered (manual log vs. a changedetection.io-automated watch matching the Swiftwatch pattern) since Swiftwatch setup is already an open DO NEXT item — didn't want to stack a second unconfigured local-script chore on Tayls at once.
+  - Read `App.jsx` (74.6KB pre-edit) fresh from the repo, syntax-checked with `@babel/parser` and compiled with `@babel/core` + `@babel/preset-react` locally before pushing. Single `create_or_update_file` push succeeded at ~76.6KB — no timeout, despite being above the ~93KB threshold that had failed before on combined multi-file payloads (this was one file, not combined).
+- **Commit:** `2eb2b8d` (App.jsx). This HANDOFF.md entry.
+- **Next:** See DO NEXT above.
+- **Watch out:** Browser automation still wasn't connected this session, so Travel view visual QA is unverified — same situation as the still-outstanding Swift QA item.
 
 ### 2026-08-26 ET · Claude chat (continued)
 - **Changed:** Built the Swiftwatch sync script, closing the architecture gap the Watch tab was left with. Lives in `TheLittlestAskew/septentrion` at `Scripts/swiftwatch-sync/`, matching `Scripts/mirror-freshness/`'s pattern byte-for-byte in structure: zero npm deps, `.env`-next-to-script with the same env-beats-ambient precedence rule (and the same reasoning comment for why), a `--self-test` mode, and the same sign-in-as-owner Supabase upsert shape (`on_conflict=owner,watch_name`).

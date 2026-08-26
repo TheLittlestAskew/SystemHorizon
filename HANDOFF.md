@@ -4,12 +4,17 @@
 > Handoff is **enabled** for this repo. Every change updates the DO NEXT block below and prepends a log entry.
 
 ## ▶ DO NEXT
-**Visual QA the Swift view, then build the Swiftwatch local sync script.** The UI is built and pushed (2026-08-26); it has not been opened in the live app yet.
+**Two things, in either order — neither blocks the other:**
 
-1. Sign in to the live app and open the new **Swift** nav item (08). Confirm the three tabs render: Watch, Collection, Calendar.
-2. Collection and Calendar tabs are add/edit in-app — add a test item and a test event, confirm they persist and the status/predicted dropdowns update correctly.
-3. Watch tab is read-only and will show its empty state (`No Swiftwatch data yet...`) until the local sync script exists — that's expected, not a bug.
-4. Once the UI is confirmed, build the **Swiftwatch sync script**: a small local script in `TheLittlestAskew/septentrion` under `Scripts/`, following the exact pattern of `Scripts/mirror-freshness/` — signs in to Supabase as the owner account (not a service-role key), reads Swiftwatch's local state (changedetection → Apprise → ntfy → BurntToast chain), and upserts into `horizon_swift_watch` keyed on `(owner, watch_name)`. Do **not** put this script in the SystemHorizon repo.
+1. **Visual QA the Swift view live.** Browser automation wasn't available this session (Claude in Chrome wasn't connected), so the UI hasn't been opened in the live app yet. Sign in, open the **Swift** nav item (08), confirm all three tabs render, and add a test Collection item and a test Calendar event to confirm they persist.
+2. **Finish Swiftwatch sync setup.** The script itself is built and pushed to `TheLittlestAskew/septentrion` at `Scripts/swiftwatch-sync/` (built against changedetection.io's real REST API, `GET /api/v1/watch/<uuid>` + `/history`, not guessed local file paths). What's left is Tayls-only local setup, documented in that folder's README:
+   - Get the changedetection.io API key (Settings > API) and confirm the local URL/port
+   - Get the two watch UUIDs (TS Store, taylorswift.com) from changedetection's own UI
+   - Edit `Scripts/swiftwatch-sync/swiftwatch-sync.config.json` with the real UUIDs
+   - Create `.env` next to the script with `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `HORIZON_EMAIL`, `HORIZON_PASSWORD`, `CHANGEDETECTION_URL`, `CHANGEDETECTION_API_KEY`
+   - Run `node swiftwatch-sync.mjs` manually once, confirm rows land in Swift > Watch
+   - Once confirmed, schedule it (Task Scheduler, every 30–60 min — no dependency on the 07:30 `septentrion-sync` job)
+   - A Claude Code skill wrapper at `~/.claude/skills/swiftwatch-sync/SKILL.md` still needs to be written, same shape as the `mirror-freshness-sync` one, if headless `/swiftwatch-sync` runs are wanted
 
 Design note carried forward: **`predicted` + `confidence` on `horizon_swift_events` exist specifically so forecasts never render as facts.** The Swift Calendar tab shows a "Predicted · N%" badge for forecasts and a "Logged" badge for real dates — keep that distinction if the UI changes.
 
@@ -18,13 +23,24 @@ Standing repo notes:
 - Remote: `origin` is `TheLittlestAskew/SystemHorizon`. The prior standalone HTML control panel is preserved as `meridian-keystone.html`.
 - `README.md` is still the stock Vite template text.
 - The Supabase project is named `aftermath-atlas-dev` (id `drtvlcgyjlofaffbwael`) despite the `horizon_*` table naming — same project `src/supabase.js` points at.
-- **The mirror-freshness sync script is not in this repo.** It's in `TheLittlestAskew/septentrion` at `Scripts/mirror-freshness/`. `scripts/mirror-freshness/` here contains only pointer stubs — do not edit or run them. **The Swiftwatch sync script should follow this exact same pattern and location.**
+- **The mirror-freshness sync script is not in this repo.** It's in `TheLittlestAskew/septentrion` at `Scripts/mirror-freshness/`. `scripts/mirror-freshness/` here contains only pointer stubs — do not edit or run them. **The Swiftwatch sync script (`Scripts/swiftwatch-sync/` in the same repo) follows this exact same pattern and location.**
 - **The master context doc is not in Notion.** It's `SystemHorizon_Master_Context.md` in the Claude Project knowledge.
 
 ---
 
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
+
+### 2026-08-26 ET · Claude chat (continued)
+- **Changed:** Built the Swiftwatch sync script, closing the architecture gap the Watch tab was left with. Lives in `TheLittlestAskew/septentrion` at `Scripts/swiftwatch-sync/`, matching `Scripts/mirror-freshness/`'s pattern byte-for-byte in structure: zero npm deps, `.env`-next-to-script with the same env-beats-ambient precedence rule (and the same reasoning comment for why), a `--self-test` mode, and the same sign-in-as-owner Supabase upsert shape (`on_conflict=owner,watch_name`).
+  - Read against changedetection.io's actual documented REST API (`GET /api/v1/watch/<uuid>` for status/timestamps/interval, `GET /api/v1/watch/<uuid>/history` for a change count) rather than guessing at local file paths or a Docker volume layout — verified the endpoint shapes via web search first since this wasn't something to invent.
+  - `status` (ok/stale/error) is derived: `error` on a reported `last_error` or a watch that's never completed a check, `stale` if the last check is more than 3x the configured interval old, `ok` otherwise.
+  - 19 self-test checks cover `parseDotEnv`, the interval-to-minutes conversion, unix-to-ISO conversion, and all four `deriveStatus` branches — all passing before push.
+  - Tried `push_files` first for the three-file commit; it timed out (same documented trap as this repo's own large payloads), so fell back to three sequential `create_or_update_file` calls.
+  - **Setup that only Tayls can finish** (API key, watch UUIDs, `.env`, first manual run, scheduling) is written up in that folder's README and left as DO NEXT below — nothing here required guessing her actual changedetection deployment details.
+- **Commit:** septentrion repo: `8da8e29` (script), `6988bbf` (config), `0b71e5c` (README). This repo: this HANDOFF.md entry only.
+- **Next:** See DO NEXT above.
+- **Watch out:** Browser automation (Claude in Chrome) wasn't connected this session, so the Swift UI visual QA from the prior DO NEXT is still outstanding — carried forward, not skipped.
 
 ### 2026-08-26 ET · Claude chat
 - **Changed:** Built the Swift view UI — the piece deliberately deferred from the 2026-08-25 session. New nav item `Swift` (08) with three tabs:
@@ -34,7 +50,7 @@ Standing repo notes:
   - Read `App.jsx` (51.8KB) and `App.css` (47.2KB) fresh from the repo rather than trusting prior-session content, per the standing "verify against live repo" practice. Pushed both files sequentially via `create_or_update_file` (not `push_files`) per the documented large-payload trap — combined payload here was ~121KB, larger than the ~93KB that has timed out before.
   - Syntax-checked with `@babel/parser` and compiled with `@babel/core` + `@babel/preset-react` locally before pushing either file.
 - **Commit:** `9fba319` (App.jsx), `02a7564` (App.css)
-- **Next:** See DO NEXT above — visual QA, then the Swiftwatch sync script.
+- **Next:** See DO NEXT above.
 - **Watch out:** The Watch tab will look empty/broken until the sync script exists and has run at least once. That's expected — don't mistake it for a UI bug during QA.
 
 ### 2026-08-25 ET · Claude chat
@@ -42,7 +58,7 @@ Standing repo notes:
   - Schema covers the three things Tayls asked for: Swiftwatch status, a collection tracker separating owned / wishlist / available, and an events calendar for predicting music and merch announcements.
   - **No UI was built.** Stopped deliberately before touching `App.jsx` — see Watch out.
 - **Commit:** none in this repo (Supabase migration only; this HANDOFF.md update is the only repo write)
-- **Next:** See DO NEXT above — build the Swift view with its three tabs, and the local Swiftwatch sync script in the septentrion repo.
+- **Next:** See DO NEXT above.
 - **Watch out:** **Deliberate stop, not an incomplete task.** `App.jsx` (51.8KB) + `App.css` (47.2KB) means a Swift view requires reading ~100KB and rewriting ~100KB with no patch tool available. This repo has a documented trap at exactly that size: `push_files` timed out on ~93KB payloads in both the 08-11 and 08-22 sessions, and a same-day session in the Fantasy-Football repo silently corrupted two files on a large write. The session in which this schema was created was already very long, so attempting the rewrite risked corrupting a dashboard Tayls uses daily to save her starting a fresh chat — a bad trade. The schema (the irreversible part) is done and verified; the UI is a clean fresh-session task with everything it needs documented above.
 
 ### 2026-08-24 ET · Claude chat

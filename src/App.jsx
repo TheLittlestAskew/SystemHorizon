@@ -897,8 +897,9 @@ function TravelView({ entries, onAdd, onDelete }) {
 
   const trips = new Map()
   for (const entry of entries) {
-    if (!trips.has(entry.tripName)) trips.set(entry.tripName, [])
-    trips.get(entry.tripName).push(entry)
+    const tripKey = entry.tripName.trim().toLowerCase()
+    if (!trips.has(tripKey)) trips.set(tripKey, [])
+    trips.get(tripKey).push(entry)
   }
 
   return <section className="travel-view" aria-labelledby="travel-heading">
@@ -932,7 +933,7 @@ function TravelView({ entries, onAdd, onDelete }) {
       const departIn = daysUntil(first.departDate)
       return <section key={tripName} className="swift-event-section">
         <div className="instrument-heading">
-          <span>{tripName}{first.route ? ` · ${first.route}` : ''}</span>
+          <span>{first.tripName}{first.route ? ` · ${first.route}` : ''}</span>
           <b>{tripEntries.length} check{tripEntries.length === 1 ? '' : 's'}{departIn != null && departIn >= 0 ? ` · ${departIn}d to departure` : ''}</b>
         </div>
         <div className="swift-collection-list">

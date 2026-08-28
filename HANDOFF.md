@@ -4,7 +4,7 @@
 > Handoff is **enabled** for this repo. Every change updates the DO NEXT block below and prepends a log entry.
 
 ## ▶ DO NEXT
-No open items right now — pick the next build from Codex's recorded private-organizer ideas (prescription/refill tracking, family Christmas gift notes) or from Tayls' direction.
+Create a desktop wireframe for the approved Horizon home page, using the banked information architecture before any application implementation.
 - Naming is locked: **Rectrix Caedere** is the campaign and brand; **Aftermath Meridian** is the live website/app; **Aftermath Atlas** is its Supabase data layer.
 - Remote: `origin` is `TheLittlestAskew/SystemHorizon`. The prior standalone HTML control panel is preserved as `meridian-keystone.html` while the Vite dashboard is the active entry point.
 - `README.md` is still the stock Vite template text; it describes React+Vite, not System Horizon.
@@ -16,6 +16,14 @@ No open items right now — pick the next build from Codex's recorded private-or
 
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
+
+### 2026-08-28 14:33 ET · Codex
+- **Changed:** Banked the approved Horizon-home information architecture in `docs/Horizon-Home-Information-Architecture.md`.
+  - The home page is now defined as a daily cockpit: one true next action, attention queue, near-term timeline, three active return points, persistent capture, and a five-area status strip.
+  - The record preserves the System Horizon front-end and Septentrion source-of-truth boundary, the locked five-area navigation, visual-reference links, and the staged implementation order.
+- **Commit:** `9501e43`
+- **Next:** Create a desktop wireframe for the approved Horizon home page.
+- **Watch out:** This is an approved product architecture, not a code change. The current home implementation and its seven-view navigation remain untouched until the wireframe is selected.
 
 ### 2026-08-24 ET · Claude chat
 - **Changed:** Closed out the last open DO NEXT item. Rewrote the project master context doc from scratch (verified against live repo state — package.json, src/supabase.js, file tree — rather than trusting the old doc's claims): corrected the live URL, replaced the retired single-file Babel/`control-panel.html` pipeline description with the actual React+Vite+GitHub Actions architecture, corrected the nav/page list, and added a GitHub MCP traps section. Tayls confirmed she no longer uses Notion (where the old doc lived), so the corrected doc was uploaded directly to this Claude Project's knowledge instead as `SystemHorizon_Master_Context.md` — no more manual paste-every-session, and no Notion link to maintain or go stale again.

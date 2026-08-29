@@ -143,6 +143,8 @@ test('applyEspnPicks marks my picks vs everyone else', () => {
   })
   assert.equal(out.statuses['chase|WR'], 'taken')
   assert.equal(out.statuses['gibbs|RB'], 'mine')
+  assert.equal(out.draftSlots['chase|WR'], 1)
+  assert.equal(out.draftSlots['gibbs|RB'], 9)
   assert.equal(out.applied, 2)
   assert.equal(out.lastAppliedOverall, 9)
 })

@@ -178,11 +178,12 @@ export function moveInOrder(order, key, dir) {
 
 /* ---------- ESPN pick application ---------- */
 
-export function applyEspnPicks({ picks, players, statuses, lastAppliedOverall, myTeamId }) {
+export function applyEspnPicks({ picks, players, statuses, draftSlots = {}, lastAppliedOverall, myTeamId }) {
   // Pure: takes a poll's picks and returns the next statuses plus a report.
   // ESPN is the source of truth here, so a pick always lands as taken/mine and
   // never toggles itself back off.
   const nextStatuses = { ...statuses }
+  const nextDraftSlots = { ...draftSlots }
   const nameIndex = new Map()
   for (const p of players || []) nameIndex.set(playerKey(p.name, p.pos), p.key)
 
@@ -202,11 +203,12 @@ export function applyEspnPicks({ picks, players, statuses, lastAppliedOverall, m
     // null is not zero, and null is not "not mine": only match on a real id.
     const isMine = myTeamId != null && pick.teamId === myTeamId
     nextStatuses[targetKey] = isMine ? 'mine' : 'taken'
+    nextDraftSlots[targetKey] = pick.overall
     applied++
     highest = Math.max(highest, pick.overall)
   }
 
-  return { statuses: nextStatuses, lastAppliedOverall: highest, applied, unmatched }
+  return { statuses: nextStatuses, draftSlots: nextDraftSlots, lastAppliedOverall: highest, applied, unmatched }
 }
 
 export function describeEspnPoll(json, unmatched) {

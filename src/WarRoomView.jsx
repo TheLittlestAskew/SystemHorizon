@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   POSITIONS, seasonYear, overallToRoundPick, myOverallPicks,
   parseRankingsCSV, normalizeAdpPayload, mergeOrder, moveInOrder,
@@ -31,6 +31,9 @@ const DEFAULT_STATE = {
   players: [],
   order: [],
   statuses: {},
+  // Player key -> overall pick. This drives the visual board and is kept local
+  // with the existing draft state so every filled cell has an honest source.
+  draftSlots: {},
   notes: {},
   history: [],
   source: null,
@@ -149,6 +152,7 @@ function WarRoomView() {
         picks: json.picks,
         players: current.players,
         statuses: current.statuses,
+        draftSlots: current.draftSlots,
         lastAppliedOverall,
         myTeamId: teamId,
       })
@@ -156,6 +160,7 @@ function WarRoomView() {
         setState((prev) => ({
           ...prev,
           statuses: { ...prev.statuses, ...result.statuses },
+          draftSlots: { ...prev.draftSlots, ...result.draftSlots },
           espn: { ...prev.espn, lastAppliedOverall: result.lastAppliedOverall },
         }))
       }
@@ -177,12 +182,19 @@ function WarRoomView() {
   function setPlayerStatus(key, next) {
     setState((current) => {
       const prev = current.statuses[key] || null
+      const prevSlot = current.draftSlots[key] || null
       const resolved = prev === next ? null : next // tapping again undoes it
       const statuses = { ...current.statuses }
+      const draftSlots = { ...current.draftSlots }
       if (resolved) statuses[key] = resolved
       else delete statuses[key]
-      const history = [...current.history, { key, prev }].slice(-100)
-      return { ...current, statuses, history }
+      if (resolved) {
+        const highestSlot = Math.max(0, ...Object.values(draftSlots).filter(Number.isInteger))
+        draftSlots[key] = highestSlot + 1
+      }
+      else delete draftSlots[key]
+      const history = [...current.history, { key, prev, prevSlot }].slice(-100)
+      return { ...current, statuses, draftSlots, history }
     })
   }
 
@@ -192,9 +204,12 @@ function WarRoomView() {
       const history = current.history.slice()
       const last = history.pop()
       const statuses = { ...current.statuses }
+      const draftSlots = { ...current.draftSlots }
       if (last.prev) statuses[last.key] = last.prev
       else delete statuses[last.key]
-      return { ...current, statuses, history }
+      if (last.prevSlot) draftSlots[last.key] = last.prevSlot
+      else delete draftSlots[last.key]
+      return { ...current, statuses, draftSlots, history }
     })
   }
 
@@ -203,6 +218,7 @@ function WarRoomView() {
     setState((current) => ({
       ...current,
       statuses: {},
+      draftSlots: {},
       history: [],
       espn: { ...current.espn, lastAppliedOverall: 0 },
     }))
@@ -296,6 +312,34 @@ function WarRoomView() {
     return POSITIONS.flatMap((pos) => picked.filter((p) => p.pos === pos))
   }, [state.statuses, playersByKey])
 
+  const boardPicks = useMemo(() => {
+    const byOverall = new Map()
+    for (const [key, overallPick] of Object.entries(state.draftSlots || {})) {
+      if (!Number.isInteger(overallPick) || overallPick < 1) continue
+      const player = playersByKey.get(key)
+      if (player) byOverall.set(overallPick, player)
+    }
+    return Array.from({ length: rounds }, (_, roundIndex) => {
+      return Array.from({ length: teams }, (_, pickIndex) => {
+        const overallPick = roundIndex * teams + pickIndex + 1
+        const roundPick = overallToRoundPick(overallPick, teams)
+        return {
+          overall: overallPick,
+          seat: roundPick?.seat ?? pickIndex + 1,
+          player: byOverall.get(overallPick) ?? null,
+          isMine: roundPick?.seat === slot,
+          isCurrent: overallPick === overall,
+        }
+      })
+    })
+  }, [state.draftSlots, playersByKey, rounds, teams, slot, overall])
+
+  const draftQueue = useMemo(() => Array.from({ length: 5 }, (_, index) => {
+    const queuedOverall = overall + index
+    const queued = overallToRoundPick(queuedOverall, teams)
+    return { overall: queuedOverall, round: queued?.round ?? '?', seat: queued?.seat ?? '?' }
+  }), [overall, teams])
+
   return <section className="warroom-view" aria-labelledby="warroom-heading">
     <header className="view-header">
       <div>
@@ -368,8 +412,8 @@ function WarRoomView() {
       </div>
     </div>}
 
-    <div className="warroom-layout">
-      <div>
+    <div className="warroom-draft-layout">
+      <section className="warroom-available" aria-label="Available players">
         <div className="warroom-controls">
           <input type="search" value={ui.search} onChange={(e) => setUi((c) => ({ ...c, search: e.target.value }))} placeholder="Search player or team" aria-label="Search players" />
           <div className="warroom-chips" role="group" aria-label="Position filter">
@@ -419,7 +463,29 @@ function WarRoomView() {
             </span>}
           </li>)}
         </ul>
-      </div>
+      </section>
+
+      <section className="warroom-draft-grid" aria-label="Live snake draft board">
+        <div className="warroom-grid-heading">
+          <div><span>Live draft board</span><strong>{teams}-team snake</strong></div>
+          <span className="warroom-dim">Round {roundPick?.round ?? '?'} · pick {roundPick?.pick ?? '?'}</span>
+        </div>
+        <div className="warroom-grid-scroll">
+          <div className="warroom-grid" style={{ '--wr-teams': teams }}>
+            <div className="warroom-grid-corner">Rd</div>
+            {Array.from({ length: teams }, (_, seatIndex) => <div className={seatIndex + 1 === slot ? 'warroom-team-head mine' : 'warroom-team-head'} key={`head-${seatIndex + 1}`}>
+              <small>Seat</small><b>{seatIndex + 1}</b>
+            </div>)}
+            {boardPicks.map((round, roundIndex) => <Fragment key={`round-${roundIndex}`}>
+              <div className="warroom-round-label" key={`round-${roundIndex}`}>{roundIndex + 1}</div>
+              {round.map((pick) => <div className={`warroom-draft-cell${pick.isMine ? ' mine' : ''}${pick.isCurrent ? ' current' : ''}${pick.player ? ' filled' : ''}`} key={pick.overall}>
+                <small>#{pick.overall}</small>
+                {pick.player ? <><b>{pick.player.name}</b><PositionChip pos={pick.player.pos} /></> : <span>{pick.isCurrent ? 'On the clock' : `Seat ${pick.seat}`}</span>}
+              </div>)}
+            </Fragment>)}
+          </div>
+        </div>
+      </section>
 
       <aside className="warroom-sidebar">
         <div className="instrument-heading"><span>My team</span><b>{myTeam.length} picked</b></div>
@@ -432,6 +498,13 @@ function WarRoomView() {
               <small className="warroom-mono">{player.bye ? `bye ${player.bye}` : ''}</small>
             </div>)}
           </div>}
+        <div className="warroom-queue">
+          <div className="instrument-heading"><span>Up next</span><b>{draftQueue.length}</b></div>
+          {draftQueue.map((queued, index) => <div className={index === 0 ? 'warroom-queue-row current' : 'warroom-queue-row'} key={queued.overall}>
+            <span>{queued.round}.{String(queued.overall - ((queued.round - 1) * teams)).padStart(2, '0')}</span>
+            <b>{queued.seat === slot ? 'Your seat' : `Seat ${queued.seat}`}</b>
+          </div>)}
+        </div>
       </aside>
     </div>
   </section>

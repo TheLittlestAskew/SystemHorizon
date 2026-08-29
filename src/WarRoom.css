@@ -1,0 +1,97 @@
+/* War Room styles. Every selector is prefixed .warroom- or nested under
+   .warroom-view so this file can be deleted or relocated without touching App.css.
+   Palette follows System Horizon's daylight tokens (--ink, --cloud, --coral …)
+   rather than the standalone board's dark oklch theme, so it reads as one app. */
+
+.warroom-view { padding-top: 44px; color: var(--ink); }
+
+.warroom-header-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.warroom-status { margin: 14px 0 0; color: #67768d; font: 11px 'Cascadia Mono', Consolas, monospace; letter-spacing: .05em; text-transform: uppercase; }
+.warroom-status.error { color: #a92c00; }
+
+.warroom-mono { font-family: 'Cascadia Mono', Consolas, monospace; font-variant-numeric: tabular-nums; }
+.warroom-dim { color: #67768d; font-size: 12px; }
+
+/* ---- settings ---- */
+.warroom-settings { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 18px 0 0; padding: 16px; border: 1px solid rgb(121 135 158 / .23); border-radius: 20px; background: #fff; }
+.warroom-settings label { display: grid; gap: 5px; color: #5a6780; font: 10px 'Cascadia Mono', Consolas, monospace; letter-spacing: .06em; text-transform: uppercase; }
+.warroom-settings input, .warroom-settings textarea { padding: 9px 10px; border: 1px solid #9ba8bc; border-radius: 9px; background: #fff; color: #151515; font: 12px 'Segoe UI Variable', 'Segoe UI', sans-serif; }
+.warroom-settings-actions { display: flex; flex-wrap: wrap; gap: 8px; grid-column: 1 / -1; align-items: end; }
+.warroom-transfer { grid-column: 1 / -1; }
+.warroom-transfer textarea { width: 100%; min-height: 66px; resize: vertical; }
+.warroom-transfer-msg { grid-column: 1 / -1; margin: 0; color: #1266ff; font-size: 12px; }
+
+/* ---- pick bar ---- */
+.warroom-pickbar { display: flex; flex-wrap: wrap; gap: 8px 26px; align-items: baseline; margin: 16px 0 0; padding: 15px 18px; border: 1px solid rgb(121 135 158 / .23); border-radius: 20px; background: #fff; box-shadow: 0 10px 30px rgb(23 25 34 / .06); }
+.warroom-pickbar > span:first-child { color: #67768d; font: 10px 'Cascadia Mono', Consolas, monospace; letter-spacing: .06em; text-transform: uppercase; }
+.warroom-pickbar b { margin-left: 8px; color: var(--ink); font-size: 20px; letter-spacing: -.03em; }
+.warroom-up { padding: 5px 12px; border-radius: 999px; background: linear-gradient(105deg, var(--coral), var(--peach)); color: #170817; font: 700 13px 'Segoe UI Variable', 'Segoe UI', sans-serif; letter-spacing: .04em; }
+
+/* ---- CSV panel ---- */
+.warroom-panel { display: grid; gap: 10px; margin: 16px 0 0; padding: 16px; border: 1px solid rgb(121 135 158 / .23); border-radius: 20px; background: #fff; }
+.warroom-panel p { margin: 0; color: #5a6780; font-size: 13px; }
+.warroom-panel textarea { width: 100%; min-height: 120px; padding: 10px; border: 1px solid #9ba8bc; border-radius: 9px; font: 12px 'Cascadia Mono', Consolas, monospace; resize: vertical; }
+.warroom-panel > div { display: flex; gap: 12px; align-items: center; }
+
+/* ---- layout ---- */
+.warroom-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; margin-top: 16px; align-items: start; }
+.warroom-sidebar { position: sticky; top: 16px; padding: 18px; border: 1px solid rgb(121 135 158 / .23); border-radius: 20px; background: #fff; }
+
+/* ---- controls ---- */
+.warroom-controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+.warroom-controls input[type='search'] { flex: 1 1 180px; min-width: 150px; min-height: 38px; padding: 8px 12px; border: 1px solid #9ba8bc; border-radius: 999px; background: #fff; color: var(--ink); font-size: 13px; }
+.warroom-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.warroom-chip { min-height: 38px; padding: 7px 14px; border: 1px solid rgb(153 169 255 / .45); border-radius: 999px; background: transparent; color: #5f6778; cursor: pointer; font-size: 12px; font-weight: 600; }
+.warroom-chip:hover, .warroom-chip:focus-visible { border-color: var(--teal); color: var(--teal); outline: 0; }
+.warroom-chip.selected { border-color: transparent; background: var(--ink); color: #fff; }
+
+/* ---- board ---- */
+.warroom-board { display: grid; margin: 0; padding: 0; list-style: none; border: 1px solid rgb(121 135 158 / .23); border-radius: 20px; background: #fff; overflow: hidden; }
+.warroom-row { display: grid; grid-template-columns: 2.7rem minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; padding: 10px 14px; border-bottom: 1px solid #e5ebf2; }
+.warroom-row:last-child { border-bottom: 0; }
+.warroom-rank { color: #8b98ac; font-size: 12px; text-align: right; }
+.warroom-who { display: grid; gap: 3px; min-width: 0; }
+.warroom-name { overflow: hidden; font-size: 13px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.warroom-meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; color: #67768d; font-size: 11px; }
+.warroom-row.taken { opacity: .42; }
+.warroom-row.taken .warroom-name { text-decoration: line-through; }
+.warroom-row.mine { background: rgb(255 80 31 / .07); }
+.warroom-row.mine .warroom-name { color: #a93a00; }
+.warroom-empty { grid-column: 1 / -1; color: #8b98ac; font-size: 13px; }
+
+.warroom-acts { display: flex; gap: 6px; }
+.warroom-acts button { min-width: 42px; min-height: 38px; padding: 6px 9px; border: 1px solid rgb(153 169 255 / .45); border-radius: 10px; background: #fff; color: #4b5568; cursor: pointer; font-size: 14px; line-height: 1; }
+.warroom-acts button:hover, .warroom-acts button:focus-visible { border-color: var(--teal); color: var(--teal); outline: 0; }
+.warroom-acts .warroom-claim { border-color: transparent; background: linear-gradient(105deg, var(--coral), var(--peach)); color: #170817; font-weight: 700; }
+.warroom-acts .warroom-note.has { border-color: var(--coral); color: var(--coral); }
+.warroom-notebox { grid-column: 1 / -1; }
+.warroom-notebox textarea { width: 100%; min-height: 70px; padding: 9px 10px; border: 1px solid #9ba8bc; border-radius: 9px; font: 12px 'Segoe UI Variable', 'Segoe UI', sans-serif; resize: vertical; }
+
+/* ---- position chips: semantic, tuned for a light canvas ---- */
+.wr-pos { display: inline-block; padding: 2px 7px; border-radius: 6px; color: #fff; font: 700 10px 'Cascadia Mono', Consolas, monospace; letter-spacing: .04em; }
+.wr-pos-QB { background: #c2410c; }
+.wr-pos-RB { background: #0f7a52; }
+.wr-pos-WR { background: #2b4fd8; }
+.wr-pos-TE { background: #9a6700; }
+.wr-pos-K { background: #667085; }
+.wr-pos-DST { background: #6d4aa8; }
+
+/* ---- my team ---- */
+.warroom-myteam { display: grid; gap: 2px; margin-top: 14px; }
+.warroom-slot { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid #e5ebf2; font-size: 13px; }
+.warroom-slot:last-child { border-bottom: 0; }
+.warroom-slot span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.warroom-slot small { color: #8b98ac; font-size: 11px; }
+
+@media (max-width: 1000px) {
+  .warroom-layout { grid-template-columns: 1fr; }
+  .warroom-sidebar { position: static; }
+}
+@media (max-width: 680px) {
+  .warroom-view { padding-top: 24px; }
+  .warroom-header-actions { width: 100%; }
+  .warroom-settings { grid-template-columns: 1fr; }
+  .warroom-row { grid-template-columns: 2.2rem minmax(0, 1fr); }
+  .warroom-acts { grid-column: 1 / -1; justify-content: flex-end; }
+}

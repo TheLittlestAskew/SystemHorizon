@@ -144,3 +144,56 @@ button { -webkit-tap-highlight-color: transparent; }
 .access-gate { display:grid; min-height:100dvh; place-items:center; padding:24px; background:radial-gradient(circle at 16% 12%, rgb(37 230 255 / .24), transparent 22rem), #101010; color:#fff; }.access-gate > div { display:grid; gap:16px; width:min(100%,430px); padding:32px; border:1px solid rgb(255 255 255 / .2); border-radius:24px; background:rgb(25 25 25 / .92); }.access-gate h1,.access-gate p { margin:0; }.access-gate h1 { font-size:44px; letter-spacing:-.07em; }.access-gate > div > p:not(.eyebrow) { color:#c8c8c8; line-height:1.45; }.access-gate label { display:grid; gap:7px; color:#d7d7d7; font-size:13px; }.access-gate input { width:100%; padding:11px 12px; border:1px solid #555; border-radius:10px; background:#111; color:#fff; }.access-gate > div > div { display:flex; gap:9px; flex-wrap:wrap; }.database-error { margin:16px 0 0; padding:12px 14px; border:1px solid #ff8a64; border-radius:12px; background:#fff0eb; color:#8a2800; }
 .career-view { padding-top:44px; }.career-grid,.career-workbench { display:grid; grid-template-columns:repeat(12,minmax(0,1fr)); gap:16px; margin-top:26px; }.career-panel { grid-column:span 6; display:grid; gap:14px; min-height:250px; padding:25px; border:1px solid rgb(121 135 158 / .23); border-radius:24px; background:#fff; box-shadow:0 18px 38px rgb(57 75 112 / .11); }.career-panel > span,.career-panel label { color:#687991; font:10px 'Cascadia Mono', Consolas, monospace; letter-spacing:.08em; text-transform:uppercase; }.career-panel > strong { font-size:64px; letter-spacing:-.09em; line-height:.8; }.career-panel > strong small { margin-left:8px; color:#60708a; font-size:14px; letter-spacing:0; }.career-panel p { margin:0; color:#596982; line-height:1.45; }.compliance-panel { background:linear-gradient(140deg,#121212,#343434); color:#fff; }.compliance-panel > span,.compliance-panel > strong small,.compliance-panel p,.compliance-panel label { color:#d9d9d9; }.compliance-panel form,.career-form > div { display:grid; grid-template-columns:1fr 1fr auto; gap:10px; align-items:end; }.compliance-panel input,.compliance-panel select,.career-form input { width:100%; padding:9px; border:1px solid #9ba8bc; border-radius:9px; background:#fff; color:#151515; }.career-statuses { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:auto; }.career-statuses div { display:grid; gap:5px; padding:10px; border-radius:12px; background:#f0f5ff; }.career-statuses small { color:#65748d; font-size:10px; }.career-statuses b { font-size:22px; }.career-workbench { align-items:start; }.career-form { grid-column:span 12; padding:18px; border:1px solid rgb(121 135 158 / .23); border-radius:20px; background:#fff; }.career-form label { display:grid; gap:6px; color:#60708a; font-size:11px; }.career-form p { margin:10px 0 0; color:#a92c00; font-size:12px; }.application-list { grid-column:span 12; padding:22px; border:1px solid rgb(121 135 158 / .23); border-radius:20px; background:#fff; }.application-list > article { display:flex; justify-content:space-between; gap:16px; padding:15px 0; border-bottom:1px solid #e5ebf2; }.application-list > article:last-child { border-bottom:0; }.application-list article div { display:grid; gap:3px; }.application-list article span,.application-list article small { color:#67768d; font-size:12px; }.application-status { display:grid; justify-items:end; gap:4px; color:#60708a; font:10px 'Cascadia Mono', Consolas, monospace; letter-spacing:.08em; text-transform:uppercase; }.application-status select { min-width:128px; padding:7px 9px; border:1px solid #9ba8bc; border-radius:8px; background:#fff; color:#151515; font:12px Inter, sans-serif; text-transform:none; }
 @media (max-width:760px){.career-panel,.career-form,.application-list{grid-column:span 12}.compliance-panel form,.career-form > div{grid-template-columns:1fr}.career-statuses{grid-template-columns:repeat(2,1fr)}}
+
+/* Swift: Swiftwatch status (read-only, populated by the local sync script), the collection tracker, and the prediction calendar for Invisible String Theory. */
+.swift-view { padding-top:44px; }
+.swift-tabs { margin:25px 0 0; }
+.swift-tab-panel { margin-top:22px; }
+.swift-panel-toolbar { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:18px; }
+.swift-panel-note { margin:0; color:#67768d; font-size:12px; line-height:1.4; max-width:52ch; }
+.swift-watch-list { display:grid; gap:12px; margin-top:24px; }
+.swift-watch-row { display:grid; gap:10px; }
+.swift-watch-meta { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px 16px; margin:2px 0 0; padding:0; }
+.swift-watch-meta div { display:grid; gap:2px; }
+.swift-watch-meta dt { color:#8b98ac; font:9px 'Cascadia Mono', Consolas, monospace; text-transform:uppercase; letter-spacing:.06em; }
+.swift-watch-meta dd { margin:0; color:#3f4a5c; font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.swift-watch-error { margin:0; color:#a92c00; font-size:12px; }
+.swift-watch-notes { margin:0; color:#67768d; font-size:12px; line-height:1.4; }
+.swift-item-form { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; max-width:820px; margin:0 0 22px; padding:16px; border:1px solid rgb(121 135 158 / .23); border-radius:20px; background:#fff; }
+.swift-item-form input, .swift-item-form select { padding:9px 10px; border:1px solid #9ba8bc; border-radius:9px; background:#fff; color:#151515; font-size:12px; }
+.swift-item-form .swift-item-notes { grid-column:1 / -1; }
+.swift-item-form .button { grid-column:1 / -1; justify-self:start; }
+.swift-item-form p { grid-column:1 / -1; margin:0; color:#a92c00; font-size:12px; }
+.swift-checkbox { display:flex; align-items:center; gap:8px; color:#5a6780; font-size:12px; }
+.swift-checkbox input { width:auto; padding:0; }
+.swift-collection-list { display:grid; gap:2px; }
+.swift-item-row { display:flex; justify-content:space-between; align-items:center; gap:16px; padding:13px 0; border-bottom:1px solid #e5ebf2; }
+.swift-item-row:last-child { border-bottom:0; }
+.swift-item-row > div:first-child { display:grid; gap:2px; min-width:0; }
+.swift-item-row strong { font-size:13px; }
+.swift-item-row span { color:#67768d; font:10px 'Cascadia Mono', Consolas, monospace; text-transform:uppercase; letter-spacing:.06em; }
+.swift-item-row small { color:#8b98ac; font-size:11px; }
+.swift-event-section { margin-top:6px; }
+.swift-event-list { display:grid; gap:2px; margin-top:14px; }
+.swift-event-row { display:flex; justify-content:space-between; align-items:center; gap:16px; padding:13px 0; border-bottom:1px solid #e5ebf2; }
+.swift-event-row:last-child { border-bottom:0; }
+.swift-event-row > div:first-child { display:grid; gap:2px; min-width:0; }
+.swift-event-row strong { font-size:13px; }
+.swift-event-row span { color:#67768d; font:10px 'Cascadia Mono', Consolas, monospace; text-transform:uppercase; letter-spacing:.06em; }
+.swift-event-row small { color:#8b98ac; font-size:11px; }
+.swift-event-badge-group { display:flex; align-items:center; gap:10px; flex-shrink:0; }
+.swift-badge { padding:5px 10px; border-radius:999px; font:9px 'Cascadia Mono', Consolas, monospace; text-transform:uppercase; letter-spacing:.06em; white-space:nowrap; }
+.swift-badge.logged { border:1px solid rgb(59 154 76 / .35); color:#3b9a4c; }
+.swift-badge.predicted { border:1px solid rgb(255 116 29 / .35); color:#a95e1a; background:rgb(255 116 29 / .08); }
+@media (max-width:760px){.swift-item-form{grid-template-columns:1fr}.swift-panel-toolbar{flex-direction:column;align-items:flex-start}.swift-event-row,.swift-item-row{flex-direction:column;align-items:flex-start}}
+
+/* Swift: dark-mode adjustments so the badges and rows read correctly against the neon field-console skin. */
+.swift-watch-meta dd { color:#cbd3ed; }
+.swift-panel-note { color:#a9b2d3; }
+.swift-item-form { border-color:rgb(121 135 158 / .23); background:linear-gradient(145deg, rgb(29 33 70 / .93), rgb(18 20 45 / .95)); }
+.swift-item-form input, .swift-item-form select { border-color:rgb(155 171 255 / .42); background:rgb(18 20 45 / .6); color:var(--cloud); }
+.swift-checkbox { color:#bcc4e1; }
+.swift-item-row span, .swift-event-row span { color:#a9b2d3; }
+.swift-item-row small, .swift-event-row small { color:#8892b7; }
+.swift-badge.logged { color:var(--lime); border-color:rgb(201 255 115 / .3); }
+.swift-badge.predicted { color:var(--peach); border-color:rgb(255 135 23 / .35); background:rgb(255 135 23 / .1); }

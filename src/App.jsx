@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from './supabase'
 import { jobPipeline } from './jobPipeline'
+import WarRoomView from './WarRoomView'
 import './App.css'
 
 const navItems = [
@@ -11,6 +12,9 @@ const navItems = [
   ['Career', '05'],
   ['Mirrors', '06'],
   ['Archive', '07'],
+  ['Swift', '08'],
+  ['Travel', '09'],
+  ['War Room', '10'],
 ]
 
 const initialProjects = [
@@ -58,6 +62,43 @@ function eventToRow(event) {
 
 function repoHealthFromRow(row) {
   return { id: row.id, repoName: row.repo_name, localPath: row.local_path, hasLocalMirror: row.has_local_mirror, uncommittedCount: row.uncommitted_count, aheadCount: row.ahead_count, behindCount: row.behind_count, localHeadSha: row.local_head_sha, localHeadAt: row.local_head_at, remoteHeadSha: row.remote_head_sha, lastHandoffAt: row.last_handoff_at, checkError: row.check_error, checkedAt: row.checked_at }
+}
+
+function swiftWatchFromRow(row) {
+  return { id: row.id, watchName: row.watch_name, url: row.url, intervalMinutes: row.interval_minutes, lastCheckedAt: row.last_checked_at, lastChangedAt: row.last_changed_at, changeCount: row.change_count, status: row.status, lastError: row.last_error, notes: row.notes }
+}
+
+function swiftCollectionFromRow(row) {
+  return { id: row.id, itemName: row.item_name, category: row.category, era: row.era, variant: row.variant, status: row.status, priority: row.priority, priceCents: row.price_cents, currency: row.currency, url: row.url, imageUrl: row.image_url, acquiredOn: row.acquired_on, quantity: row.quantity, notes: row.notes }
+}
+
+function swiftCollectionToRow(item) {
+  return { item_name: item.itemName, category: item.category || null, era: item.era || null, variant: item.variant || null, status: item.status || 'wishlist', priority: item.priority ?? 3, price_cents: item.priceCents ?? null, currency: item.currency || 'USD', url: item.url || null, image_url: item.imageUrl || null, acquired_on: item.acquiredOn || null, quantity: item.quantity ?? 1, notes: item.notes || null }
+}
+
+function swiftEventFromRow(row) {
+  return { id: row.id, title: row.title, date: row.event_date, kind: row.kind, era: row.era, recurring: row.recurring, significance: row.significance, predicted: row.predicted, confidence: row.confidence, source: row.source, notes: row.notes }
+}
+
+function swiftEventToRow(event) {
+  return { title: event.title, event_date: event.date || null, kind: event.kind || null, era: event.era || null, recurring: !!event.recurring, significance: event.significance ?? 3, predicted: !!event.predicted, confidence: event.predicted && event.confidence != null ? event.confidence : null, source: event.source || null, notes: event.notes || null }
+}
+
+function formatSwiftPrice(cents, currency) {
+  if (cents == null) return null
+  try {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: currency || 'USD' }).format(cents / 100)
+  } catch {
+    return `$${(cents / 100).toFixed(2)}`
+  }
+}
+
+function travelFromRow(row) {
+  return { id: row.id, tripName: row.trip_name, route: row.route, departDate: row.depart_date, returnDate: row.return_date, priceCents: row.price_cents, currency: row.currency, checkedOn: row.checked_on, notes: row.notes }
+}
+
+function travelToRow(entry) {
+  return { trip_name: entry.tripName, route: entry.route || null, depart_date: entry.departDate || null, return_date: entry.returnDate || null, price_cents: entry.priceCents, currency: entry.currency || 'USD', checked_on: entry.checkedOn, notes: entry.notes || null }
 }
 
 function Button({ tone = 'quiet', className = '', children, ...props }) {
@@ -582,6 +623,329 @@ function MirrorsView({ repoHealth }) {
   </section>
 }
 
+const SWIFT_COLLECTION_STATUSES = ['wishlist', 'owned', 'available', 'preorder', 'sold_out']
+const SWIFT_COLLECTION_CATEGORIES = ['vinyl', 'cd', 'cassette', 'apparel', 'book', 'accessory', 'other']
+const SWIFT_EVENT_KINDS = ['anniversary', 'release', 'tour', 'birthday', 'numerology', 'announcement', 'other']
+
+function swiftWatchTone(status) {
+  return status === 'ok' ? 'cyan' : status === 'stale' ? 'violet' : 'coral'
+}
+
+function SwiftWatchPanel({ watches }) {
+  return <div className="swift-watch-list">
+    {watches.length === 0 && <p className="empty-state">No Swiftwatch data yet. Run the Swiftwatch sync script on your machine to populate this panel — see the mirror-freshness sync in TheLittlestAskew/septentrion for the pattern to copy.</p>}
+    {watches.map((watch) => <article className="mirror-row swift-watch-row" key={watch.id}>
+      <div className="mirror-row-heading">
+        <Signal tone={swiftWatchTone(watch.status)} />
+        <strong>{watch.watchName}</strong>
+        <small>checked {relativeTime(watch.lastCheckedAt)}</small>
+      </div>
+      <dl className="swift-watch-meta">
+        <div><dt>Last change</dt><dd>{relativeTime(watch.lastChangedAt)}</dd></div>
+        <div><dt>Changes seen</dt><dd>{watch.changeCount ?? 0}</dd></div>
+        {watch.intervalMinutes ? <div><dt>Interval</dt><dd>{watch.intervalMinutes}m</dd></div> : null}
+        {watch.url ? <div><dt>Target</dt><dd><a href={watch.url} target="_blank" rel="noreferrer">{watch.url}</a></dd></div> : null}
+      </dl>
+      {watch.lastError && <p className="swift-watch-error">{watch.lastError}</p>}
+      {watch.notes && <p className="swift-watch-notes">{watch.notes}</p>}
+    </article>)}
+  </div>
+}
+
+function SwiftCollectionPanel({ items, onAdd, onUpdateStatus, onDelete }) {
+  const [filter, setFilter] = useState('All')
+  const [isAdding, setIsAdding] = useState(false)
+  const [form, setForm] = useState({ itemName: '', category: 'vinyl', era: '', variant: '', status: 'wishlist', priority: 3, priceCents: '', url: '', notes: '' })
+  const [formError, setFormError] = useState('')
+
+  const visible = filter === 'All' ? items : items.filter((item) => item.status === filter)
+
+  function updateField(field, value) {
+    setForm((current) => ({ ...current, [field]: value }))
+  }
+
+  async function submit(event) {
+    event.preventDefault()
+    const cleanName = form.itemName.trim()
+    if (!cleanName) {
+      setFormError('Give the item a name first.')
+      return
+    }
+    try {
+      await onAdd({
+        itemName: cleanName,
+        category: form.category,
+        era: form.era.trim() || null,
+        variant: form.variant.trim() || null,
+        status: form.status,
+        priority: Number(form.priority) || 3,
+        priceCents: form.priceCents.trim() ? Math.round(Number(form.priceCents) * 100) : null,
+        url: form.url.trim() || null,
+        notes: form.notes.trim() || null,
+      })
+      setForm({ itemName: '', category: 'vinyl', era: '', variant: '', status: 'wishlist', priority: 3, priceCents: '', url: '', notes: '' })
+      setFormError('')
+      setIsAdding(false)
+    } catch (error) {
+      setFormError(error.message || 'The item could not be saved.')
+    }
+  }
+
+  return <div className="swift-tab-panel">
+    <div className="swift-panel-toolbar">
+      <div className="registry-controls" role="group" aria-label="Filter collection by status">
+        {['All', ...SWIFT_COLLECTION_STATUSES].map((option) => <button className={filter === option ? 'selected' : ''} key={option} type="button" onClick={() => setFilter(option)}>{option === 'All' ? 'All' : option.replace('_', ' ')}</button>)}
+      </div>
+      <Button tone="coral" type="button" onClick={() => setIsAdding((open) => !open)}>{isAdding ? 'Close' : 'Add item'}</Button>
+    </div>
+
+    {isAdding && <form className="swift-item-form" onSubmit={submit}>
+      <input value={form.itemName} onChange={(event) => updateField('itemName', event.target.value)} placeholder="Item name" autoFocus />
+      <select value={form.category} onChange={(event) => updateField('category', event.target.value)} aria-label="Category">
+        {SWIFT_COLLECTION_CATEGORIES.map((category) => <option key={category} value={category}>{category}</option>)}
+      </select>
+      <input value={form.era} onChange={(event) => updateField('era', event.target.value)} placeholder="Era (e.g. Folklore)" />
+      <input value={form.variant} onChange={(event) => updateField('variant', event.target.value)} placeholder="Variant / pressing" />
+      <select value={form.status} onChange={(event) => updateField('status', event.target.value)} aria-label="Status">
+        {SWIFT_COLLECTION_STATUSES.map((status) => <option key={status} value={status}>{status.replace('_', ' ')}</option>)}
+      </select>
+      <select value={form.priority} onChange={(event) => updateField('priority', event.target.value)} aria-label="Priority, 1 is grail, 5 is idle curiosity">
+        {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n === 1 ? '1 · grail' : n === 5 ? '5 · idle' : n}</option>)}
+      </select>
+      <input value={form.priceCents} onChange={(event) => updateField('priceCents', event.target.value)} placeholder="Price (USD)" inputMode="decimal" />
+      <input value={form.url} onChange={(event) => updateField('url', event.target.value)} placeholder="Link" />
+      <input className="swift-item-notes" value={form.notes} onChange={(event) => updateField('notes', event.target.value)} placeholder="Notes" />
+      <Button tone="coral" type="submit">Save item</Button>
+      {formError && <p role="alert">{formError}</p>}
+    </form>}
+
+    <div className="swift-collection-list">
+      {visible.length === 0 && <p className="empty-state">Nothing here yet.</p>}
+      {visible.map((item) => <article className="swift-item-row" key={item.id}>
+        <div>
+          <strong>{item.itemName}</strong>
+          <span>{item.category}{item.era ? ` · ${item.era}` : ''}{item.variant ? ` · ${item.variant}` : ''}</span>
+          {formatSwiftPrice(item.priceCents, item.currency) && <small>{formatSwiftPrice(item.priceCents, item.currency)}</small>}
+          {item.notes && <small>{item.notes}</small>}
+        </div>
+        <div className="task-controls">
+          <select aria-label={`Status for ${item.itemName}`} value={item.status} onChange={(event) => onUpdateStatus(item.id, event.target.value)}>
+            {SWIFT_COLLECTION_STATUSES.map((status) => <option key={status} value={status}>{status.replace('_', ' ')}</option>)}
+          </select>
+          <button type="button" onClick={() => onDelete(item.id)} aria-label={`Delete ${item.itemName}`}>×</button>
+        </div>
+      </article>)}
+    </div>
+  </div>
+}
+
+function SwiftEventRow({ event, onDelete }) {
+  return <article className="swift-event-row">
+    <div>
+      <strong>{event.title}</strong>
+      <span>{event.date || 'No date'} · {event.kind}{event.recurring ? ' · annual' : ''}</span>
+      {event.source && <small>Source: {event.source}</small>}
+      {event.notes && <small>{event.notes}</small>}
+    </div>
+    <div className="swift-event-badge-group">
+      {event.predicted ? <span className="swift-badge predicted">Predicted{typeof event.confidence === 'number' ? ` · ${event.confidence}%` : ''}</span> : <span className="swift-badge logged">Logged</span>}
+      <button type="button" onClick={() => onDelete(event.id)} aria-label={`Delete ${event.title}`}>×</button>
+    </div>
+  </article>
+}
+
+function SwiftEventsPanel({ events, onAdd, onDelete }) {
+  const [isAdding, setIsAdding] = useState(false)
+  const [form, setForm] = useState({ title: '', date: '', kind: 'anniversary', recurring: false, predicted: false, confidence: '', source: '', notes: '' })
+  const [formError, setFormError] = useState('')
+  const today = new Date().toISOString().slice(0, 10)
+  const upcoming = events.filter((event) => !event.date || event.date >= today)
+  const past = events.filter((event) => event.date && event.date < today)
+
+  function updateField(field, value) {
+    setForm((current) => ({ ...current, [field]: value }))
+  }
+
+  async function submit(event) {
+    event.preventDefault()
+    const cleanTitle = form.title.trim()
+    if (!cleanTitle) {
+      setFormError('Give the event a title first.')
+      return
+    }
+    try {
+      await onAdd({
+        title: cleanTitle,
+        date: form.date || null,
+        kind: form.kind,
+        recurring: form.recurring,
+        predicted: form.predicted,
+        confidence: form.predicted && form.confidence.trim() ? Number(form.confidence) : null,
+        source: form.source.trim() || null,
+        notes: form.notes.trim() || null,
+      })
+      setForm({ title: '', date: '', kind: 'anniversary', recurring: false, predicted: false, confidence: '', source: '', notes: '' })
+      setFormError('')
+      setIsAdding(false)
+    } catch (error) {
+      setFormError(error.message || 'The event could not be saved.')
+    }
+  }
+
+  return <div className="swift-tab-panel">
+    <div className="swift-panel-toolbar">
+      <p className="swift-panel-note">Forecasts and logged dates stay visually distinct — a guess never renders as a fact.</p>
+      <Button tone="coral" type="button" onClick={() => setIsAdding((open) => !open)}>{isAdding ? 'Close' : 'Add event'}</Button>
+    </div>
+
+    {isAdding && <form className="swift-item-form" onSubmit={submit}>
+      <input value={form.title} onChange={(event) => updateField('title', event.target.value)} placeholder="Event title" autoFocus />
+      <input type="date" value={form.date} onChange={(event) => updateField('date', event.target.value)} aria-label="Date" />
+      <select value={form.kind} onChange={(event) => updateField('kind', event.target.value)} aria-label="Kind">
+        {SWIFT_EVENT_KINDS.map((kind) => <option key={kind} value={kind}>{kind}</option>)}
+      </select>
+      <label className="swift-checkbox"><input type="checkbox" checked={form.recurring} onChange={(event) => updateField('recurring', event.target.checked)} /> Recurring annually</label>
+      <label className="swift-checkbox"><input type="checkbox" checked={form.predicted} onChange={(event) => updateField('predicted', event.target.checked)} /> This is a prediction, not a fact</label>
+      {form.predicted && <input value={form.confidence} onChange={(event) => updateField('confidence', event.target.value)} placeholder="Confidence 0-100" inputMode="numeric" />}
+      <input value={form.source} onChange={(event) => updateField('source', event.target.value)} placeholder="Source / reasoning" />
+      <input className="swift-item-notes" value={form.notes} onChange={(event) => updateField('notes', event.target.value)} placeholder="Notes" />
+      <Button tone="coral" type="submit">Save event</Button>
+      {formError && <p role="alert">{formError}</p>}
+    </form>}
+
+    <section className="swift-event-section">
+      <div className="instrument-heading"><span>Upcoming</span><b>{upcoming.length}</b></div>
+      <div className="swift-event-list">{upcoming.length ? upcoming.map((event) => <SwiftEventRow event={event} onDelete={onDelete} key={event.id} />) : <p className="empty-state">Nothing upcoming.</p>}</div>
+    </section>
+    {past.length > 0 && <details className="task-done-list"><summary>{past.length} past</summary>{past.map((event) => <SwiftEventRow event={event} onDelete={onDelete} key={event.id} />)}</details>}
+  </div>
+}
+
+function SwiftView({ watches, collection, events, onAddCollectionItem, onUpdateCollectionStatus, onDeleteCollectionItem, onAddEvent, onDeleteEvent }) {
+  const [tab, setTab] = useState('Watch')
+
+  return <section className="swift-view" aria-labelledby="swift-heading">
+    <header className="view-header">
+      <div>
+        <p className="eyebrow">System index / 08</p>
+        <h2 id="swift-heading">Swift field</h2>
+        <p>Swiftwatch status, the collection tracker, and the prediction calendar for Invisible String Theory.</p>
+      </div>
+    </header>
+    <div className="registry-controls swift-tabs" role="group" aria-label="Swift view tabs">
+      {['Watch', 'Collection', 'Calendar'].map((option) => <button className={tab === option ? 'selected' : ''} key={option} type="button" onClick={() => setTab(option)}>{option}</button>)}
+    </div>
+    {tab === 'Watch' && <SwiftWatchPanel watches={watches} />}
+    {tab === 'Collection' && <SwiftCollectionPanel items={collection} onAdd={onAddCollectionItem} onUpdateStatus={onUpdateCollectionStatus} onDelete={onDeleteCollectionItem} />}
+    {tab === 'Calendar' && <SwiftEventsPanel events={events} onAdd={onAddEvent} onDelete={onDeleteEvent} />}
+  </section>
+}
+
+function daysUntil(dateStr) {
+  if (!dateStr) return null
+  const target = new Date(`${dateStr}T00:00:00`)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return Math.round((target - today) / 86400000)
+}
+
+function TravelEntryRow({ entry, isLowest, onDelete }) {
+  return <article className="swift-item-row">
+    <div>
+      <strong>{formatSwiftPrice(entry.priceCents, entry.currency)}</strong>
+      <span>checked {entry.checkedOn}{entry.route ? ` · ${entry.route}` : ''}</span>
+      {entry.notes && <small>{entry.notes}</small>}
+    </div>
+    <div className="swift-event-badge-group">
+      {isLowest && <span className="swift-badge logged">Lowest seen</span>}
+      <button type="button" onClick={() => onDelete(entry.id)} aria-label={`Delete price check from ${entry.checkedOn}`}>×</button>
+    </div>
+  </article>
+}
+
+function TravelView({ entries, onAdd, onDelete }) {
+  const [isAdding, setIsAdding] = useState(false)
+  const [form, setForm] = useState({ tripName: '', route: '', departDate: '', returnDate: '', priceDollars: '', checkedOn: new Date().toISOString().slice(0, 10), notes: '' })
+  const [formError, setFormError] = useState('')
+
+  function updateField(field, value) {
+    setForm((current) => ({ ...current, [field]: value }))
+  }
+
+  async function submit(event) {
+    event.preventDefault()
+    const cleanTrip = form.tripName.trim()
+    const priceNum = Number(form.priceDollars)
+    if (!cleanTrip) { setFormError('Give the trip a name first.'); return }
+    if (!form.priceDollars.trim() || Number.isNaN(priceNum) || priceNum <= 0) { setFormError('Enter a valid price.'); return }
+    try {
+      await onAdd({
+        tripName: cleanTrip,
+        route: form.route.trim() || null,
+        departDate: form.departDate || null,
+        returnDate: form.returnDate || null,
+        priceCents: Math.round(priceNum * 100),
+        currency: 'USD',
+        checkedOn: form.checkedOn || new Date().toISOString().slice(0, 10),
+        notes: form.notes.trim() || null,
+      })
+      setForm((current) => ({ ...current, priceDollars: '', notes: '', checkedOn: new Date().toISOString().slice(0, 10) }))
+      setFormError('')
+      setIsAdding(false)
+    } catch (error) {
+      setFormError(error.message || 'The price check could not be saved.')
+    }
+  }
+
+  const trips = new Map()
+  for (const entry of entries) {
+    const tripKey = entry.tripName.trim().toLowerCase()
+    if (!trips.has(tripKey)) trips.set(tripKey, [])
+    trips.get(tripKey).push(entry)
+  }
+
+  return <section className="travel-view" aria-labelledby="travel-heading">
+    <header className="view-header">
+      <div>
+        <p className="eyebrow">System index / 09</p>
+        <h2 id="travel-heading">Travel field</h2>
+        <p>Manual price log for trips you're watching. Log a price whenever you check, and the lowest seen gets flagged.</p>
+      </div>
+      <Button tone="coral" type="button" onClick={() => setIsAdding((open) => !open)}>{isAdding ? 'Close' : 'Log a price'}</Button>
+    </header>
+
+    {isAdding && <form className="swift-item-form" onSubmit={submit}>
+      <input value={form.tripName} onChange={(event) => updateField('tripName', event.target.value)} placeholder="Trip name (e.g. PAX Unplugged)" autoFocus />
+      <input value={form.route} onChange={(event) => updateField('route', event.target.value)} placeholder="Route (e.g. ATL-PHL round trip)" />
+      <input type="date" value={form.departDate} onChange={(event) => updateField('departDate', event.target.value)} aria-label="Depart date" />
+      <input type="date" value={form.returnDate} onChange={(event) => updateField('returnDate', event.target.value)} aria-label="Return date" />
+      <input value={form.priceDollars} onChange={(event) => updateField('priceDollars', event.target.value)} placeholder="Price (USD)" inputMode="decimal" />
+      <input type="date" value={form.checkedOn} onChange={(event) => updateField('checkedOn', event.target.value)} aria-label="Checked on" />
+      <input className="swift-item-notes" value={form.notes} onChange={(event) => updateField('notes', event.target.value)} placeholder="Notes (airline, times, source site)" />
+      <Button tone="coral" type="submit">Save price check</Button>
+      {formError && <p role="alert">{formError}</p>}
+    </form>}
+
+    {trips.size === 0 && <p className="empty-state">No price checks logged yet. Log the first one above.</p>}
+
+    {[...trips.entries()].map(([tripName, tripEntries]) => {
+      const sorted = [...tripEntries].sort((a, b) => (a.checkedOn < b.checkedOn ? 1 : -1))
+      const lowestCents = Math.min(...tripEntries.map((entry) => entry.priceCents))
+      const first = tripEntries[0]
+      const departIn = daysUntil(first.departDate)
+      return <section key={tripName} className="swift-event-section">
+        <div className="instrument-heading">
+          <span>{first.tripName}{first.route ? ` · ${first.route}` : ''}</span>
+          <b>{tripEntries.length} check{tripEntries.length === 1 ? '' : 's'}{departIn != null && departIn >= 0 ? ` · ${departIn}d to departure` : ''}</b>
+        </div>
+        <div className="swift-collection-list">
+          {sorted.map((entry) => <TravelEntryRow key={entry.id} entry={entry} isLowest={entry.priceCents === lowestCents} onDelete={onDelete} />)}
+        </div>
+      </section>
+    })}
+  </section>
+}
+
 function App() {
   const [activeView, setActiveView] = useState('Horizon')
   const [session, setSession] = useState(null)
@@ -592,6 +956,10 @@ function App() {
   const [jobs, setJobs] = useState([])
   const [jobError, setJobError] = useState('')
   const [repoHealth, setRepoHealth] = useState([])
+  const [swiftWatch, setSwiftWatch] = useState([])
+  const [swiftCollection, setSwiftCollection] = useState([])
+  const [swiftEvents, setSwiftEvents] = useState([])
+  const [travelWatch, setTravelWatch] = useState([])
   const [databaseError, setDatabaseError] = useState('')
   const greeting = useMemo(() => new Date().getHours() < 12 ? 'Morning field check' : new Date().getHours() < 18 ? 'Afternoon field check' : 'Evening field check', [])
 
@@ -639,6 +1007,30 @@ function App() {
     setRepoHealth((data ?? []).map(repoHealthFromRow))
   }
 
+  async function loadSwiftWatch() {
+    const { data, error } = await supabase.from('horizon_swift_watch').select('*').order('watch_name', { ascending: true })
+    if (error) throw error
+    setSwiftWatch((data ?? []).map(swiftWatchFromRow))
+  }
+
+  async function loadSwiftCollection() {
+    const { data, error } = await supabase.from('horizon_swift_collection').select('*').order('priority', { ascending: true })
+    if (error) throw error
+    setSwiftCollection((data ?? []).map(swiftCollectionFromRow))
+  }
+
+  async function loadSwiftEvents() {
+    const { data, error } = await supabase.from('horizon_swift_events').select('*').order('event_date', { ascending: true })
+    if (error) throw error
+    setSwiftEvents((data ?? []).map(swiftEventFromRow))
+  }
+
+  async function loadTravelWatch() {
+    const { data, error } = await supabase.from('horizon_travel_watch').select('*').order('checked_on', { ascending: false })
+    if (error) throw error
+    setTravelWatch((data ?? []).map(travelFromRow))
+  }
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
     const { data: subscription } = supabase.auth.onAuthStateChange((_event, nextSession) => setSession(nextSession))
@@ -647,7 +1039,7 @@ function App() {
 
   useEffect(() => {
     if (!session) return
-    Promise.all([loadProjects(), loadTasks(), loadEvents(), loadJobPipeline(), loadRepoHealth()]).catch((error) => setDatabaseError(error.message || 'Could not load private records.'))
+    Promise.all([loadProjects(), loadTasks(), loadEvents(), loadJobPipeline(), loadRepoHealth(), loadSwiftWatch(), loadSwiftCollection(), loadSwiftEvents(), loadTravelWatch()]).catch((error) => setDatabaseError(error.message || 'Could not load private records.'))
   }, [session])
 
   async function addProject(project) {
@@ -705,6 +1097,49 @@ function App() {
     if (error) { setDatabaseError(error.message || 'Could not delete the event.'); await loadEvents() }
   }
 
+  async function addSwiftCollectionItem(item) {
+    const { data, error } = await supabase.from('horizon_swift_collection').insert(swiftCollectionToRow(item)).select().single()
+    if (error) { setDatabaseError(error.message || 'Could not save the collection item.'); return }
+    setSwiftCollection((current) => [swiftCollectionFromRow(data), ...current])
+  }
+
+  async function updateSwiftCollectionStatus(id, status) {
+    const { data, error } = await supabase.from('horizon_swift_collection').update({ status }).eq('id', id).select().single()
+    if (error) { setDatabaseError(error.message || 'Could not update the collection item.'); return }
+    const saved = swiftCollectionFromRow(data)
+    setSwiftCollection((current) => current.map((item) => item.id === id ? saved : item))
+  }
+
+  async function deleteSwiftCollectionItem(id) {
+    setSwiftCollection((current) => current.filter((item) => item.id !== id))
+    const { error } = await supabase.from('horizon_swift_collection').delete().eq('id', id)
+    if (error) { setDatabaseError(error.message || 'Could not delete the collection item.'); await loadSwiftCollection() }
+  }
+
+  async function addSwiftEvent(event) {
+    const { data, error } = await supabase.from('horizon_swift_events').insert(swiftEventToRow(event)).select().single()
+    if (error) { setDatabaseError(error.message || 'Could not save the event.'); return }
+    setSwiftEvents((current) => [...current, swiftEventFromRow(data)].sort((a, b) => (a.date || '') < (b.date || '') ? -1 : 1))
+  }
+
+  async function deleteSwiftEvent(id) {
+    setSwiftEvents((current) => current.filter((event) => event.id !== id))
+    const { error } = await supabase.from('horizon_swift_events').delete().eq('id', id)
+    if (error) { setDatabaseError(error.message || 'Could not delete the event.'); await loadSwiftEvents() }
+  }
+
+  async function addTravelEntry(entry) {
+    const { data, error } = await supabase.from('horizon_travel_watch').insert(travelToRow(entry)).select().single()
+    if (error) throw error
+    setTravelWatch((current) => [travelFromRow(data), ...current])
+  }
+
+  async function deleteTravelEntry(id) {
+    setTravelWatch((current) => current.filter((entry) => entry.id !== id))
+    const { error } = await supabase.from('horizon_travel_watch').delete().eq('id', id)
+    if (error) { setDatabaseError(error.message || 'Could not delete the price check.'); await loadTravelWatch() }
+  }
+
   if (!session) return <AccessGate />
 
   const selectedProject = projects.find((project) => project.id === selectedProjectId)
@@ -731,6 +1166,9 @@ function App() {
           : activeView === 'Career' ? <CareerView jobs={jobs} jobError={jobError} />
           : activeView === 'Mirrors' ? <MirrorsView repoHealth={repoHealth} />
           : activeView === 'Archive' ? <ArchiveView />
+          : activeView === 'Swift' ? <SwiftView watches={swiftWatch} collection={swiftCollection} events={swiftEvents} onAddCollectionItem={addSwiftCollectionItem} onUpdateCollectionStatus={updateSwiftCollectionStatus} onDeleteCollectionItem={deleteSwiftCollectionItem} onAddEvent={addSwiftEvent} onDeleteEvent={deleteSwiftEvent} />
+          : activeView === 'Travel' ? <TravelView entries={travelWatch} onAdd={addTravelEntry} onDelete={deleteTravelEntry} />
+          : activeView === 'War Room' ? <WarRoomView />
           : <Horizon projects={projects} onProjects={() => setActiveView('Projects')} />}
       </main>
     </div>

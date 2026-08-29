@@ -948,6 +948,10 @@ function TravelView({ entries, onAdd, onDelete }) {
 
 function App() {
   const [activeView, setActiveView] = useState('Horizon')
+  const [navCollapsed, setNavCollapsed] = useState(() => {
+    try { return window.localStorage.getItem('system-horizon-nav-collapsed') === 'true' }
+    catch { return false }
+  })
   const [session, setSession] = useState(null)
   const [projects, setProjects] = useState([])
   const [selectedProjectId, setSelectedProjectId] = useState(null)
@@ -1036,6 +1040,11 @@ function App() {
     const { data: subscription } = supabase.auth.onAuthStateChange((_event, nextSession) => setSession(nextSession))
     return () => subscription.subscription.unsubscribe()
   }, [])
+
+  useEffect(() => {
+    try { window.localStorage.setItem('system-horizon-nav-collapsed', String(navCollapsed)) }
+    catch { /* Navigation preference is optional when storage is blocked. */ }
+  }, [navCollapsed])
 
   useEffect(() => {
     if (!session) return
@@ -1145,15 +1154,18 @@ function App() {
   const selectedProject = projects.find((project) => project.id === selectedProjectId)
   const pageTitle = activeView === 'Horizon' ? 'System Horizon' : activeView === 'ProjectDetail' ? (selectedProject?.name ?? 'Project') : activeView
 
+  const isWarRoom = activeView === 'War Room'
+
   return <div className="app-provider">
-    <div className="app-shell">
+    <div className={`app-shell${navCollapsed ? ' nav-collapsed' : ''}${isWarRoom ? ' warroom-active' : ''}`}>
       <aside className="side-nav" aria-label="Primary navigation">
         <button className="brand-mark" type="button" aria-label="Open Horizon" onClick={() => setActiveView('Horizon')}><span>SH</span><i aria-hidden="true" /></button>
+        <button className="nav-collapse" type="button" aria-label={navCollapsed ? 'Expand navigation' : 'Collapse navigation'} aria-pressed={navCollapsed} onClick={() => setNavCollapsed((collapsed) => !collapsed)}><span aria-hidden="true">{navCollapsed ? '›' : '‹'}</span><b>{navCollapsed ? 'Expand' : 'Collapse'}</b></button>
         <nav>{navItems.map(([label, code]) => <button className={activeView === label || (activeView === 'ProjectDetail' && label === 'Projects') ? 'nav-item active' : 'nav-item'} key={label} type="button" onClick={() => setActiveView(label)}><span>{code}</span><b>{label}</b></button>)}</nav>
         <div className="nav-footer"><Signal /><span>Sync stable</span></div>
       </aside>
 
-      <main className="main-content">
+      <main className={isWarRoom ? 'main-content warroom-main' : 'main-content'}>
         <header className="topbar">
           <div><span>{greeting}</span><h1>{pageTitle}</h1></div>
           <div className="topbar-tools"><label className="search-field"><span>Search</span><input aria-label="Search System Horizon" placeholder="Find a system" /></label><Button type="button" onClick={() => supabase.auth.signOut()}>Sign out</Button><DateReadout /></div>

@@ -4,7 +4,7 @@
 > Handoff is **enabled** for this repo. Every change updates the DO NEXT block below and prepends a log entry.
 
 ## ▶ DO NEXT
-**1. Draft day is Saturday 2026-08-30. The War Room merge is complete and live.**
+**1. Draft day is Saturday 2026-08-30. The War Room is live with its draft-night visual pass.**
 Open `sh.tayloraritchie.com` → **War Room** (nav panel 10). It loads ~271 players
 from FFC ADP on first visit. Click **ESPN Sync: Off** to turn it on — polls every
 5s and auto-marks picks taken/mine.
@@ -70,6 +70,14 @@ Standing repo notes:
 
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
+
+### 2026-08-29 18:54 ET · Codex
+- **Changed:** Restyled `src/WarRoom.css` as a contained dark draft-day command surface using the approved mockup direction.
+  - Preserved the existing ESPN sync, CSV fallback, player ranking board, and local board-state behavior.
+  - Reworked hierarchy, spacing, contrast, controls, board rows, position chips, and roster rail without changing shared System Horizon styles.
+- **Commit:** `dd13524`
+- **Next:** Open `sh.tayloraritchie.com` → **War Room** and visually verify the new board before draft day.
+- **Watch out:** Local visual review reaches the owner-only access gate; it cannot inspect the signed-in board without the owner session.
 
 ### 2026-08-29 · Claude chat (War Room wire-up completed via browser)
 - **Changed:** Added the three lines to `src/App.jsx` that make the War Room reachable: the `WarRoomView` import, `['War Room', '10']` in `navItems`, and the `activeView === 'War Room'` route between the Travel route and the Horizon fallback. Done by driving the GitHub web editor through the Chrome extension, because the Contents API cannot patch a file and re-sending 76KB read only in fragments was the larger risk.

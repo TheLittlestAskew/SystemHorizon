@@ -222,3 +222,54 @@ export function describeEspnPoll(json, unmatched) {
   if (unmatched) parts.push(unmatched + ' unmatched this poll')
   return parts.join(' · ')
 }
+
+/* ---------- league draft order ----------
+   Slot -> team. Cross-checked 2026-08-29 against the live league JSON:
+   draftSettings.pickOrder = [6,2,17,4,13,7,15,20,16,1,5,19,8,12,11,10,18,9,14,3]
+   resolves to exactly this sequence, and slot 9 = espnTeamId 16 = Hits Different
+   = Taylor Ritchie. Team names are ESPN's own spellings; handles are Discord.
+   Do not edit without re-pulling pickOrder — a wrong slot silently attributes
+   picks to the wrong owner. */
+export const DRAFT_ORDER = [
+  { slot: 1,  name: 'Trash Goblins',               handle: '@Matthew',                espnTeamId: 6  },
+  { slot: 2,  name: 'Champs: Evermore',            handle: '@adamantium',             espnTeamId: 2  },
+  { slot: 3,  name: 'Goldfish Bowl',               handle: '@PaperGoldfish98',        espnTeamId: 17 },
+  { slot: 4,  name: 'SkyDaddy Dragons',            handle: '@Alec',                   espnTeamId: 4  },
+  { slot: 5,  name: "Christian's Calculated Team", handle: '@Christian (Dorius)',     espnTeamId: 13 },
+  { slot: 6,  name: 'Brownton Abbey',              handle: '@DustyBuns54',            espnTeamId: 7  },
+  { slot: 7,  name: 'Power Word: Punt',            handle: '@CJ',                     espnTeamId: 15 },
+  { slot: 8,  name: "Halfling Hail Mary's",        handle: '@E-N Cam',                espnTeamId: 20 },
+  { slot: 9,  name: 'Hits Different',              handle: '@KillYourDarlings',       espnTeamId: 16 },
+  { slot: 10, name: 'Cursed Dice',                 handle: '@Christian',              espnTeamId: 1  },
+  { slot: 11, name: 'I Feel Bonita',               handle: '@luíSanto',               espnTeamId: 5  },
+  { slot: 12, name: "Dakota's Dangerous Team",     handle: '@dakotatesta',            espnTeamId: 19 },
+  { slot: 13, name: 'The Adamante Uniom',          handle: '@Zag',                    espnTeamId: 8  },
+  { slot: 14, name: 'Sin City Star Spawn',         handle: '@Joey (Yurnith)',         espnTeamId: 12 },
+  { slot: 15, name: 'Guinness on the Gridiron',    handle: '@Liam',                   espnTeamId: 11 },
+  { slot: 16, name: 'Phins Up',                    handle: '@Tim',                    espnTeamId: 10 },
+  { slot: 17, name: '13th Down',                   handle: '@Tess',                   espnTeamId: 18 },
+  { slot: 18, name: 'Dungeons and Footballs',      handle: '@Ben (Guy Underhill)',    espnTeamId: 9  },
+  { slot: 19, name: 'Here for the Vibes',          handle: '@Samantha',               espnTeamId: 14 },
+  { slot: 20, name: 'The Murderhobos',             handle: '@Sarah (Alina/Kyriana)',  espnTeamId: 3  },
+]
+
+export function teamForSeat(seat) {
+  // Seat number (1-based draft slot) -> team. Null for anything out of range so
+  // a resized league shows no name rather than the wrong owner.
+  if (!Number.isInteger(seat) || seat < 1 || seat > DRAFT_ORDER.length) return null
+  return DRAFT_ORDER[seat - 1]
+}
+
+export function teamForOverall(overall, teams) {
+  // Which team owns a given overall pick number. Uses the snake-corrected seat,
+  // not the raw position within the round.
+  if (teams !== DRAFT_ORDER.length) return null
+  const rp = overallToRoundPick(overall, teams)
+  return rp ? teamForSeat(rp.seat) : null
+}
+
+export function teamByEspnId(espnTeamId) {
+  // Attribute an ESPN pick to a team name. Null id must not match anyone.
+  if (espnTeamId == null) return null
+  return DRAFT_ORDER.find((t) => t.espnTeamId === espnTeamId) || null
+}

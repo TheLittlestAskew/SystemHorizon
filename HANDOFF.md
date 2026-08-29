@@ -4,7 +4,7 @@
 > Handoff is **enabled** for this repo. Every change updates the DO NEXT block below and prepends a log entry.
 
 ## ▶ DO NEXT
-**1. Draft day is Saturday 2026-08-30. The War Room is live with its draft-night visual pass.**
+**1. Draft day is Saturday 2026-08-30. The War Room is live with its draft-night visual pass and live snake board.**
 Open `sh.tayloraritchie.com` → **War Room** (nav panel 10). It loads ~271 players
 from FFC ADP on first visit. Click **ESPN Sync: Off** to turn it on — polls every
 5s and auto-marks picks taken/mine.
@@ -70,6 +70,14 @@ Standing repo notes:
 
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
+
+### 2026-08-29 19:06 ET · Codex
+- **Changed:** Rebuilt the War Room draft page as the requested three-panel draft-room workflow.
+  - Available players now sit left, the center renders a 20-team, 14-round snake board, and the right rail keeps My Team plus the next five picks visible.
+  - ESPN picks now retain their overall draft number in local state, so synced cells appear in their actual board position. Manual marks claim the next unfilled position and Undo restores its prior slot.
+- **Commit:** `427c2ed`
+- **Next:** Open `sh.tayloraritchie.com` → **War Room**, turn on ESPN Sync, and visually confirm live picks fill the center board before draft day.
+- **Watch out:** The 20-team board scrolls horizontally by design on smaller screens; shrinking its cells would make it unreadable.
 
 ### 2026-08-29 18:54 ET · Codex
 - **Changed:** Restyled `src/WarRoom.css` as a contained dark draft-day command surface using the approved mockup direction.

@@ -45,6 +45,13 @@ const DEFAULT_STATE = {
   espn: { leagueId: '1573934181', teamId: 16, lastAppliedOverall: 0 },
 }
 
+const WAR_ROOM_TABS = [
+  { id: 'draft', label: 'Draft Board' },
+  { id: 'players', label: 'Player Pool' },
+  { id: 'team', label: 'My Team' },
+  { id: 'settings', label: 'Settings' },
+]
+
 function loadState() {
   // Corrupted or blocked storage must start clean rather than throw on boot.
   let raw = null
@@ -79,7 +86,7 @@ function WarRoomView() {
   const [espnError, setEspnError] = useState(false)
   const [syncOn, setSyncOn] = useState(false)
   const [ui, setUi] = useState({ posFilter: 'ALL', search: '', hideTaken: true, edit: false, openNote: null })
-  const [showSettings, setShowSettings] = useState(false)
+  const [activeTab, setActiveTab] = useState('draft')
   const [panel, setPanel] = useState({ open: false, message: '' })
   const [csvText, setCsvText] = useState('')
   const [csvError, setCsvError] = useState('')
@@ -351,7 +358,7 @@ function WarRoomView() {
         </p>
       </div>
       <div className="warroom-header-actions">
-        <button type="button" className="button" onClick={() => setShowSettings((open) => !open)} aria-pressed={showSettings}>Settings</button>
+        <button type="button" className="button" onClick={() => setActiveTab('settings')} aria-current={activeTab === 'settings' ? 'page' : undefined}>Settings</button>
         <button type="button" className="button" onClick={() => setPanel({ open: !panel.open, message: '' })}>Import CSV</button>
         <button type="button" className="button" onClick={fetchADP}>Refresh ADP</button>
         <button
@@ -365,10 +372,20 @@ function WarRoomView() {
       </div>
     </header>
 
+    <nav className="warroom-tabs" aria-label="War Room pages">
+      {WAR_ROOM_TABS.map((tab) => <button
+        key={tab.id}
+        type="button"
+        className={activeTab === tab.id ? 'warroom-tab active' : 'warroom-tab'}
+        aria-current={activeTab === tab.id ? 'page' : undefined}
+        onClick={() => setActiveTab(tab.id)}
+      >{tab.label}</button>)}
+    </nav>
+
     <p className={status.isError ? 'warroom-status error' : 'warroom-status'} role="status">{status.text}</p>
     {syncOn && <p className={espnError ? 'warroom-status error' : 'warroom-status'} role="status">ESPN · {espnStatus || 'polling…'}</p>}
 
-    {showSettings && <div className="warroom-settings">
+    {activeTab === 'settings' && <div className="warroom-settings warroom-tab-page">
       <label>Teams<input type="number" min="2" max="32" inputMode="numeric" defaultValue={teams} onChange={(e) => updateSetting('teams', e.target.value)} /></label>
       <label>Your slot<input type="number" min="1" max="32" inputMode="numeric" defaultValue={slot ?? ''} onChange={(e) => updateSetting('slot', e.target.value)} /></label>
       <label>Rounds<input type="number" min="1" max="30" inputMode="numeric" defaultValue={rounds} onChange={(e) => updateSetting('rounds', e.target.value)} /></label>
@@ -412,7 +429,7 @@ function WarRoomView() {
       </div>
     </div>}
 
-    <div className="warroom-draft-layout">
+    {activeTab === 'draft' && <div className="warroom-draft-layout">
       <section className="warroom-available" aria-label="Available players">
         <div className="warroom-controls">
           <input type="search" value={ui.search} onChange={(e) => setUi((c) => ({ ...c, search: e.target.value }))} placeholder="Search player or team" aria-label="Search players" />
@@ -506,7 +523,76 @@ function WarRoomView() {
           </div>)}
         </div>
       </aside>
-    </div>
+    </div>}
+
+    {activeTab === 'players' && <section className="warroom-player-page warroom-tab-page" aria-label="Player pool">
+      <div className="warroom-controls">
+        <input type="search" value={ui.search} onChange={(e) => setUi((current) => ({ ...current, search: e.target.value }))} placeholder="Search player or team" aria-label="Search players" />
+        <div className="warroom-chips" role="group" aria-label="Position filter">
+          {['ALL', ...POSITIONS].map((pos) => <button
+            key={pos}
+            type="button"
+            className={ui.posFilter === pos ? 'warroom-chip selected' : 'warroom-chip'}
+            aria-pressed={ui.posFilter === pos}
+            onClick={() => setUi((current) => ({ ...current, posFilter: pos }))}
+          >{pos}</button>)}
+        </div>
+        <button type="button" className={ui.hideTaken ? 'warroom-chip selected' : 'warroom-chip'} aria-pressed={ui.hideTaken} onClick={() => setUi((current) => ({ ...current, hideTaken: !current.hideTaken }))}>Hide drafted</button>
+        <button type="button" className={ui.edit ? 'warroom-chip selected' : 'warroom-chip'} aria-pressed={ui.edit} onClick={() => setUi((current) => ({ ...current, edit: !current.edit }))}>Edit ranks</button>
+      </div>
+
+      <ul className="warroom-board">
+        {rows.length === 0 && <li className="warroom-row"><span className="warroom-empty">No players match. Load ADP or import a CSV above.</span></li>}
+        {rows.map(({ player, rank, status: rowStatus }) => <li key={player.key} className={`warroom-row ${rowStatus}`}>
+          <span className="warroom-rank warroom-mono">{rank}</span>
+          <span className="warroom-who">
+            <span className="warroom-name">{player.name}</span>
+            <span className="warroom-meta">
+              <PositionChip pos={player.pos} />
+              <span>{player.team || 'FA'}{player.bye ? ` · bye ${player.bye}` : ''}</span>
+              <span className="warroom-mono">ADP {player.adp < 900 ? player.adp.toFixed(1) : '-'}</span>
+              {player.tier ? <span className="warroom-mono">T{player.tier}</span> : null}
+            </span>
+          </span>
+          <span className="warroom-acts">
+            {ui.edit ? <>
+              <button type="button" onClick={() => setState((current) => ({ ...current, order: moveInOrder(current.order, player.key, 'top') }))} aria-label={`Move ${player.name} to top`}>⤒</button>
+              <button type="button" onClick={() => setState((current) => ({ ...current, order: moveInOrder(current.order, player.key, -1) }))} aria-label={`Move ${player.name} up`}>↑</button>
+              <button type="button" onClick={() => setState((current) => ({ ...current, order: moveInOrder(current.order, player.key, 1) }))} aria-label={`Move ${player.name} down`}>↓</button>
+            </> : <>
+              <button type="button" className={state.notes[player.key] ? 'warroom-note has' : 'warroom-note'} onClick={() => setUi((current) => ({ ...current, openNote: current.openNote === player.key ? null : player.key }))} aria-label={`Note on ${player.name}`}>✎</button>
+              <button type="button" onClick={() => setPlayerStatus(player.key, 'taken')} aria-label={`${player.name} drafted by someone else`}>✕</button>
+              <button type="button" className="warroom-claim" onClick={() => setPlayerStatus(player.key, 'mine')} aria-label={`${player.name} is my pick`}>＋</button>
+            </>}
+          </span>
+          {ui.openNote === player.key && <span className="warroom-notebox">
+            <textarea autoFocus defaultValue={state.notes[player.key] || ''} placeholder="Sleeper? Fade? Handcuff?" onBlur={(e) => saveNote(player.key, e.target.value)} />
+          </span>}
+        </li>)}
+      </ul>
+    </section>}
+
+    {activeTab === 'team' && <section className="warroom-team-page warroom-tab-page" aria-label="My team">
+      <div className="warroom-team-card">
+        <div className="instrument-heading"><span>My team</span><b>{myTeam.length} picked</b></div>
+        {myTeam.length === 0
+          ? <p className="empty-state">No picks yet. Use Player Pool to claim a player when you draft them.</p>
+          : <div className="warroom-myteam">
+            {myTeam.map((player) => <div key={player.key} className="warroom-slot">
+              <PositionChip pos={player.pos} />
+              <span>{player.name}</span>
+              <small className="warroom-mono">{player.team || 'FA'}{player.bye ? ` · bye ${player.bye}` : ''}</small>
+            </div>)}
+          </div>}
+      </div>
+      <div className="warroom-team-card warroom-queue-card">
+        <div className="instrument-heading"><span>Up next</span><b>{draftQueue.length}</b></div>
+        {draftQueue.map((queued, index) => <div className={index === 0 ? 'warroom-queue-row current' : 'warroom-queue-row'} key={queued.overall}>
+          <span>{queued.round}.{String(queued.overall - ((queued.round - 1) * teams)).padStart(2, '0')}</span>
+          <b>{queued.seat === slot ? 'Your seat' : `Seat ${queued.seat}`}</b>
+        </div>)}
+      </div>
+    </section>}
   </section>
 }
 

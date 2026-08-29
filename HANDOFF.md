@@ -4,7 +4,7 @@
 > Handoff is **enabled** for this repo. Every change updates the DO NEXT block below and prepends a log entry.
 
 ## ▶ DO NEXT
-**1. Draft day is Saturday 2026-08-30. The War Room is live with its draft-night visual pass, live snake board, and full workspace mode.**
+**1. Draft day is Saturday 2026-08-30. The War Room is live with its draft-night visual pass, live snake board, full workspace mode, and its own Draft Board / Player Pool / My Team / Settings navigation.**
 Open `sh.tayloraritchie.com` → **War Room** (nav panel 10). It loads ~271 players
 from FFC ADP on first visit. Click **ESPN Sync: Off** to turn it on — polls every
 5s and auto-marks picks taken/mine.
@@ -70,6 +70,14 @@ Standing repo notes:
 
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
+
+### 2026-08-29 19:22 ET · Codex
+- **Changed:** Added internal War Room navigation for the Draft Board, Player Pool, My Team, and Settings views.
+  - Each page works from the same browser-local live state, so player actions and ESPN sync results remain consistent as you move around.
+  - Settings now has a dedicated page, while the Draft Board stays the default full-screen view.
+- **Commit:** `6d9e9c4`
+- **Next:** Open `sh.tayloraritchie.com` → **War Room** and verify each top tab in the signed-in draft workspace.
+- **Watch out:** The Player Pool repeats the player-action controls intentionally, so you can claim, fade, rank, or note a player without returning to the Draft Board.
 
 ### 2026-08-29 19:12 ET · Codex
 - **Changed:** Added a persistent desktop navigation collapse control and made War Room a full-bleed working surface.

@@ -1,97 +1,14 @@
-/* War Room styles. Every selector is prefixed .warroom- or nested under
-   .warroom-view so this file can be deleted or relocated without touching App.css.
-   Palette follows System Horizon's daylight tokens (--ink, --cloud, --coral …)
-   rather than the standalone board's dark oklch theme, so it reads as one app. */
-
-.warroom-view { padding-top: 44px; color: var(--ink); }
-
-.warroom-header-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-
-.warroom-status { margin: 14px 0 0; color: #67768d; font: 11px 'Cascadia Mono', Consolas, monospace; letter-spacing: .05em; text-transform: uppercase; }
-.warroom-status.error { color: #a92c00; }
-
-.warroom-mono { font-family: 'Cascadia Mono', Consolas, monospace; font-variant-numeric: tabular-nums; }
-.warroom-dim { color: #67768d; font-size: 12px; }
-
-/* ---- settings ---- */
-.warroom-settings { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 18px 0 0; padding: 16px; border: 1px solid rgb(121 135 158 / .23); border-radius: 20px; background: #fff; }
-.warroom-settings label { display: grid; gap: 5px; color: #5a6780; font: 10px 'Cascadia Mono', Consolas, monospace; letter-spacing: .06em; text-transform: uppercase; }
-.warroom-settings input, .warroom-settings textarea { padding: 9px 10px; border: 1px solid #9ba8bc; border-radius: 9px; background: #fff; color: #151515; font: 12px 'Segoe UI Variable', 'Segoe UI', sans-serif; }
-.warroom-settings-actions { display: flex; flex-wrap: wrap; gap: 8px; grid-column: 1 / -1; align-items: end; }
-.warroom-transfer { grid-column: 1 / -1; }
-.warroom-transfer textarea { width: 100%; min-height: 66px; resize: vertical; }
-.warroom-transfer-msg { grid-column: 1 / -1; margin: 0; color: #1266ff; font-size: 12px; }
-
-/* ---- pick bar ---- */
-.warroom-pickbar { display: flex; flex-wrap: wrap; gap: 8px 26px; align-items: baseline; margin: 16px 0 0; padding: 15px 18px; border: 1px solid rgb(121 135 158 / .23); border-radius: 20px; background: #fff; box-shadow: 0 10px 30px rgb(23 25 34 / .06); }
-.warroom-pickbar > span:first-child { color: #67768d; font: 10px 'Cascadia Mono', Consolas, monospace; letter-spacing: .06em; text-transform: uppercase; }
-.warroom-pickbar b { margin-left: 8px; color: var(--ink); font-size: 20px; letter-spacing: -.03em; }
-.warroom-up { padding: 5px 12px; border-radius: 999px; background: linear-gradient(105deg, var(--coral), var(--peach)); color: #170817; font: 700 13px 'Segoe UI Variable', 'Segoe UI', sans-serif; letter-spacing: .04em; }
-
-/* ---- CSV panel ---- */
-.warroom-panel { display: grid; gap: 10px; margin: 16px 0 0; padding: 16px; border: 1px solid rgb(121 135 158 / .23); border-radius: 20px; background: #fff; }
-.warroom-panel p { margin: 0; color: #5a6780; font-size: 13px; }
-.warroom-panel textarea { width: 100%; min-height: 120px; padding: 10px; border: 1px solid #9ba8bc; border-radius: 9px; font: 12px 'Cascadia Mono', Consolas, monospace; resize: vertical; }
-.warroom-panel > div { display: flex; gap: 12px; align-items: center; }
-
-/* ---- layout ---- */
-.warroom-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; margin-top: 16px; align-items: start; }
-.warroom-sidebar { position: sticky; top: 16px; padding: 18px; border: 1px solid rgb(121 135 158 / .23); border-radius: 20px; background: #fff; }
-
-/* ---- controls ---- */
-.warroom-controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
-.warroom-controls input[type='search'] { flex: 1 1 180px; min-width: 150px; min-height: 38px; padding: 8px 12px; border: 1px solid #9ba8bc; border-radius: 999px; background: #fff; color: var(--ink); font-size: 13px; }
-.warroom-chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.warroom-chip { min-height: 38px; padding: 7px 14px; border: 1px solid rgb(153 169 255 / .45); border-radius: 999px; background: transparent; color: #5f6778; cursor: pointer; font-size: 12px; font-weight: 600; }
-.warroom-chip:hover, .warroom-chip:focus-visible { border-color: var(--teal); color: var(--teal); outline: 0; }
-.warroom-chip.selected { border-color: transparent; background: var(--ink); color: #fff; }
-
-/* ---- board ---- */
-.warroom-board { display: grid; margin: 0; padding: 0; list-style: none; border: 1px solid rgb(121 135 158 / .23); border-radius: 20px; background: #fff; overflow: hidden; }
-.warroom-row { display: grid; grid-template-columns: 2.7rem minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; padding: 10px 14px; border-bottom: 1px solid #e5ebf2; }
-.warroom-row:last-child { border-bottom: 0; }
-.warroom-rank { color: #8b98ac; font-size: 12px; text-align: right; }
-.warroom-who { display: grid; gap: 3px; min-width: 0; }
-.warroom-name { overflow: hidden; font-size: 13px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
-.warroom-meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; color: #67768d; font-size: 11px; }
-.warroom-row.taken { opacity: .42; }
-.warroom-row.taken .warroom-name { text-decoration: line-through; }
-.warroom-row.mine { background: rgb(255 80 31 / .07); }
-.warroom-row.mine .warroom-name { color: #a93a00; }
-.warroom-empty { grid-column: 1 / -1; color: #8b98ac; font-size: 13px; }
-
-.warroom-acts { display: flex; gap: 6px; }
-.warroom-acts button { min-width: 42px; min-height: 38px; padding: 6px 9px; border: 1px solid rgb(153 169 255 / .45); border-radius: 10px; background: #fff; color: #4b5568; cursor: pointer; font-size: 14px; line-height: 1; }
-.warroom-acts button:hover, .warroom-acts button:focus-visible { border-color: var(--teal); color: var(--teal); outline: 0; }
-.warroom-acts .warroom-claim { border-color: transparent; background: linear-gradient(105deg, var(--coral), var(--peach)); color: #170817; font-weight: 700; }
-.warroom-acts .warroom-note.has { border-color: var(--coral); color: var(--coral); }
-.warroom-notebox { grid-column: 1 / -1; }
-.warroom-notebox textarea { width: 100%; min-height: 70px; padding: 9px 10px; border: 1px solid #9ba8bc; border-radius: 9px; font: 12px 'Segoe UI Variable', 'Segoe UI', sans-serif; resize: vertical; }
-
-/* ---- position chips: semantic, tuned for a light canvas ---- */
-.wr-pos { display: inline-block; padding: 2px 7px; border-radius: 6px; color: #fff; font: 700 10px 'Cascadia Mono', Consolas, monospace; letter-spacing: .04em; }
-.wr-pos-QB { background: #c2410c; }
-.wr-pos-RB { background: #0f7a52; }
-.wr-pos-WR { background: #2b4fd8; }
-.wr-pos-TE { background: #9a6700; }
-.wr-pos-K { background: #667085; }
-.wr-pos-DST { background: #6d4aa8; }
-
-/* ---- my team ---- */
-.warroom-myteam { display: grid; gap: 2px; margin-top: 14px; }
-.warroom-slot { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid #e5ebf2; font-size: 13px; }
-.warroom-slot:last-child { border-bottom: 0; }
-.warroom-slot span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.warroom-slot small { color: #8b98ac; font-size: 11px; }
-
-@media (max-width: 1000px) {
-  .warroom-layout { grid-template-columns: 1fr; }
-  .warroom-sidebar { position: static; }
-}
-@media (max-width: 680px) {
-  .warroom-view { padding-top: 24px; }
-  .warroom-header-actions { width: 100%; }
-  .warroom-settings { grid-template-columns: 1fr; }
-  .warroom-row { grid-template-columns: 2.2rem minmax(0, 1fr); }
-  .warroom-acts { grid-column: 1 / -1; justify-content: flex-end; }
-}
+/* Scoped draft-night command-surface skin. Shared System Horizon views stay unchanged. */
+.warroom-view{--wr-bg:#070b14;--wr-panel:#0e1626;--wr-panel-strong:#111c30;--wr-line:rgb(148 166 211 / .18);--wr-line-strong:rgb(158 179 232 / .34);--wr-copy:#f5f7ff;--wr-muted:#9aa8c6;--wr-dim:#65738f;--wr-violet:#8d65ff;--wr-violet-light:#b9a7ff;--wr-green:#6ee58c;--wr-danger:#ff8b7b;position:relative;isolation:isolate;overflow:hidden;margin-top:26px;padding:clamp(22px,3.5vw,48px);border:1px solid rgb(152 175 231 / .24);border-radius:22px;background:radial-gradient(circle at 84% -6%,rgb(111 76 255 / .28),transparent 30rem),radial-gradient(circle at 1% 100%,rgb(21 138 192 / .17),transparent 28rem),var(--wr-bg);box-shadow:0 28px 70px rgb(13 23 52 / .22),inset 0 1px 0 rgb(255 255 255 / .06);color:var(--wr-copy)}
+.warroom-view::before{position:absolute;inset:0;z-index:-1;background-image:linear-gradient(rgb(154 172 224 / .035) 1px,transparent 1px),linear-gradient(90deg,rgb(154 172 224 / .035) 1px,transparent 1px);background-size:32px 32px;content:'';mask-image:linear-gradient(to bottom,#000,transparent 72%)}
+.warroom-view .view-header{align-items:center}.warroom-view .view-header .eyebrow{color:var(--wr-violet-light)}.warroom-view .view-header h2{color:var(--wr-copy);font-size:clamp(42px,5vw,68px)}.warroom-view .view-header p:last-child{max-width:60ch;color:var(--wr-muted);line-height:1.55}.warroom-header-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px}
+.warroom-view .button{min-height:38px;padding:8px 13px;border:1px solid var(--wr-line-strong);border-radius:9px;background:rgb(16 27 47 / .78);box-shadow:none;color:#dbe3fb;font-size:12px}.warroom-view .button:hover,.warroom-view .button:focus-visible{border-color:var(--wr-violet-light);background:rgb(51 42 103 / .62);box-shadow:0 0 0 3px rgb(141 101 255 / .18);outline:0}.warroom-view .button.coral{border-color:transparent;background:linear-gradient(110deg,#7449e8,#9c6dff);box-shadow:0 10px 24px rgb(94 60 214 / .28);color:#fff}
+.warroom-status{margin:12px 0 0;color:var(--wr-muted);font:10px 'Cascadia Mono',Consolas,monospace;letter-spacing:.07em;text-transform:uppercase}.warroom-status.error{color:var(--wr-danger)}.warroom-mono{font-family:'Cascadia Mono',Consolas,monospace;font-variant-numeric:tabular-nums}.warroom-dim{color:var(--wr-muted);font-size:12px}
+.warroom-settings,.warroom-panel{display:grid;gap:12px;margin-top:18px;padding:18px;border:1px solid var(--wr-line);border-radius:14px;background:linear-gradient(135deg,rgb(18 30 52 / .96),rgb(9 14 25 / .96))}.warroom-settings{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}.warroom-settings label{display:grid;gap:6px;color:var(--wr-muted);font:10px 'Cascadia Mono',Consolas,monospace;letter-spacing:.06em;text-transform:uppercase}.warroom-settings input,.warroom-settings textarea,.warroom-panel textarea,.warroom-notebox textarea{border:1px solid var(--wr-line-strong);border-radius:8px;background:rgb(4 8 16 / .7);color:var(--wr-copy);font:12px 'Segoe UI Variable','Segoe UI',sans-serif}.warroom-settings input{min-height:38px;padding:8px 10px}.warroom-settings textarea{width:100%;min-height:66px;padding:10px;resize:vertical}.warroom-settings-actions{display:flex;flex-wrap:wrap;grid-column:1 / -1;gap:8px;align-items:end}.warroom-transfer{grid-column:1 / -1}.warroom-transfer-msg{grid-column:1 / -1;margin:0;color:var(--wr-green);font-size:12px}.warroom-panel p{margin:0;color:var(--wr-muted);font-size:13px;line-height:1.5}.warroom-panel textarea{width:100%;min-height:120px;padding:10px;font-family:'Cascadia Mono',Consolas,monospace;resize:vertical}.warroom-panel>div{display:flex;gap:12px;align-items:center}
+.warroom-pickbar{display:grid;grid-template-columns:minmax(190px,auto) minmax(0,1fr) auto;gap:12px 26px;align-items:center;margin-top:20px;padding:17px 20px;border:1px solid rgb(142 105 255 / .48);border-radius:14px;background:linear-gradient(100deg,rgb(33 23 70 / .96),rgb(16 27 48 / .94) 57%,rgb(10 17 31 / .92));box-shadow:inset 0 1px 0 rgb(255 255 255 / .07),0 16px 36px rgb(3 6 15 / .28)}.warroom-pickbar>span:first-child{color:var(--wr-muted);font:10px 'Cascadia Mono',Consolas,monospace;letter-spacing:.07em;text-transform:uppercase}.warroom-pickbar b{display:inline-block;margin-left:8px;color:var(--wr-copy);font-size:21px;letter-spacing:-.04em}.warroom-up{justify-self:start;padding:6px 11px;border:1px solid rgb(110 229 140 / .46);border-radius:6px;background:rgb(59 149 89 / .16);color:var(--wr-green);font:700 11px 'Cascadia Mono',Consolas,monospace;letter-spacing:.08em}
+.warroom-layout{display:grid;grid-template-columns:minmax(0,1fr) 302px;gap:16px;margin-top:16px;align-items:start}.warroom-sidebar{position:sticky;top:16px;padding:18px;border:1px solid var(--wr-line);border-radius:14px;background:linear-gradient(155deg,rgb(19 30 51 / .94),rgb(8 13 24 / .96));box-shadow:inset 0 1px 0 rgb(255 255 255 / .06)}.warroom-sidebar .instrument-heading{color:var(--wr-violet-light)}.warroom-sidebar .instrument-heading b{color:var(--wr-muted)}.warroom-sidebar .empty-state{padding:14px 0 0;color:var(--wr-muted)}
+.warroom-controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px;padding:10px;border:1px solid var(--wr-line);border-radius:14px;background:rgb(11 18 32 / .72)}.warroom-controls input[type='search']{flex:1 1 180px;min-width:150px;min-height:38px;padding:8px 12px;border:1px solid var(--wr-line-strong);border-radius:8px;background:rgb(5 10 19 / .7);color:var(--wr-copy);font-size:13px}.warroom-controls input::placeholder{color:var(--wr-dim)}.warroom-chips{display:flex;flex-wrap:wrap;gap:5px}.warroom-chip{min-height:34px;padding:6px 10px;border:1px solid var(--wr-line);border-radius:7px;background:transparent;color:var(--wr-muted);cursor:pointer;font:700 10px 'Cascadia Mono',Consolas,monospace;letter-spacing:.04em}.warroom-chip:hover,.warroom-chip:focus-visible{border-color:var(--wr-violet-light);color:var(--wr-copy);outline:0}.warroom-chip.selected{border-color:rgb(145 105 255 / .62);background:rgb(98 63 209 / .42);color:#fff}
+.warroom-board{display:grid;margin:0;padding:0;list-style:none;border:1px solid var(--wr-line);border-radius:14px;background:rgb(9 15 27 / .9);overflow:hidden}.warroom-row{display:grid;grid-template-columns:2.7rem minmax(0,1fr) auto;gap:4px 12px;align-items:center;min-height:62px;padding:10px 14px;border-bottom:1px solid rgb(148 166 211 / .13);transition:background 140ms ease}.warroom-row:hover{background:rgb(121 93 255 / .08)}.warroom-row:last-child{border-bottom:0}.warroom-rank{color:var(--wr-dim);font-size:12px;text-align:right}.warroom-who{display:grid;gap:4px;min-width:0}.warroom-name{overflow:hidden;color:var(--wr-copy);font-size:13px;font-weight:650;text-overflow:ellipsis;white-space:nowrap}.warroom-meta{display:flex;flex-wrap:wrap;gap:8px;align-items:center;color:var(--wr-muted);font-size:11px}.warroom-row.taken{opacity:.38}.warroom-row.taken .warroom-name{text-decoration:line-through}.warroom-row.mine{background:linear-gradient(90deg,rgb(102 71 233 / .27),rgb(102 71 233 / .04))}.warroom-row.mine .warroom-name{color:#d8cdff}.warroom-empty{grid-column:1 / -1;color:var(--wr-muted);font-size:13px}
+.warroom-acts{display:flex;gap:6px}.warroom-acts button{min-width:34px;min-height:34px;padding:5px 8px;border:1px solid var(--wr-line);border-radius:7px;background:rgb(17 28 47 / .76);color:var(--wr-muted);cursor:pointer;font-size:14px;line-height:1}.warroom-acts button:hover,.warroom-acts button:focus-visible{border-color:var(--wr-violet-light);color:var(--wr-copy);outline:0}.warroom-acts .warroom-claim{border-color:rgb(110 229 140 / .45);background:rgb(61 148 88 / .18);color:var(--wr-green);font-weight:700}.warroom-acts .warroom-note.has{border-color:var(--wr-violet);color:var(--wr-violet-light)}.warroom-notebox{grid-column:1 / -1}.warroom-notebox textarea{width:100%;min-height:70px;padding:9px 10px;resize:vertical}
+.wr-pos{display:inline-block;min-width:25px;padding:3px 6px;border-radius:4px;color:#fff;font:700 10px 'Cascadia Mono',Consolas,monospace;letter-spacing:.04em;text-align:center}.wr-pos-QB{background:#8d4c93}.wr-pos-RB{background:#21745a}.wr-pos-WR{background:#305ba5}.wr-pos-TE{background:#a47532}.wr-pos-K{background:#5a647d}.wr-pos-DST{background:#7052a9}.warroom-myteam{display:grid;gap:2px;margin-top:14px}.warroom-slot{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:11px 0;border-bottom:1px solid rgb(148 166 211 / .13);color:var(--wr-copy);font-size:13px}.warroom-slot:last-child{border-bottom:0}.warroom-slot span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.warroom-slot small{color:var(--wr-dim);font-size:11px}
+@media(max-width:1000px){.warroom-layout{grid-template-columns:1fr}.warroom-sidebar{position:static}}@media(max-width:720px){.warroom-view{margin-top:16px;padding:20px 14px;border-radius:16px}.warroom-view .view-header{align-items:flex-start}.warroom-header-actions{justify-content:flex-start;width:100%}.warroom-pickbar{grid-template-columns:1fr;gap:8px}.warroom-settings{grid-template-columns:1fr}.warroom-row{grid-template-columns:2.2rem minmax(0,1fr)}.warroom-acts{grid-column:1 / -1;justify-content:flex-end}}@media(prefers-reduced-motion:reduce){.warroom-row{transition:none}}

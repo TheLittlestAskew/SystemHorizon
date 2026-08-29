@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from './supabase'
 import { jobPipeline } from './jobPipeline'
+import WarRoomView from './WarRoomView'
 import './App.css'
 
 const navItems = [
@@ -13,6 +14,7 @@ const navItems = [
   ['Archive', '07'],
   ['Swift', '08'],
   ['Travel', '09'],
+  ['War Room', '10'],
 ]
 
 const initialProjects = [
@@ -1166,6 +1168,7 @@ function App() {
           : activeView === 'Archive' ? <ArchiveView />
           : activeView === 'Swift' ? <SwiftView watches={swiftWatch} collection={swiftCollection} events={swiftEvents} onAddCollectionItem={addSwiftCollectionItem} onUpdateCollectionStatus={updateSwiftCollectionStatus} onDeleteCollectionItem={deleteSwiftCollectionItem} onAddEvent={addSwiftEvent} onDeleteEvent={deleteSwiftEvent} />
           : activeView === 'Travel' ? <TravelView entries={travelWatch} onAdd={addTravelEntry} onDelete={deleteTravelEntry} />
+          : activeView === 'War Room' ? <WarRoomView />
           : <Horizon projects={projects} onProjects={() => setActiveView('Projects')} />}
       </main>
     </div>

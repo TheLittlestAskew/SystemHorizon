@@ -2,7 +2,7 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import {
   POSITIONS, seasonYear, overallToRoundPick, myOverallPicks,
   parseRankingsCSV, normalizeAdpPayload, mergeOrder, moveInOrder,
-  applyEspnPicks, describeEspnPoll,
+  applyEspnPicks, describeEspnPoll, teamForSeat,
 } from './warRoomLogic'
 import './WarRoom.css'
 
@@ -491,13 +491,13 @@ function WarRoomView() {
           <div className="warroom-grid" style={{ '--wr-teams': teams }}>
             <div className="warroom-grid-corner">Rd</div>
             {Array.from({ length: teams }, (_, seatIndex) => <div className={seatIndex + 1 === slot ? 'warroom-team-head mine' : 'warroom-team-head'} key={`head-${seatIndex + 1}`}>
-              <small>Seat</small><b>{seatIndex + 1}</b>
+              <small>{seatIndex + 1}</small><b>{teamForSeat(seatIndex + 1)?.name ?? `Seat ${seatIndex + 1}`}</b>
             </div>)}
             {boardPicks.map((round, roundIndex) => <Fragment key={`round-${roundIndex}`}>
               <div className="warroom-round-label" key={`round-${roundIndex}`}>{roundIndex + 1}</div>
               {round.map((pick) => <div className={`warroom-draft-cell${pick.isMine ? ' mine' : ''}${pick.isCurrent ? ' current' : ''}${pick.player ? ' filled' : ''}`} key={pick.overall}>
                 <small>#{pick.overall}</small>
-                {pick.player ? <><b>{pick.player.name}</b><PositionChip pos={pick.player.pos} /></> : <span>{pick.isCurrent ? 'On the clock' : `Seat ${pick.seat}`}</span>}
+                {pick.player ? <><b>{pick.player.name}</b><PositionChip pos={pick.player.pos} /></> : <span>{pick.isCurrent ? 'On the clock' : (teamForSeat(pick.seat)?.name ?? `Seat ${pick.seat}`)}</span>}
               </div>)}
             </Fragment>)}
           </div>
@@ -519,7 +519,7 @@ function WarRoomView() {
           <div className="instrument-heading"><span>Up next</span><b>{draftQueue.length}</b></div>
           {draftQueue.map((queued, index) => <div className={index === 0 ? 'warroom-queue-row current' : 'warroom-queue-row'} key={queued.overall}>
             <span>{queued.round}.{String(queued.overall - ((queued.round - 1) * teams)).padStart(2, '0')}</span>
-            <b>{queued.seat === slot ? 'Your seat' : `Seat ${queued.seat}`}</b>
+            <b>{queued.seat === slot ? 'Your seat' : (teamForSeat(queued.seat)?.name ?? `Seat ${queued.seat}`)}</b>
           </div>)}
         </div>
       </aside>
@@ -589,7 +589,7 @@ function WarRoomView() {
         <div className="instrument-heading"><span>Up next</span><b>{draftQueue.length}</b></div>
         {draftQueue.map((queued, index) => <div className={index === 0 ? 'warroom-queue-row current' : 'warroom-queue-row'} key={queued.overall}>
           <span>{queued.round}.{String(queued.overall - ((queued.round - 1) * teams)).padStart(2, '0')}</span>
-          <b>{queued.seat === slot ? 'Your seat' : `Seat ${queued.seat}`}</b>
+          <b>{queued.seat === slot ? 'Your seat' : (teamForSeat(queued.seat)?.name ?? `Seat ${queued.seat}`)}</b>
         </div>)}
       </div>
     </section>}

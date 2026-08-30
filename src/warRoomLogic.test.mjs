@@ -4,6 +4,7 @@ import {
   seasonYear, normalizePos, playerKey, overallToRoundPick, myOverallPicks,
   parseCSVLine, parseRankingsCSV, normalizeAdpPayload, mergeOrder, moveInOrder,
   applyEspnPicks, describeEspnPoll,
+  DRAFT_ORDER, teamForSeat, teamForOverall, teamByEspnId,
 } from './warRoomLogic.js'
 
 test('seasonYear rolls back before March', () => {
@@ -66,6 +67,63 @@ test('myOverallPicks refuses out-of-range slots', () => {
   assert.deepEqual(myOverallPicks(21, 20, 2), [])
   assert.deepEqual(myOverallPicks(null, 20, 2), [])
   assert.deepEqual(myOverallPicks(3, 20, 0), [])
+})
+
+test('DRAFT_ORDER matches the verified league pickOrder', () => {
+  // draftSettings.pickOrder from the live league JSON, cross-checked 2026-08-29.
+  // If ESPN's order ever changes, this is the test that catches it before the
+  // board silently attributes picks to the wrong owner.
+  const PICK_ORDER = [6, 2, 17, 4, 13, 7, 15, 20, 16, 1, 5, 19, 8, 12, 11, 10, 18, 9, 14, 3]
+  assert.equal(DRAFT_ORDER.length, 20)
+  assert.deepEqual(DRAFT_ORDER.map((t) => t.espnTeamId), PICK_ORDER)
+  assert.deepEqual(DRAFT_ORDER.map((t) => t.slot), PICK_ORDER.map((_, i) => i + 1))
+  // Every espnTeamId is unique, or teamByEspnId would silently return the first match.
+  assert.equal(new Set(DRAFT_ORDER.map((t) => t.espnTeamId)).size, 20)
+  for (const team of DRAFT_ORDER) {
+    assert.ok(team.name && team.name.trim(), `slot ${team.slot} must have a name`)
+  }
+})
+
+test('teamForSeat resolves the seats that matter', () => {
+  // Tayls is slot 9 / espnTeamId 16, the pairing the whole board hangs on.
+  assert.equal(teamForSeat(9).name, 'Hits Different')
+  assert.equal(teamForSeat(9).espnTeamId, 16)
+  assert.equal(teamForSeat(1).name, 'Trash Goblins')
+  assert.equal(teamForSeat(20).name, 'The Murderhobos')
+})
+
+test('teamForSeat returns null instead of throwing on junk seats', () => {
+  // The Up Next queue passes the string '?' when the snake math fails, so this
+  // must stay safe: WarRoomView calls teamForSeat(queued.seat) unguarded.
+  assert.equal(teamForSeat('?'), null)
+  assert.equal(teamForSeat(0), null)
+  assert.equal(teamForSeat(-1), null)
+  assert.equal(teamForSeat(1.5), null)
+  assert.equal(teamForSeat(null), null)
+  assert.equal(teamForSeat(undefined), null)
+  assert.equal(teamForSeat(21), null) // one past the last seat
+})
+
+test('teamForOverall follows the snake, not the raw round position', () => {
+  assert.equal(teamForOverall(1, 20).name, 'Trash Goblins')   // R1.01, seat 1
+  assert.equal(teamForOverall(20, 20).name, 'The Murderhobos') // R1.20, seat 20
+  assert.equal(teamForOverall(21, 20).name, 'The Murderhobos') // R2.01 reverses
+  assert.equal(teamForOverall(9, 20).name, 'Hits Different')   // Tayls' first pick
+  assert.equal(teamForOverall(32, 20).name, 'Hits Different')  // and her second
+})
+
+test('teamForOverall refuses a league size the table cannot describe', () => {
+  assert.equal(teamForOverall(1, 12), null) // 12-team league, 20-team table
+  assert.equal(teamForOverall(0, 20), null)
+  assert.equal(teamForOverall(1.5, 20), null)
+})
+
+test('teamByEspnId never matches on a missing id', () => {
+  assert.equal(teamByEspnId(16).name, 'Hits Different')
+  assert.equal(teamByEspnId(3).name, 'The Murderhobos')
+  assert.equal(teamByEspnId(null), null)
+  assert.equal(teamByEspnId(undefined), null)
+  assert.equal(teamByEspnId(999), null)
 })
 
 test('parseCSVLine handles quotes and embedded commas', () => {

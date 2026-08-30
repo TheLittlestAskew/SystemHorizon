@@ -4,6 +4,17 @@
 > Handoff is **enabled** for this repo. Every change updates the DO NEXT block below and prepends a log entry.
 
 ## ▶ DO NEXT
+**NOW: the draft board shows real team names on every seat — open War Room and
+eyeball it before Saturday.** Grid headers, empty board cells, and both Up Next
+lists now read from `DRAFT_ORDER` / `teamForSeat()` in `src/warRoomLogic.js`
+instead of "Seat N". Check seat 9 reads **Hits Different** and seat 1 reads
+**Trash Goblins**; if the whole row is shifted, `DRAFT_ORDER` is out of sync with
+ESPN's `draftSettings.pickOrder` and picks will be attributed to the wrong owner.
+`npm test` guards that order against the verified pickOrder, so run it after any
+edit to that table. **Names cannot be derived at runtime** — `/api/draft` returns
+`teams` as the count `20`, not a roster, and the raw ESPN league JSON 401s without
+the server-side cookies — so `DRAFT_ORDER` stays hand-maintained on purpose.
+
 **1. Draft day is Saturday 2026-08-30. The War Room is live with its draft-night visual pass, live snake board, full workspace mode, and its own Draft Board / Player Pool / My Team / Settings navigation.**
 Open `sh.tayloraritchie.com` → **War Room** (nav panel 10). It loads ~271 players
 from FFC ADP on first visit. Click **ESPN Sync: Off** to turn it on — polls every
@@ -70,6 +81,18 @@ Standing repo notes:
 
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
+
+### 2026-08-29 20:12 ET · Claude Code
+- **Changed:** The draft board now labels every seat with its real team name instead of "Seat N".
+  - `WarRoomView.jsx`: all four seat labels wired to `teamForSeat()` — grid headers, empty board cells, and **both** Up Next queue variants (sidebar and My Team tab). Each falls back to `Seat N` if the lookup returns null, so a resized league degrades instead of showing the wrong owner.
+  - `warRoomLogic.test.mjs`: 5 new tests over the `DRAFT_ORDER` lookups from `3bfce51` — the table checked against the live `draftSettings.pickOrder`, unique `espnTeamId`s, snake-correct `teamForOverall`, null-safe `teamByEspnId`, and junk-seat handling.
+  - Suite is **28/28**; `oxlint` and `vite build` both clean.
+- **Commit:** `57ffbe5`
+- **Friction:** gen-fail — the incoming patch spec arrived truncated mid-string on its 4th edit and imported a `teamForSeat` that did not exist in the local tree; applying it blind would have thrown at import. What worked: verifying the data sources before writing anything (`/api/draft` returns `teams: 20` as a count, not a roster; a direct ESPN league read 401s), which proved names cannot be derived at runtime and turned it into a "where do the names come from" question instead of a guess.
+- **Friction:** re-run — that question was answered by building a placeholder `SEAT_TEAMS` table, and then the push was rejected: `3bfce51` (Codex, 19:33) had **already** added the real verified `DRAFT_ORDER` with all 20 names, owners, and espnTeamIds. The placeholder was thrown away and the view was pointed at the real table. What worked: `git fetch` + reading the rejected-push diff before rebasing. **`git fetch` first when a War Room task looks like it needs data that "does not exist yet" — Codex is working the same repo the same evening.**
+- **Friction:** gen-fail — a `replace_all` edit on the queued-pick label silently hit only 1 of its 2 occurrences because the sidebar copy (line 522) is indented 12 spaces and the My Team copy (line 592) is indented 10. What worked: grepping for `queued.seat === slot` after the edit and patching the second separately. **Anything duplicated across those two layout variants needs that grep-after check.**
+- **Next:** Open War Room and confirm seat 9 reads "Hits Different" before Saturday's draft.
+- **Watch out:** `teamForSeat` is called with the literal string `'?'` from the Up Next queue whenever the snake math fails, so its `Number.isInteger` guard is load-bearing — don't "simplify" it to a truthy check. Also `teamForOverall` and `teamByEspnId` are exported but not yet called anywhere; `teamByEspnId` is the natural way to show *who* took a player on a filled cell, left alone here as out of scope.
 
 ### 2026-08-29 19:22 ET · Codex
 - **Changed:** Added internal War Room navigation for the Draft Board, Player Pool, My Team, and Settings views.

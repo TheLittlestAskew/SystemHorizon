@@ -88,6 +88,22 @@ button { -webkit-tap-highlight-color: transparent; }
 .calendar-detail-project { margin:0; color:var(--cyan); font-size:12px; letter-spacing:.04em; text-transform:uppercase; }
 .calendar-detail-panel > p:not(.calendar-detail-project):not(.empty-state) { margin:0; color:#d9e1f5; font-size:13px; line-height:1.5; }
 @media (max-width:1000px){.calendar-layout{grid-template-columns:1fr}}
+.calendar-mode-toggle { margin-top:20px; }
+.calendar-month-layout { display:grid; grid-template-columns:minmax(0,1fr) 320px; gap:20px; margin-top:20px; align-items:start; }
+.calendar-month-toolbar { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:16px; flex-wrap:wrap; }
+.calendar-month-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:6px; }
+.calendar-month-cell { display:flex; flex-direction:column; gap:4px; min-height:96px; padding:8px; border-radius:12px; border:1px solid rgb(148 166 211 / .16); background:rgb(18 20 45 / .4); cursor:pointer; text-align:left; }
+.calendar-month-cell.empty { border:0; background:transparent; cursor:default; }
+.calendar-month-cell.today { border-color:#ff501f; }
+.calendar-month-cell.selected { border-color:rgb(148 166 211 / .4); background:rgb(18 20 45 / .65); }
+.calendar-month-day-num { color:var(--cloud); font-size:12px; font-weight:600; }
+.calendar-month-cell.today .calendar-month-day-num { color:#ff501f; }
+.calendar-month-events { display:grid; gap:2px; width:100%; overflow:hidden; }
+.calendar-month-event { width:100%; padding:2px 6px; border:0; border-radius:5px; background:rgb(35 39 80 / .6); color:#a9b2d3; font-size:10px; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; }
+.calendar-month-event.selected { background:linear-gradient(110deg, #2362ff, #a54cff); color:var(--cloud); }
+.calendar-month-more { color:#8892b7; font-size:10px; padding:0 6px; }
+@media (max-width:1000px){.calendar-month-layout{grid-template-columns:1fr}}
+@media (max-width:680px){.calendar-month-cell{min-height:64px}.calendar-month-event{font-size:9px}}
 
 /* Archive: a live feed pulled from each repo's HANDOFF.md, no local storage. */
 .archive-view { padding-top:44px; color:var(--cloud); }

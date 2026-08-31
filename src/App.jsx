@@ -438,7 +438,7 @@ function FlowView({ tasks, projects, onOpenProjects, onAddTask, onUpdateTaskStat
     <div className="flow-columns">
       {columns.map((status) => {
         const columnTasks = tasks.filter((task) => task.status === status)
-        return <div className="flow-column" key={status}>
+        return <div className={`flow-column${status === 'Active' ? ' flow-column-active' : ''}`} key={status}>
           <div className="instrument-heading"><span>{status}</span><b>{columnTasks.length}</b></div>
           <div className="flow-column-list">
             {columnTasks.length ? columnTasks.map((task) => <TaskRow key={task.id} task={task} projectName={projectName(task.projectId)} onStatusChange={onUpdateTaskStatus} onDelete={onDeleteTask} />) : <p className="empty-state">Nothing here.</p>}
@@ -595,6 +595,7 @@ function MirrorsView({ repoHealth }) {
     if (aFlags !== bFlags) return bFlags - aFlags
     return a.repoName.localeCompare(b.repoName)
   })
+  const flaggedCount = rows.filter((repo) => repoStatusFlags(repo).flags.length > 0).length
 
   return <section className="mirrors-view" aria-labelledby="mirrors-heading">
     <header className="view-header">
@@ -604,6 +605,10 @@ function MirrorsView({ repoHealth }) {
         <p>GitHub repos and local mirrors, checked for uncommitted work, unpushed commits, commits behind, and unbanked handoffs.</p>
       </div>
     </header>
+    {rows.length > 0 && <div className="mirrors-summary">
+      <div><span>Attention needed</span><p>{rows.length} repositor{rows.length === 1 ? 'y' : 'ies'} tracked across GitHub and local mirrors.</p></div>
+      <strong className={flaggedCount === 0 ? 'clean' : ''}>{flaggedCount === 0 ? 'All clean' : flaggedCount}</strong>
+    </div>}
     {rows.length === 0 && <p className="empty-state">No repo health data yet. Run the mirror-freshness sync script (scripts/mirror-freshness/) to populate this panel.</p>}
     <div className="mirrors-list">
       {rows.map((repo) => {
@@ -933,10 +938,18 @@ function TravelView({ entries, onAdd, onDelete }) {
       const lowestCents = Math.min(...tripEntries.map((entry) => entry.priceCents))
       const first = tripEntries[0]
       const departIn = daysUntil(first.departDate)
-      return <section key={tripName} className="swift-event-section">
+      return { tripName, sorted, lowestCents, first, departIn }
+    }).sort((a, b) => {
+      const aSoon = a.departIn != null && a.departIn >= 0
+      const bSoon = b.departIn != null && b.departIn >= 0
+      if (aSoon && bSoon) return a.departIn - b.departIn
+      return aSoon ? -1 : bSoon ? 1 : 0
+    }).map(({ tripName, sorted, lowestCents, first, departIn }, index) => {
+      const isSoonest = index === 0 && departIn != null && departIn >= 0
+      return <section key={tripName} className={`swift-event-section${isSoonest ? ' travel-soonest' : ''}`}>
         <div className="instrument-heading">
           <span>{first.tripName}{first.route ? ` · ${first.route}` : ''}</span>
-          <b>{tripEntries.length} check{tripEntries.length === 1 ? '' : 's'}{departIn != null && departIn >= 0 ? ` · ${departIn}d to departure` : ''}</b>
+          <b>{sorted.length} check{sorted.length === 1 ? '' : 's'}{departIn != null && departIn >= 0 ? ` · ${departIn}d to departure` : ''}</b>
         </div>
         <div className="swift-collection-list">
           {sorted.map((entry) => <TravelEntryRow key={entry.id} entry={entry} isLowest={entry.priceCents === lowestCents} onDelete={onDelete} />)}

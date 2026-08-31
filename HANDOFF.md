@@ -4,28 +4,37 @@
 > Handoff is **enabled** for this repo. Every change updates the DO NEXT block below and prepends a log entry.
 
 ## ▶ DO NEXT
-**NOW: verify `App.css` still builds and renders clean, then check the Swift page.**
-2026-08-31 pushed a CSS-only fix: deleted a dead "Swift dark-mode adjustments"
-block that was leftover from the superseded Neon field-console skin and was
-winning the cascade by load order, causing low-contrast light-on-white text
-across most of the Swift page (not just the form, as originally scoped — see
-Log below). Also consolidated 5 duplicated `:root` passes into one canonical
-block using the values already winning the cascade — no visual change intended
-anywhere else. Open `sh.tayloraritchie.com` → **Swift** and confirm text reads
-clean, then spot-check Horizon/Projects/Career (the other views with dark
-accent modules) for any unexpected shift. First push of this fix (`38fa495`)
-accidentally wrote a literal file-path string instead of content due to a
-tool-call error — corrected immediately in `8f16755`. Worth a full page-by-page
-visual pass given that scare, not just Swift.
+**NOW: visual-verify Phase 1 + Phase 2 of the dark-accent rollout on sh.tayloraritchie.com — nothing has been eyeballed live yet.**
+2026-08-31 completed both phases of the CSS/JSX audit in one session:
+- Phase 1: removed a dead Swift dark-mode override block that was
+  causing low-contrast text (see prior log entries for the full story,
+  including a mid-session tool-call mistake that briefly overwrote
+  `App.css` with a literal file path — caught and corrected same session).
+- Phase 2: gave Flow, Mirrors, and Travel a dark accent module each,
+  matching the pattern already used by Horizon/Projects/Career, using
+  the War Room `#070b14`-family palette. Archive got its dark highlight
+  via CSS `:first-child` only (no JSX change, since entries are already
+  sorted newest-first). Specifically:
+  - **Flow:** the Active column goes dark (current-work emphasis).
+  - **Mirrors:** new summary panel above the list shows flagged-repo count.
+  - **Archive:** most recent entry is highlighted.
+  - **Travel:** was missing `padding-top:44px` entirely (now fixed, matches
+    every other view) and the trip with the soonest upcoming departure
+    gets highlighted — useful for the PAX Unplugged Dec 3-6 booking
+    decision specifically.
 
-**Then: Phase 2 of the SH visual-direction audit — bring Flow, Mirrors, Archive,
-and Travel up to the established hybrid pattern** (light base + one dark accent
-module, using the War Room `#070b14`/cyan-violet-coral system as the palette
-source). Travel currently has **zero dedicated CSS at all** — `.travel-view` is
-referenced in `App.jsx` with no matching rule in `App.css` — so it needs a page
-built from scratch stylistically, not just a dark pass like the other three.
+**Checklist for the visual pass:** open each of Horizon, Projects, Career,
+Flow, Mirrors, Archive, Swift, Travel in turn. Confirm nothing regressed
+from the token consolidation, and that the four new dark modules render
+as intended (not broken/illegible, not clashing with light-mode siblings).
+Swift is the highest-priority check since it's the one that was actively
+broken before this session.
 
-**Draft day (2026-08-30) has passed — War Room items below are now historical
+**Once verified clean:** no further dark-module work is scoped. Remaining
+open items are unrelated (see Standing list below) unless a fresh
+direction comes up.
+
+**Draft day (2026-08-30) has passed — the War Room items below are historical
 context, not active blockers, unless something broke during the draft.**
 
 **1. War Room is live with its draft-night visual pass, live snake board, full workspace mode, and its own Draft Board / Player Pool / My Team / Settings navigation.**
@@ -91,6 +100,42 @@ Standing repo notes:
 
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
+
+### 2026-08-31 18:32 ET · Claude chat
+- **Changed:** Phase 2 of the visual-direction audit (see prior entry for
+  Phase 1). Extended the light-canvas/dark-module hybrid pattern to the
+  four views that had no unique treatment:
+  - `FlowView` (App.jsx): the Active column gets a conditional
+    `flow-column-active` class; App.css darkens it to match the urgency
+    semantic already used by Horizon's time-instrument.
+  - `MirrorsView` (App.jsx): computes `flaggedCount` and renders a new
+    `.mirrors-summary` panel above the repo list.
+  - Archive: CSS-only, `.archive-feed .archive-entry:first-child` — no
+    JSX change needed since entries are already sorted newest-first in
+    the component.
+  - `TravelView` (App.jsx): was missing `.travel-view { padding-top:44px; }`
+    entirely — every other view has this, Travel didn't. Also restructured
+    the trip-group render into two passes (build `{tripName, sorted,
+    lowestCents, first, departIn}` objects, then sort by soonest
+    departure) so the soonest-departing trip can get a `travel-soonest`
+    highlight. Directly useful for the PAX Unplugged Dec 3-6 booking
+    decision — the highlighted trip is whichever one needs a decision
+    soonest.
+- **Verified before push:** CSS brace count balanced (586/586), each new
+  selector confirmed present exactly once. JSX verified with
+  `@babel/parser` (sourceType module, jsx plugin) — parses clean, grep
+  confirmed each new class name appears exactly once. **Re-fetched both
+  files after push and diffed byte-for-byte against the intended local
+  copies before calling it done** — the discipline picked up from the
+  Phase 1 mistake earlier this session.
+- **Commit:** `0d1099a` (App.css), `137c1ac` (App.jsx)
+- **Next:** Visual-verify on `sh.tayloraritchie.com` — see DO NEXT. Nothing
+  in this session has actually been seen live; everything is verified by
+  static analysis (brace/selector counts, babel parse, byte diffs) only.
+- **Watch out:** the `.mirrors-summary` and `.travel-soonest` treatments
+  are new UI surface, not just recolors — worth a closer look than a
+  glance to confirm the copy and layout read the way they're supposed to
+  with real data, not just that they don't crash.
 
 ### 2026-08-31 18:05 ET · Claude chat
 - **Changed:** Ran a full-app visual-direction audit (all 10 nav views against

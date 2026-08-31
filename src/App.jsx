@@ -450,6 +450,7 @@ function FlowView({ tasks, projects, onOpenProjects, onAddTask, onUpdateTaskStat
 }
 
 function CalendarView({ events, projects, tasks, onAddEvent, onDeleteEvent, onUpdateTaskStatus, onDeleteTask }) {
+  const [mode, setMode] = useState('Agenda')
   const [cursor, setCursor] = useState(() => { const date = new Date(); date.setDate(1); return date })
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [selectedEventId, setSelectedEventId] = useState(null)
@@ -496,11 +497,33 @@ function CalendarView({ events, projects, tasks, onAddEvent, onDeleteEvent, onUp
     setIsAdding(false)
   }
 
+  const eventForm = isAdding && <form className="event-form" onSubmit={submitEvent}>
+    <input type="date" value={selectedDate} onChange={(event) => setSelectedDate(event.target.value)} aria-label="Event date" />
+    <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="New event" autoFocus />
+    <input value={time} onChange={(event) => setTime(event.target.value)} placeholder="10:00 AM" />
+    <Button tone="coral" type="submit">Add</Button>
+  </form>
+
+  const detailPanel = <div className="calendar-detail-panel">
+    {activeEvent ? <>
+      <span className="calendar-detail-date">{new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date(`${activeEvent.date}T00:00:00`))}{activeEvent.startTime ? ` · ${activeEvent.startTime}` : ''}</span>
+      <h3>{activeEvent.title}</h3>
+      {activeEvent.projectId ? <p className="calendar-detail-project">{projectName(activeEvent.projectId)}</p> : null}
+      {activeEvent.notes ? <p>{activeEvent.notes}</p> : null}
+      <Button type="button" onClick={() => onDeleteEvent(activeEvent.id)}>Delete event</Button>
+    </> : <p className="empty-state">No upcoming events. Add one to see it here.</p>}
+  </div>
+
   return <section className="calendar-view" aria-labelledby="calendar-heading">
     <header className="view-header">
       <div><p className="eyebrow">System index / 04</p><h2 id="calendar-heading">Calendar field</h2><p>Commitments, build blocks, and the space around them.</p></div>
     </header>
-    <div className="calendar-layout">
+
+    <div className="registry-controls calendar-mode-toggle" role="group" aria-label="Calendar view mode">
+      {['Agenda', 'Month'].map((option) => <button className={mode === option ? 'selected' : ''} key={option} type="button" onClick={() => setMode(option)}>{option}</button>)}
+    </div>
+
+    {mode === 'Agenda' ? <div className="calendar-layout">
       <div className="calendar-side">
         <div className="month-nav"><button type="button" onClick={() => shiftMonth(-1)} aria-label="Previous month">‹</button><span>{monthLabel}</span><button type="button" onClick={() => shiftMonth(1)} aria-label="Next month">›</button></div>
         <div className="calendar-grid" role="grid" aria-label={monthLabel}>
@@ -528,12 +551,7 @@ function CalendarView({ events, projects, tasks, onAddEvent, onDeleteEvent, onUp
           <span>Upcoming</span>
           <Button tone="coral" type="button" onClick={() => setIsAdding((open) => !open)}>{isAdding ? 'Close' : 'Add event'}</Button>
         </div>
-        {isAdding && <form className="event-form" onSubmit={submitEvent}>
-          <input type="date" value={selectedDate} onChange={(event) => setSelectedDate(event.target.value)} aria-label="Event date" />
-          <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="New event" autoFocus />
-          <input value={time} onChange={(event) => setTime(event.target.value)} placeholder="10:00 AM" />
-          <Button tone="coral" type="submit">Add</Button>
-        </form>}
+        {eventForm}
         <div className="calendar-event-groups">
           {eventGroups.length ? eventGroups.map((group) => <div className="calendar-date-group" key={group.date}>
             <div className="calendar-date-heading">{group.label}</div>
@@ -545,16 +563,34 @@ function CalendarView({ events, projects, tasks, onAddEvent, onDeleteEvent, onUp
         </div>
       </div>
 
-      <div className="calendar-detail-panel">
-        {activeEvent ? <>
-          <span className="calendar-detail-date">{new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date(`${activeEvent.date}T00:00:00`))}{activeEvent.startTime ? ` · ${activeEvent.startTime}` : ''}</span>
-          <h3>{activeEvent.title}</h3>
-          {activeEvent.projectId ? <p className="calendar-detail-project">{projectName(activeEvent.projectId)}</p> : null}
-          {activeEvent.notes ? <p>{activeEvent.notes}</p> : null}
-          <Button type="button" onClick={() => onDeleteEvent(activeEvent.id)}>Delete event</Button>
-        </> : <p className="empty-state">No upcoming events. Add one to see it here.</p>}
+      {detailPanel}
+    </div> : <div className="calendar-month-layout">
+      <div className="calendar-month-main">
+        <div className="calendar-month-toolbar">
+          <div className="month-nav"><button type="button" onClick={() => shiftMonth(-1)} aria-label="Previous month">‹</button><span>{monthLabel}</span><button type="button" onClick={() => shiftMonth(1)} aria-label="Next month">›</button></div>
+          <Button tone="coral" type="button" onClick={() => setIsAdding((open) => !open)}>{isAdding ? 'Close' : 'Add event'}</Button>
+        </div>
+        {eventForm}
+        <div className="calendar-month-grid" role="grid" aria-label={monthLabel}>
+          {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((label) => <div className="calendar-weekday" key={label}>{label}</div>)}
+          {cells.map((day, index) => {
+            if (day === null) return <div className="calendar-month-cell empty" key={`empty-${index}`} />
+            const dateStr = dateKey(day)
+            const dayEvents = eventsFor(dateStr)
+            const shown = dayEvents.slice(0, 2)
+            const overflow = dayEvents.length - shown.length
+            return <div className={`calendar-month-cell${dateStr === todayKey ? ' today' : ''}${dateStr === selectedDate ? ' selected' : ''}`} key={dateStr} role="gridcell" onClick={() => setSelectedDate(dateStr)}>
+              <span className="calendar-month-day-num">{day}</span>
+              <div className="calendar-month-events">
+                {shown.map((event) => <button key={event.id} type="button" className={`calendar-month-event${activeEvent?.id === event.id ? ' selected' : ''}`} onClick={(clickEvent) => { clickEvent.stopPropagation(); setSelectedEventId(event.id) }}>{event.startTime ? `${event.startTime} ` : ''}{event.title}</button>)}
+                {overflow > 0 && <span className="calendar-month-more">+{overflow} more</span>}
+              </div>
+            </div>
+          })}
+        </div>
       </div>
-    </div>
+      {detailPanel}
+    </div>}
   </section>
 }
 

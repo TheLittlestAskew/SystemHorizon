@@ -187,3 +187,34 @@ button { -webkit-tap-highlight-color: transparent; }
 .swift-badge.logged { border:1px solid rgb(59 154 76 / .35); color:#3b9a4c; }
 .swift-badge.predicted { border:1px solid rgb(255 116 29 / .35); color:#a95e1a; background:rgb(255 116 29 / .08); }
 @media (max-width:760px){.swift-item-form{grid-template-columns:1fr}.swift-panel-toolbar{flex-direction:column;align-items:flex-start}.swift-event-row,.swift-item-row{flex-direction:column;align-items:flex-start}}
+
+/* Phase 2: dark accent modules for Flow, Mirrors, Archive, Travel, extending the established light-canvas/dark-module pattern (see Horizon's time-instrument, Projects' project-inspector, Career's compliance-panel) with the War Room dark palette. Each view gets exactly one distinguished dark element, chosen for what's actually urgent or current in that view. */
+.flow-column.flow-column-active { background:linear-gradient(140deg,#0c0e1c,#171a34); border-color:rgb(148 166 211 / .25); color:var(--cloud); }
+.flow-column.flow-column-active .instrument-heading { color:#c7ccdd; }
+.flow-column.flow-column-active .instrument-heading b { color:var(--cyan); }
+.flow-column.flow-column-active .task-row { border-bottom-color:rgb(255 255 255 / .12); }
+.flow-column.flow-column-active .task-row span { color:#a9b2d3; }
+.flow-column.flow-column-active .task-row small { color:#8892b7; }
+.flow-column.flow-column-active .task-controls select { background:rgb(18 20 45 / .6); border-color:rgb(155 171 255 / .3); color:var(--cloud); }
+.flow-column.flow-column-active .task-controls button { background:rgb(18 20 45 / .6); border-color:rgb(155 171 255 / .3); color:#a9b2d3; }
+.flow-column.flow-column-active .empty-state { color:#8892b7; }
+
+.mirrors-summary { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; margin:24px 0 12px; padding:20px 22px; border:1px solid rgb(148 166 211 / .25); border-radius:20px; background:linear-gradient(140deg,#0c0e1c,#171a34); color:var(--cloud); }
+.mirrors-summary span { display:block; color:#a9b2d3; font:10px 'Cascadia Mono', Consolas, monospace; letter-spacing:.08em; text-transform:uppercase; }
+.mirrors-summary p { margin:4px 0 0; color:#d9e1f5; font-size:13px; }
+.mirrors-summary strong { font-size:28px; letter-spacing:-.04em; color:var(--coral); }
+.mirrors-summary strong.clean { color:var(--lime); }
+
+.archive-feed .archive-entry:first-child { border-color:rgb(148 166 211 / .25); background:linear-gradient(140deg,#0c0e1c,#171a34); color:var(--cloud); }
+.archive-feed .archive-entry:first-child .archive-entry-meta b { color:var(--coral); }
+.archive-feed .archive-entry:first-child .archive-entry-meta span { color:#a9b2d3; }
+.archive-feed .archive-entry:first-child p { color:#d9e1f5; }
+
+.travel-view { padding-top:44px; }
+.travel-view .swift-event-section.travel-soonest { padding:18px 20px; border:1px solid rgb(148 166 211 / .25); border-radius:20px; background:linear-gradient(140deg,#0c0e1c,#171a34); color:var(--cloud); }
+.travel-view .swift-event-section.travel-soonest .instrument-heading span { color:var(--cloud); }
+.travel-view .swift-event-section.travel-soonest .instrument-heading b { color:var(--coral); }
+.travel-view .swift-event-section.travel-soonest .swift-item-row { border-bottom-color:rgb(255 255 255 / .12); }
+.travel-view .swift-event-section.travel-soonest .swift-item-row strong { color:var(--cloud); }
+.travel-view .swift-event-section.travel-soonest .swift-item-row span { color:#a9b2d3; }
+.travel-view .swift-event-section.travel-soonest .swift-item-row small { color:#8892b7; }

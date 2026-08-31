@@ -4,18 +4,23 @@ import { jobPipeline } from './jobPipeline'
 import WarRoomView from './WarRoomView'
 import './App.css'
 
-const navItems = [
-  ['Horizon', '01'],
-  ['Projects', '02'],
-  ['Flow', '03'],
-  ['Calendar', '04'],
-  ['Career', '05'],
-  ['Mirrors', '06'],
-  ['Archive', '07'],
-  ['Swift', '08'],
-  ['Travel', '09'],
-  ['War Room', '10'],
-]
+const navItems = ['Horizon', 'Projects', 'Flow', 'Calendar', 'Career', 'Mirrors', 'Archive', 'Swift', 'Travel', 'War Room']
+
+// Minimal line icons, hand-drawn in a thin-stroke/rounded-terminal style (not
+// copied from any licensed set) - one per nav item, 24x24 viewBox, currentColor
+// stroke so they pick up the existing nav-item/active color rules for free.
+const navIcons = {
+  Horizon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="11" r="5" /><line x1="3" y1="18" x2="21" y2="18" /></svg>,
+  Projects: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" /></svg>,
+  Flow: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="4" height="14" rx="1" /><rect x="10" y="5" width="4" height="9" rx="1" /><rect x="17" y="5" width="4" height="12" rx="1" /></svg>,
+  Calendar: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="16" rx="2" /><line x1="3" y1="10" x2="21" y2="10" /><line x1="8" y1="3" x2="8" y2="7" /><line x1="16" y1="3" x2="16" y2="7" /></svg>,
+  Career: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="8" width="18" height="12" rx="2" /><path d="M8 8V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><line x1="3" y1="13" x2="21" y2="13" /></svg>,
+  Mirrors: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 11a8 8 0 0 0-14.9-3.5" /><path d="M4 5v4h4" /><path d="M4 13a8 8 0 0 0 14.9 3.5" /><path d="M20 19v-4h-4" /></svg>,
+  Archive: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M3 8l3-4h12l3 4" /><rect x="3" y="8" width="18" height="12" rx="1" /><line x1="3" y1="8" x2="21" y2="8" /></svg>,
+  Swift: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="7" cy="18" r="2.4" /><circle cx="17" cy="16" r="2.4" /><path d="M9.4 18V6l10-2v12" /></svg>,
+  Travel: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2L11 13" /><path d="M22 2l-7 20-4-9-9-4 20-7z" /></svg>,
+  'War Room': <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z" /></svg>,
+}
 
 const initialProjects = [
   { id: 'system-horizon', name: 'System Horizon', area: 'Ops & Infra', kind: 'app', status: 'Active', health: 'Yellow', tone: 'coral', metric: '10/15 views live', signal: 67, summary: 'The cross-device control panel for projects, return points, and the next true thing.', nextAction: 'Restore or locate the missing tayls-task-manager.jsx source.', details: ['Known trap: recurring strip is hardcoded.', 'Failed Flows is still unbuilt.', 'Future grocery page: maintain a needed/regular list, compare local Walmart, Kroger, and Publix prices, recommend the cheapest store per item, and show each store cart total.', 'Future grocery handoff: where retailer capabilities allow it, add the recommended items to the appropriate online carts.', 'Future desktop capture widget: accept quick brain-dumps and route each thought to its rightful System Horizon area.', 'Future repo and mirror health check: show GitHub repositories and designated local mirrors that have uncommitted work, unpushed commits, remote commits waiting locally, or unbanked handoffs.', 'Future private health organizer: track current prescriptions and refill dates, plus a running list of topics to raise with a doctor.', 'Future family gift notes: maintain family-member profiles with private Christmas gift ideas and related notes.', 'The missing JSX source stays visible until resolved.'] },
@@ -1253,7 +1258,7 @@ function App() {
       <aside className="side-nav" aria-label="Primary navigation">
         <button className="brand-mark" type="button" aria-label="Open Horizon" onClick={() => setActiveView('Horizon')}><span>SH</span><i aria-hidden="true" /></button>
         <button className="nav-collapse" type="button" aria-label={navCollapsed ? 'Expand navigation' : 'Collapse navigation'} aria-pressed={navCollapsed} onClick={() => setNavCollapsed((collapsed) => !collapsed)}><span aria-hidden="true">{navCollapsed ? '›' : '‹'}</span><b>{navCollapsed ? 'Expand' : 'Collapse'}</b></button>
-        <nav>{navItems.map(([label, code]) => <button className={activeView === label || (activeView === 'ProjectDetail' && label === 'Projects') ? 'nav-item active' : 'nav-item'} key={label} type="button" onClick={() => setActiveView(label)}><span>{code}</span><b>{label}</b></button>)}</nav>
+        <nav>{navItems.map((label) => <button className={activeView === label || (activeView === 'ProjectDetail' && label === 'Projects') ? 'nav-item active' : 'nav-item'} key={label} type="button" onClick={() => setActiveView(label)}><span className="nav-icon" aria-hidden="true">{navIcons[label]}</span><b>{label}</b></button>)}</nav>
         <div className="nav-footer"><Signal /><span>Sync stable</span></div>
       </aside>
 

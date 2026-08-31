@@ -4,18 +4,31 @@
 > Handoff is **enabled** for this repo. Every change updates the DO NEXT block below and prepends a log entry.
 
 ## ▶ DO NEXT
-**NOW: the draft board shows real team names on every seat — open War Room and
-eyeball it before Saturday.** Grid headers, empty board cells, and both Up Next
-lists now read from `DRAFT_ORDER` / `teamForSeat()` in `src/warRoomLogic.js`
-instead of "Seat N". Check seat 9 reads **Hits Different** and seat 1 reads
-**Trash Goblins**; if the whole row is shifted, `DRAFT_ORDER` is out of sync with
-ESPN's `draftSettings.pickOrder` and picks will be attributed to the wrong owner.
-`npm test` guards that order against the verified pickOrder, so run it after any
-edit to that table. **Names cannot be derived at runtime** — `/api/draft` returns
-`teams` as the count `20`, not a roster, and the raw ESPN league JSON 401s without
-the server-side cookies — so `DRAFT_ORDER` stays hand-maintained on purpose.
+**NOW: verify `App.css` still builds and renders clean, then check the Swift page.**
+2026-08-31 pushed a CSS-only fix: deleted a dead "Swift dark-mode adjustments"
+block that was leftover from the superseded Neon field-console skin and was
+winning the cascade by load order, causing low-contrast light-on-white text
+across most of the Swift page (not just the form, as originally scoped — see
+Log below). Also consolidated 5 duplicated `:root` passes into one canonical
+block using the values already winning the cascade — no visual change intended
+anywhere else. Open `sh.tayloraritchie.com` → **Swift** and confirm text reads
+clean, then spot-check Horizon/Projects/Career (the other views with dark
+accent modules) for any unexpected shift. First push of this fix (`38fa495`)
+accidentally wrote a literal file-path string instead of content due to a
+tool-call error — corrected immediately in `8f16755`. Worth a full page-by-page
+visual pass given that scare, not just Swift.
 
-**1. Draft day is Saturday 2026-08-30. The War Room is live with its draft-night visual pass, live snake board, full workspace mode, and its own Draft Board / Player Pool / My Team / Settings navigation.**
+**Then: Phase 2 of the SH visual-direction audit — bring Flow, Mirrors, Archive,
+and Travel up to the established hybrid pattern** (light base + one dark accent
+module, using the War Room `#070b14`/cyan-violet-coral system as the palette
+source). Travel currently has **zero dedicated CSS at all** — `.travel-view` is
+referenced in `App.jsx` with no matching rule in `App.css` — so it needs a page
+built from scratch stylistically, not just a dark pass like the other three.
+
+**Draft day (2026-08-30) has passed — War Room items below are now historical
+context, not active blockers, unless something broke during the draft.**
+
+**1. War Room is live with its draft-night visual pass, live snake board, full workspace mode, and its own Draft Board / Player Pool / My Team / Settings navigation.**
 Open `sh.tayloraritchie.com` → **War Room** (nav panel 10). It loads ~271 players
 from FFC ADP on first visit. Click **ESPN Sync: Off** to turn it on — polls every
 5s and auto-marks picks taken/mine.
@@ -58,10 +71,7 @@ poll writing to Supabase had never been exercised. Revisit once the pressure is 
 
 **Small cleanup, no rush:** an unused `warroom-merge` branch exists (identical to
 main, created for a verification path that turned out not to be needed) and can
-be deleted. Separately, a **pre-existing CSS ordering bug**: the Swift dark-mode
-block at the end of `App.css` loads *after* the "Modular daylight mode" light
-theme, so `.swift-item-form` and its inputs render dark-on-light. Noticed
-2026-08-29, deliberately not touched as out of scope.
+be deleted.
 
 Design note carried forward: **`predicted` + `confidence` on `horizon_swift_events` exist specifically so forecasts never render as facts.** The Swift Calendar tab shows a "Predicted · N%" badge for forecasts and a "Logged" badge for real dates — keep that distinction if the UI changes.
 
@@ -81,6 +91,46 @@ Standing repo notes:
 
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
+
+### 2026-08-31 18:05 ET · Claude chat
+- **Changed:** Ran a full-app visual-direction audit (all 10 nav views against
+  the current cascade output) at Taylor's request, sourced partly from two
+  Pinterest boards (Septentrion, UI/UX) pulled live via the Zapier Pinterest
+  connector's raw API passthrough. Findings: Horizon/Projects/Career already
+  hybrid (light base + dark accent module); Flow/Mirrors/Archive untouched
+  light-only; Travel has zero dedicated CSS at all; War Room is the fully-dark
+  reference implementation and closely matches the Pinterest palette
+  (`#070b14` vs. pinned refs around `#0f1014`).
+  - Fixed the previously-known Swift CSS bug and traced its real cause: a dead
+    "dark-mode adjustments" block at the end of `App.css`, written for the
+    superseded Neon field-console skin, was winning the cascade by load order
+    and resetting several Swift text colors to light lavender/gray values
+    meant for a dark background — but their backgrounds stayed white. Affected
+    `swift-watch-meta dd`, `swift-panel-note`, `swift-checkbox`, and both row
+    types, not just the form as the prior HANDOFF entry scoped it.
+  - Consolidated 5 sequential `:root` passes (base, Neon field-console,
+    Modular daylight, Saturation, No navy) into one canonical block using the
+    values that were already winning the cascade — no visual change, removes
+    the duplication pattern that caused the bug in the first place.
+- **Verified before push:** brace count balanced (560/560 in the new file),
+  zero CSS selectors lost or added versus the old file, dead block confirmed
+  absent, single `:root` confirmed.
+- **Commit:** `38fa495` (bad — see Friction), `8f16755` (corrected)
+- **Friction:** gen-fail — the first `create_or_update_file` call passed the
+  local file *path* (`/home/claude/App.css.new`) as the `content` argument
+  instead of the file's actual text, so the live commit briefly overwrote
+  `App.css` with a 24-byte string containing just that path. Caught
+  immediately by re-fetching the file after the push and seeing `size: 24`.
+  Corrected in the next commit by reading the file's literal content into
+  context first and passing that. **Generalisable: after any
+  `create_or_update_file` call, re-fetch and check the returned `size`/content
+  before considering the change done — don't trust the tool call succeeding
+  just because it returned 200.**
+- **Next:** Open `sh.tayloraritchie.com`, verify Swift renders clean and no
+  other view visibly shifted, then start Phase 2 (Flow/Mirrors/Archive/Travel
+  dark-module treatment) — see DO NEXT.
+- **Watch out:** Travel needs a stylistic build from scratch, not a dark pass
+  like the other three — it currently inherits no dedicated styling.
 
 ### 2026-08-29 20:12 ET · Claude Code
 - **Changed:** The draft board now labels every seat with its real team name instead of "Seat N".

@@ -449,9 +449,11 @@ function FlowView({ tasks, projects, onOpenProjects, onAddTask, onUpdateTaskStat
   </section>
 }
 
-function CalendarView({ events, projects, onAddEvent, onDeleteEvent }) {
+function CalendarView({ events, projects, tasks, onAddEvent, onDeleteEvent, onUpdateTaskStatus, onDeleteTask }) {
   const [cursor, setCursor] = useState(() => { const date = new Date(); date.setDate(1); return date })
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [selectedEventId, setSelectedEventId] = useState(null)
+  const [isAdding, setIsAdding] = useState(false)
   const [title, setTitle] = useState('')
   const [time, setTime] = useState('')
 
@@ -464,8 +466,19 @@ function CalendarView({ events, projects, onAddEvent, onDeleteEvent }) {
   const dateKey = (day) => `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
   const eventsFor = (dateStr) => events.filter((event) => event.date === dateStr)
   const projectName = (id) => projects.find((project) => project.id === id)?.name
-  const selectedEvents = eventsFor(selectedDate)
   const todayKey = new Date().toISOString().slice(0, 10)
+
+  const upcomingEvents = [...events]
+    .filter((event) => event.date >= todayKey)
+    .sort((a, b) => a.date === b.date ? (a.startTime || '').localeCompare(b.startTime || '') : (a.date < b.date ? -1 : 1))
+  const eventGroups = []
+  for (const event of upcomingEvents) {
+    const last = eventGroups[eventGroups.length - 1]
+    if (last && last.date === event.date) last.items.push(event)
+    else eventGroups.push({ date: event.date, label: new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric' }).format(new Date(`${event.date}T00:00:00`)), items: [event] })
+  }
+  const activeEvent = upcomingEvents.find((event) => event.id === selectedEventId) ?? upcomingEvents[0] ?? null
+  const openTasks = [...tasks].filter((task) => task.status !== 'Done').sort((a, b) => (a.createdAt < b.createdAt ? -1 : 1))
 
   function shiftMonth(delta) {
     const next = new Date(cursor)
@@ -480,37 +493,67 @@ function CalendarView({ events, projects, onAddEvent, onDeleteEvent }) {
     onAddEvent({ title: cleanTitle, date: selectedDate, startTime: time.trim() || null, endTime: null, projectId: null, notes: '' })
     setTitle('')
     setTime('')
+    setIsAdding(false)
   }
 
   return <section className="calendar-view" aria-labelledby="calendar-heading">
     <header className="view-header">
       <div><p className="eyebrow">System index / 04</p><h2 id="calendar-heading">Calendar field</h2><p>Commitments, build blocks, and the space around them.</p></div>
-      <div className="month-nav"><button type="button" onClick={() => shiftMonth(-1)} aria-label="Previous month">‹</button><span>{monthLabel}</span><button type="button" onClick={() => shiftMonth(1)} aria-label="Next month">›</button></div>
     </header>
-    <div className="calendar-grid" role="grid" aria-label={monthLabel}>
-      {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((label) => <div className="calendar-weekday" key={label}>{label}</div>)}
-      {cells.map((day, index) => {
-        if (day === null) return <div className="calendar-cell empty" key={`empty-${index}`} />
-        const dateStr = dateKey(day)
-        const dayEvents = eventsFor(dateStr)
-        return <button className={`calendar-cell${dateStr === selectedDate ? ' selected' : ''}${dateStr === todayKey ? ' today' : ''}`} key={dateStr} type="button" onClick={() => setSelectedDate(dateStr)}>
-          <span>{day}</span>
-          {dayEvents.length > 0 && <i aria-hidden="true">{dayEvents.length}</i>}
-        </button>
-      })}
-    </div>
-    <div className="calendar-workbench">
-      <article className="career-panel">
-        <span>{new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'short', day: 'numeric' }).format(new Date(`${selectedDate}T00:00:00`))}</span>
-        <form className="event-form" onSubmit={submitEvent}>
-          <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="New event" />
+    <div className="calendar-layout">
+      <div className="calendar-side">
+        <div className="month-nav"><button type="button" onClick={() => shiftMonth(-1)} aria-label="Previous month">‹</button><span>{monthLabel}</span><button type="button" onClick={() => shiftMonth(1)} aria-label="Next month">›</button></div>
+        <div className="calendar-grid" role="grid" aria-label={monthLabel}>
+          {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((label) => <div className="calendar-weekday" key={label}>{label}</div>)}
+          {cells.map((day, index) => {
+            if (day === null) return <div className="calendar-cell empty" key={`empty-${index}`} />
+            const dateStr = dateKey(day)
+            const dayEvents = eventsFor(dateStr)
+            return <button className={`calendar-cell${dateStr === selectedDate ? ' selected' : ''}${dateStr === todayKey ? ' today' : ''}`} key={dateStr} type="button" onClick={() => setSelectedDate(dateStr)}>
+              <span>{day}</span>
+              {dayEvents.length > 0 && <i aria-hidden="true">{dayEvents.length}</i>}
+            </button>
+          })}
+        </div>
+        <div className="calendar-task-list">
+          <div className="instrument-heading"><span>Tasks</span><b>{openTasks.length}</b></div>
+          <div className="calendar-task-rows">
+            {openTasks.length ? openTasks.map((task) => <TaskRow key={task.id} task={task} projectName={projectName(task.projectId)} onStatusChange={onUpdateTaskStatus} onDelete={onDeleteTask} />) : <p className="empty-state">Nothing open.</p>}
+          </div>
+        </div>
+      </div>
+
+      <div className="calendar-events-column">
+        <div className="calendar-events-header">
+          <span>Upcoming</span>
+          <Button tone="coral" type="button" onClick={() => setIsAdding((open) => !open)}>{isAdding ? 'Close' : 'Add event'}</Button>
+        </div>
+        {isAdding && <form className="event-form" onSubmit={submitEvent}>
+          <input type="date" value={selectedDate} onChange={(event) => setSelectedDate(event.target.value)} aria-label="Event date" />
+          <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="New event" autoFocus />
           <input value={time} onChange={(event) => setTime(event.target.value)} placeholder="10:00 AM" />
           <Button tone="coral" type="submit">Add</Button>
-        </form>
-        <div className="event-list">
-          {selectedEvents.length ? selectedEvents.map((event) => <div className="event-row" key={event.id}><div><strong>{event.title}</strong>{event.startTime ? <small>{event.startTime}</small> : null}{event.projectId ? <small>{projectName(event.projectId)}</small> : null}</div><button type="button" onClick={() => onDeleteEvent(event.id)} aria-label={`Delete ${event.title}`}>×</button></div>) : <p className="empty-state">Nothing scheduled.</p>}
+        </form>}
+        <div className="calendar-event-groups">
+          {eventGroups.length ? eventGroups.map((group) => <div className="calendar-date-group" key={group.date}>
+            <div className="calendar-date-heading">{group.label}</div>
+            {group.items.map((event) => <button key={event.id} type="button" className={`calendar-event-row${activeEvent?.id === event.id ? ' selected' : ''}`} onClick={() => setSelectedEventId(event.id)}>
+              <span className="calendar-event-time">{event.startTime || '—'}</span>
+              <span className="calendar-event-info"><strong>{event.title}</strong>{event.projectId ? <small>{projectName(event.projectId)}</small> : null}</span>
+            </button>)}
+          </div>) : <p className="empty-state">Nothing scheduled ahead. Add an event to see it here.</p>}
         </div>
-      </article>
+      </div>
+
+      <div className="calendar-detail-panel">
+        {activeEvent ? <>
+          <span className="calendar-detail-date">{new Intl.DateTimeFormat('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).format(new Date(`${activeEvent.date}T00:00:00`))}{activeEvent.startTime ? ` · ${activeEvent.startTime}` : ''}</span>
+          <h3>{activeEvent.title}</h3>
+          {activeEvent.projectId ? <p className="calendar-detail-project">{projectName(activeEvent.projectId)}</p> : null}
+          {activeEvent.notes ? <p>{activeEvent.notes}</p> : null}
+          <Button type="button" onClick={() => onDeleteEvent(activeEvent.id)}>Delete event</Button>
+        </> : <p className="empty-state">No upcoming events. Add one to see it here.</p>}
+      </div>
     </div>
   </section>
 }
@@ -1187,7 +1230,7 @@ function App() {
         {activeView === 'ProjectDetail' && selectedProject ? <ProjectDetailView project={selectedProject} tasks={tasks} onBack={() => setActiveView('Projects')} onAddTask={addTask} onUpdateTaskStatus={updateTaskStatus} onDeleteTask={deleteTask} />
           : activeView === 'Projects' ? <ProjectRegistry projects={projects} selectedProjectId={selectedProjectId} onSelectProject={setSelectedProjectId} onAddProject={addProject} onSeedProjects={seedProjects} onOpenProject={openProject} />
           : activeView === 'Flow' ? <FlowView tasks={tasks} projects={projects} onOpenProjects={() => setActiveView('Projects')} onAddTask={addTask} onUpdateTaskStatus={updateTaskStatus} onDeleteTask={deleteTask} />
-          : activeView === 'Calendar' ? <CalendarView events={events} projects={projects} onAddEvent={addEvent} onDeleteEvent={deleteEvent} />
+          : activeView === 'Calendar' ? <CalendarView events={events} projects={projects} tasks={tasks} onAddEvent={addEvent} onDeleteEvent={deleteEvent} onUpdateTaskStatus={updateTaskStatus} onDeleteTask={deleteTask} />
           : activeView === 'Career' ? <CareerView jobs={jobs} jobError={jobError} />
           : activeView === 'Mirrors' ? <MirrorsView repoHealth={repoHealth} />
           : activeView === 'Archive' ? <ArchiveView />

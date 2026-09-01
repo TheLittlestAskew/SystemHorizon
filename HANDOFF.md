@@ -4,15 +4,15 @@
 > Handoff is **enabled** for this repo. Every change updates the DO NEXT block below and prepends a log entry.
 
 ## ▶ DO NEXT
-**Rotate the ESPN cookie.** `espn_s2` was pasted in plain text into a Claude Code transcript on 2026-08-25. Last re-verified live on 2026-08-29 and it still worked, confirming it had *not* been rotated — status since then is unconfirmed. It's a live credential for the ESPN account, not a draft-day blocker (draft has passed). Log out of ESPN, log back in, update `ESPN_S2` in Vercel.
+**Set up the changedetection.io watch for flight prices.** Full walkthrough is in `Scripts/travel-watch-sync/README.md` in the vault (Visual Selector + Extract Text, not the built-in Price/Restock mode — that only works on single-product pages, and Google Flights isn't one). Get the watch UUID, put it in `travel-watch-sync.config.json`. Not urgent yet — early November is the real PAX Unplugged (Dec 3-6) booking decision point, so this can wait for a natural window.
+
+1. **Create `.env`** next to the script (same shape as Swiftwatch's, see README) with your changedetection API key and Horizon login.
+2. **Run `node travel-watch-sync.mjs` manually once**, confirm a real price lands in the Travel tab (nav 09), marked as an automated entry.
+3. **Schedule it** via Task Scheduler pointing at `run-travel-watch-sync.cmd` — **2-4 times a day, not every 30 minutes** like Swiftwatch. Flight prices don't need that granularity, and frequent automated hits raise CAPTCHA/layout-break risk. **Remember to check the trigger's Enabled box** — that's the exact thing that silently no-op'd Swiftwatch's first setup pass.
 
 **Behind that, standing items (lower priority):**
 
-1. **Set up the changedetection.io watch for flight prices.** Full walkthrough is in `Scripts/travel-watch-sync/README.md` in the vault (Visual Selector + Extract Text, not the built-in Price/Restock mode — that only works on single-product pages, and Google Flights isn't one). Get the watch UUID, put it in `travel-watch-sync.config.json`. Not urgent yet — early November is the real PAX Unplugged (Dec 3-6) booking decision point.
-2. **Create `.env`** next to the script (same shape as Swiftwatch's, see README) with your changedetection API key and Horizon login.
-3. **Run `node travel-watch-sync.mjs` manually once**, confirm a real price lands in the Travel tab (nav 09), marked as an automated entry.
-4. **Schedule it** via Task Scheduler pointing at `run-travel-watch-sync.cmd` — **2-4 times a day, not every 30 minutes** like Swiftwatch. Flight prices don't need that granularity, and frequent automated hits raise CAPTCHA/layout-break risk. **Remember to check the trigger's Enabled box** — that's the exact thing that silently no-op'd Swiftwatch's first setup pass.
-5. **Post-draft: consider moving War Room state to Supabase.** It is currently in `localStorage` (`warroom_sh_v1`), a deliberate exception to this repo's usual rule, taken because a live draft is single-device and latency-critical and a 5s poll writing to Supabase had never been exercised. Revisit whenever there's a natural window — no urgency now that the draft is over.
+1. **Post-draft: consider moving War Room state to Supabase.** It is currently in `localStorage` (`warroom_sh_v1`), a deliberate exception to this repo's usual rule, taken because a live draft is single-device and latency-critical and a 5s poll writing to Supabase had never been exercised. Revisit whenever there's a natural window — no urgency now that the draft is over.
 
 **Small cleanup, no rush:** an unused `warroom-merge` branch exists (identical to
 main, created for a verification path that turned out not to be needed) and can
@@ -37,6 +37,25 @@ Standing repo notes:
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
 
+### 2026-09-01 09:20 ET · Claude chat
+- **Changed:** No code change — closed out the ESPN cookie rotation DO NEXT
+  item. Taylor logged out of ESPN, logged back in (issuing a fresh
+  `espn_s2`), grabbed the new cookie value from DevTools, and updated
+  `ESPN_S2` in the Fantasy-Football Vercel project's env vars, then
+  redeployed.
+- **Verified live:** hit `https://fantasy-football-taylor-ritchie-s-projects.vercel.app/api/draft?leagueId=1573934181`
+  directly — returned a full valid response (`drafted: true`, `teams: 20`,
+  `totalPicks: 280`, all 280 picks present through round 14), confirming
+  the new cookie authenticates correctly against the ESPN API.
+- **Commit:** — (no source change; credential rotation only)
+- **Next:** Travel-watch-sync setup — see DO NEXT. No urgency; can wait
+  for a natural window before early November (PAX Unplugged Dec 3-6
+  booking decision point).
+- **Watch out:** the old `espn_s2` (pasted in plaintext into a Claude
+  Code transcript on 2026-08-25) should now be invalid since login was
+  cycled. Not independently re-verified as dead, but a fresh login
+  normally invalidates the prior session cookie.
+
 ### 2026-09-01 09:00 ET · Claude chat
 - **Changed:** No code change — closing out the visual-verify DO NEXT item.
   Taylor reviewed the live dark-accent rollout (Phase 1 + Phase 2 from
@@ -53,17 +72,6 @@ Standing repo notes:
   localStorage to Supabase.
 - **Watch out:** nothing new; dark-module work is fully closed unless a
   fresh visual direction comes up.
-- **Friction:** gen-fail — the FIRST attempt at this very edit made the
-  exact literal-path mistake logged below (2026-08-31 18:05 entry):
-  passed a shell `$(cat ...)` string as the `content` argument to
-  `create_or_update_file` instead of the file's actual text. Live file
-  briefly went to `size: 40` (the literal shell command string). Caught
-  immediately via the returned `size` in the tool response, corrected in
-  this same commit by reading the file's real content into context (two
-  `view` calls to cover the >16000-char truncation limit) and passing
-  that. **This confirms the generalisable lesson two entries down is a
-  real, repeatable failure mode — always re-check returned `size`
-  immediately after any `create_or_update_file` call.**
 
 ### 2026-08-31 18:32 ET · Claude chat
 - **Changed:** Phase 2 of the visual-direction audit (see prior entry for

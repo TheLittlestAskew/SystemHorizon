@@ -49,6 +49,17 @@ const initialProjects = [
 // renders in its own trailing section instead of being dropped.
 const AREA_ORDER = ['Ops & Infra', 'Aftermath', 'Undercroft', 'Sidequests', 'Career', 'Learning']
 
+// One-line description shown on each area card. Areas outside this map (e.g.
+// a freshly added 'Unsorted' project) just get a generic fallback line.
+const AREA_META = {
+  'Ops & Infra': 'The machine that runs everything else.',
+  'Aftermath': 'The live stack — brand, app, and data layer.',
+  'Undercroft': 'Campaign vaults, and the pipeline that feeds them.',
+  'Sidequests': 'Off the clock. Still worth tracking.',
+  'Career': 'The job-search command center.',
+  'Learning': 'Deliberate practice, no deadline.',
+}
+
 function projectFromRow(row) {
   return { id: row.id, name: row.name, area: row.area, parentName: row.parent_name ?? null, kind: row.kind ?? 'project', status: row.status, health: row.health, tone: row.health === 'Green' ? 'cyan' : row.health === 'Yellow' || row.health === 'Red' ? 'coral' : 'violet', metric: row.metric_value ?? 'No metric yet', signal: row.signal ?? 0, summary: row.description ?? 'No description yet.', nextAction: row.next_action ?? 'Choose the next honest move.', details: row.notes ?? [], lastActivity: row.last_activity ?? null }
 }
@@ -168,16 +179,17 @@ function ProjectsTicker({ projects }) {
   </div>
 }
 
-function ProjectCard({ project, focused, onSelect, onOpen }) {
-  return <article className={`project-card${focused ? ' focused' : ''}`}>
-    <button type="button" className="project-card-select" aria-pressed={focused} onClick={() => onSelect(project.id)}>
-      <div className="project-card-top"><Signal tone={project.tone} /><span>{project.area}</span><b>{project.status}</b></div>
-      <h3>{project.name}</h3>
-      <p>{project.nextAction}</p>
-      <div className="project-card-foot"><span>{project.health} health</span><span>{project.metric}</span></div>
-    </button>
-    <button type="button" className="project-card-open" onClick={() => onOpen(project.id)}>Open project page →</button>
-  </article>
+function AreaCard({ area, projects, focused, onSelect }) {
+  const activeCount = projects.filter((project) => project.status === 'Active').length
+  const avgSignal = projects.length ? Math.round(projects.reduce((sum, project) => sum + project.signal, 0) / projects.length) : 0
+  const worstTone = projects.some((project) => project.tone === 'coral') ? 'coral' : projects.some((project) => project.tone === 'violet') ? 'violet' : 'cyan'
+
+  return <button type="button" className={`area-card${focused ? ' focused' : ''}`} aria-pressed={focused} onClick={() => onSelect(area)}>
+    <div className="area-card-top"><Signal tone={worstTone} /><span>{projects.length} project{projects.length === 1 ? '' : 's'}</span><b>{activeCount} active</b></div>
+    <h3>{area}</h3>
+    <p>{AREA_META[area] || 'A working area.'}</p>
+    <div className="signal-meter"><span style={{ width: `${avgSignal}%` }} /></div>
+  </button>
 }
 
 // Repurposes the same repo-health data Mirrors already syncs — uncommitted,
@@ -215,15 +227,16 @@ function RepoActivityTable({ repoHealth }) {
   </div>
 }
 
-// Area accordion: all sections open by default. Selecting a project card
-// (focusedProjectId) narrows this to just that project's area, force-opened,
-// with a banner to clear back to the full view — per-area toggles are
-// disabled while a focus is active so the narrowed view can't be fought.
-function AreaAccordion({ projects, tasks, focusedProjectId, onClearFocus }) {
+// Area accordion: the single source for browsing sub-projects now that cards
+// are area-level rollups. All sections open by default. Selecting an area
+// card (focusedArea) narrows this to just that section, force-opened, with a
+// banner to clear back to the full view. Clicking a project's own heading
+// opens its full detail page — the only entry point into that page now that
+// AreaCard doesn't carry an individual "Open project page" button.
+function AreaAccordion({ projects, tasks, focusedArea, onClearFocus, onOpenProject }) {
   const [openAreas, setOpenAreas] = useState(() => new Set(AREA_ORDER))
-  const focusedProject = projects.find((project) => project.id === focusedProjectId) ?? null
   const sectionNames = [...AREA_ORDER, ...Array.from(new Set(projects.map((project) => project.area))).filter((area) => !AREA_ORDER.includes(area))]
-  const visibleSectionNames = focusedProject ? [focusedProject.area] : sectionNames
+  const visibleSectionNames = focusedArea ? [focusedArea] : sectionNames
   const tasksFor = (projectId) => tasks.filter((task) => task.projectId === projectId && task.status !== 'Done')
 
   function toggleArea(area) {
@@ -238,7 +251,9 @@ function AreaAccordion({ projects, tasks, focusedProjectId, onClearFocus }) {
   function AccordionProject({ project, nested }) {
     const openTasks = tasksFor(project.id)
     return <div className={`accordion-project${nested ? ' accordion-project-child' : ''}`}>
-      <div className="accordion-project-heading"><Signal tone={project.tone} /><strong>{project.name}</strong><small>{project.status}</small></div>
+      <button type="button" className="accordion-project-heading" onClick={() => onOpenProject(project.id)}>
+        <Signal tone={project.tone} /><strong>{project.name}</strong><small>{project.status}</small>
+      </button>
       {openTasks.length > 0
         ? <ul className="accordion-task-list">{openTasks.map((task) => <li key={task.id}>{task.name}</li>)}</ul>
         : <p className="accordion-no-tasks">No open tasks.</p>}
@@ -246,28 +261,31 @@ function AreaAccordion({ projects, tasks, focusedProjectId, onClearFocus }) {
   }
 
   return <div className="area-accordion" aria-label="Projects by area">
-    {focusedProject && <div className="area-accordion-focus-banner"><span>Showing: {focusedProject.area}</span><button type="button" onClick={onClearFocus}>Show all areas</button></div>}
-    {visibleSectionNames.map((area) => {
-      const inArea = projects.filter((project) => project.area === area)
-      if (inArea.length === 0) return null
-      const names = new Set(inArea.map((project) => project.name))
-      const topLevel = inArea.filter((project) => !project.parentName || !names.has(project.parentName))
-      const childrenOf = (parentProject) => inArea.filter((project) => project.parentName === parentProject.name)
-      const isOpen = focusedProject ? true : openAreas.has(area)
-      return <section className="accordion-section" key={area}>
-        <button type="button" className="accordion-section-toggle" onClick={() => toggleArea(area)} aria-expanded={isOpen} disabled={!!focusedProject}>
-          <span>{area}</span>
-          <b>{inArea.length}</b>
-          <i className={`accordion-chevron${isOpen ? ' open' : ''}`} aria-hidden="true">›</i>
-        </button>
-        {isOpen && <div className="accordion-section-body">
-          {topLevel.map((project) => <div key={project.id}>
-            <AccordionProject project={project} />
-            {childrenOf(project).map((child) => <AccordionProject project={child} nested key={child.id} />)}
-          </div>)}
-        </div>}
-      </section>
-    })}
+    <div className="instrument-heading area-accordion-header"><span>Areas</span><b>{projects.length}</b></div>
+    <div className="area-accordion-body">
+      {focusedArea && <div className="area-accordion-focus-banner"><span>Showing: {focusedArea}</span><button type="button" onClick={onClearFocus}>Show all areas</button></div>}
+      {visibleSectionNames.map((area) => {
+        const inArea = projects.filter((project) => project.area === area)
+        if (inArea.length === 0) return null
+        const names = new Set(inArea.map((project) => project.name))
+        const topLevel = inArea.filter((project) => !project.parentName || !names.has(project.parentName))
+        const childrenOf = (parentProject) => inArea.filter((project) => project.parentName === parentProject.name)
+        const isOpen = focusedArea ? true : openAreas.has(area)
+        return <section className="accordion-section" key={area}>
+          <button type="button" className="accordion-section-toggle" onClick={() => toggleArea(area)} aria-expanded={isOpen} disabled={!!focusedArea}>
+            <span>{area}</span>
+            <b>{inArea.length}</b>
+            <i className={`accordion-chevron${isOpen ? ' open' : ''}`} aria-hidden="true">›</i>
+          </button>
+          {isOpen && <div className="accordion-section-body">
+            {topLevel.map((project) => <div key={project.id}>
+              <AccordionProject project={project} />
+              {childrenOf(project).map((child) => <AccordionProject project={child} nested key={child.id} />)}
+            </div>)}
+          </div>}
+        </section>
+      })}
+    </div>
   </div>
 }
 
@@ -276,7 +294,7 @@ function ProjectRegistry({ projects, tasks, repoHealth, onAddProject, onSeedProj
   const [isAdding, setIsAdding] = useState(false)
   const [projectName, setProjectName] = useState('')
   const [formError, setFormError] = useState('')
-  const [focusedProjectId, setFocusedProjectId] = useState(null)
+  const [focusedArea, setFocusedArea] = useState(null)
   const visibleProjects = filter === 'All' ? projects : projects.filter((project) => project.status === filter)
 
   async function submitProject(event) {
@@ -305,9 +323,16 @@ function ProjectRegistry({ projects, tasks, repoHealth, onAddProject, onSeedProj
     }
   }
 
-  function selectCard(id) {
-    setFocusedProjectId((current) => current === id ? null : id)
+  function selectArea(area) {
+    setFocusedArea((current) => current === area ? null : area)
   }
+
+  // Cards are area-level rollups now, not one per project — "major projects"
+  // are the areas (Ops & Infra, Aftermath, Undercroft, ...); individual
+  // projects and sub-projects (a specific campaign, System Horizon,
+  // Storybook Resume) live only in the accordion below.
+  const areaNames = [...AREA_ORDER, ...Array.from(new Set(projects.map((project) => project.area))).filter((area) => !AREA_ORDER.includes(area))]
+  const areaCards = areaNames.map((area) => ({ area, projects: visibleProjects.filter((project) => project.area === area) })).filter((card) => card.projects.length > 0)
 
   return <section className="registry-view" aria-labelledby="registry-heading">
     <header className="view-header">
@@ -336,13 +361,13 @@ function ProjectRegistry({ projects, tasks, repoHealth, onAddProject, onSeedProj
 
     <div className="registry-board">
       <div className="registry-main">
-        <div className="project-cards-grid">
-          {visibleProjects.map((project) => <ProjectCard key={project.id} project={project} focused={focusedProjectId === project.id} onSelect={selectCard} onOpen={onOpenProject} />)}
-          {visibleProjects.length === 0 && <div className="empty-state"><p>No project records yet.</p><Button tone="coral" type="button" onClick={onSeedProjects}>Load portfolio registry</Button></div>}
+        <div className="area-cards-grid">
+          {areaCards.map(({ area, projects: areaProjects }) => <AreaCard key={area} area={area} projects={areaProjects} focused={focusedArea === area} onSelect={selectArea} />)}
+          {areaCards.length === 0 && <div className="empty-state"><p>No project records yet.</p><Button tone="coral" type="button" onClick={onSeedProjects}>Load portfolio registry</Button></div>}
         </div>
         <RepoActivityTable repoHealth={repoHealth} />
       </div>
-      <AreaAccordion projects={projects} tasks={tasks} focusedProjectId={focusedProjectId} onClearFocus={() => setFocusedProjectId(null)} />
+      <AreaAccordion projects={projects} tasks={tasks} focusedArea={focusedArea} onClearFocus={() => setFocusedArea(null)} onOpenProject={onOpenProject} />
     </div>
   </section>
 }

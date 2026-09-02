@@ -50,7 +50,7 @@ const initialProjects = [
 const AREA_ORDER = ['Ops & Infra', 'Aftermath', 'Undercroft', 'Sidequests', 'Career', 'Learning']
 
 function projectFromRow(row) {
-  return { id: row.id, name: row.name, area: row.area, parentName: row.parent_name ?? null, kind: row.kind ?? 'project', status: row.status, health: row.health, tone: row.health === 'Green' ? 'cyan' : row.health === 'Yellow' || row.health === 'Red' ? 'coral' : 'violet', metric: row.metric_value ?? 'No metric yet', signal: row.signal ?? 0, summary: row.description ?? 'No description yet.', nextAction: row.next_action ?? 'Choose the next honest move.', details: row.notes ?? [] }
+  return { id: row.id, name: row.name, area: row.area, parentName: row.parent_name ?? null, kind: row.kind ?? 'project', status: row.status, health: row.health, tone: row.health === 'Green' ? 'cyan' : row.health === 'Yellow' || row.health === 'Red' ? 'coral' : 'violet', metric: row.metric_value ?? 'No metric yet', signal: row.signal ?? 0, summary: row.description ?? 'No description yet.', nextAction: row.next_action ?? 'Choose the next honest move.', details: row.notes ?? [], lastActivity: row.last_activity ?? null }
 }
 
 function projectToRow(project) {
@@ -143,12 +143,140 @@ function DotMatrix({ completed = 18, total = 35 }) {
   </div>
 }
 
-function ProjectRegistry({ projects, selectedProjectId, onSelectProject, onAddProject, onSeedProjects, onOpenProject }) {
+// Recently-updated ticker: an infinite CSS marquee, so the duplicated second
+// pass is aria-hidden to avoid double-announcing every project name.
+function ProjectsTicker({ projects }) {
+  const sorted = [...projects].sort((a, b) => {
+    if (!a.lastActivity && !b.lastActivity) return 0
+    if (!a.lastActivity) return 1
+    if (!b.lastActivity) return -1
+    return a.lastActivity < b.lastActivity ? 1 : -1
+  })
+  if (sorted.length === 0) return null
+
+  const item = (project, hidden) => <span className="projects-ticker-item" aria-hidden={hidden || undefined} key={`${project.id}${hidden ? '-dup' : ''}`}>
+    <Signal tone={project.tone} />
+    <strong>{project.name}</strong>
+    <small>updated {relativeTime(project.lastActivity)}</small>
+  </span>
+
+  return <div className="projects-ticker" aria-label="Recently updated projects">
+    <div className="projects-ticker-track">
+      {sorted.map((project) => item(project, false))}
+      {sorted.map((project) => item(project, true))}
+    </div>
+  </div>
+}
+
+function ProjectCard({ project, focused, onSelect, onOpen }) {
+  return <article className={`project-card${focused ? ' focused' : ''}`}>
+    <button type="button" className="project-card-select" aria-pressed={focused} onClick={() => onSelect(project.id)}>
+      <div className="project-card-top"><Signal tone={project.tone} /><span>{project.area}</span><b>{project.status}</b></div>
+      <h3>{project.name}</h3>
+      <p>{project.nextAction}</p>
+      <div className="project-card-foot"><span>{project.health} health</span><span>{project.metric}</span></div>
+    </button>
+    <button type="button" className="project-card-open" onClick={() => onOpen(project.id)}>Open project page →</button>
+  </article>
+}
+
+// Repurposes the same repo-health data Mirrors already syncs — uncommitted,
+// ahead, and behind counts — as a compact activity table instead of the full
+// mirror-row cards. No commit-message or issue data is wired up yet.
+function RepoActivityTable({ repoHealth }) {
+  const rows = [...repoHealth].sort((a, b) => {
+    const aFlags = repoStatusFlags(a).flags.length
+    const bFlags = repoStatusFlags(b).flags.length
+    if (aFlags !== bFlags) return bFlags - aFlags
+    return a.repoName.localeCompare(b.repoName)
+  })
+
+  return <div className="repo-activity-table" role="table" aria-label="Repository activity">
+    <div className="repo-activity-row repo-activity-head" role="row">
+      <span role="columnheader">Repo</span>
+      <span role="columnheader">Uncommitted</span>
+      <span role="columnheader">Ahead</span>
+      <span role="columnheader">Behind</span>
+      <span role="columnheader">Checked</span>
+      <span role="columnheader">Status</span>
+    </div>
+    {rows.length === 0 && <p className="empty-state">No repo activity data yet. Run the mirror-freshness sync script to populate this.</p>}
+    {rows.map((repo) => {
+      const { flags, tone } = repoStatusFlags(repo)
+      return <div className="repo-activity-row" role="row" key={repo.id}>
+        <span role="cell"><Signal tone={tone} /> {repo.repoName}</span>
+        <span role="cell">{repo.uncommittedCount ?? 0}</span>
+        <span role="cell">{repo.aheadCount ?? 0}</span>
+        <span role="cell">{repo.behindCount ?? 0}</span>
+        <span role="cell">{relativeTime(repo.checkedAt)}</span>
+        <span role="cell">{flags.length ? `${flags.length} flag${flags.length === 1 ? '' : 's'}` : 'Clean'}</span>
+      </div>
+    })}
+  </div>
+}
+
+// Area accordion: all sections open by default. Selecting a project card
+// (focusedProjectId) narrows this to just that project's area, force-opened,
+// with a banner to clear back to the full view — per-area toggles are
+// disabled while a focus is active so the narrowed view can't be fought.
+function AreaAccordion({ projects, tasks, focusedProjectId, onClearFocus }) {
+  const [openAreas, setOpenAreas] = useState(() => new Set(AREA_ORDER))
+  const focusedProject = projects.find((project) => project.id === focusedProjectId) ?? null
+  const sectionNames = [...AREA_ORDER, ...Array.from(new Set(projects.map((project) => project.area))).filter((area) => !AREA_ORDER.includes(area))]
+  const visibleSectionNames = focusedProject ? [focusedProject.area] : sectionNames
+  const tasksFor = (projectId) => tasks.filter((task) => task.projectId === projectId && task.status !== 'Done')
+
+  function toggleArea(area) {
+    setOpenAreas((current) => {
+      const next = new Set(current)
+      if (next.has(area)) next.delete(area)
+      else next.add(area)
+      return next
+    })
+  }
+
+  function AccordionProject({ project, nested }) {
+    const openTasks = tasksFor(project.id)
+    return <div className={`accordion-project${nested ? ' accordion-project-child' : ''}`}>
+      <div className="accordion-project-heading"><Signal tone={project.tone} /><strong>{project.name}</strong><small>{project.status}</small></div>
+      {openTasks.length > 0
+        ? <ul className="accordion-task-list">{openTasks.map((task) => <li key={task.id}>{task.name}</li>)}</ul>
+        : <p className="accordion-no-tasks">No open tasks.</p>}
+    </div>
+  }
+
+  return <div className="area-accordion" aria-label="Projects by area">
+    {focusedProject && <div className="area-accordion-focus-banner"><span>Showing: {focusedProject.area}</span><button type="button" onClick={onClearFocus}>Show all areas</button></div>}
+    {visibleSectionNames.map((area) => {
+      const inArea = projects.filter((project) => project.area === area)
+      if (inArea.length === 0) return null
+      const names = new Set(inArea.map((project) => project.name))
+      const topLevel = inArea.filter((project) => !project.parentName || !names.has(project.parentName))
+      const childrenOf = (parentProject) => inArea.filter((project) => project.parentName === parentProject.name)
+      const isOpen = focusedProject ? true : openAreas.has(area)
+      return <section className="accordion-section" key={area}>
+        <button type="button" className="accordion-section-toggle" onClick={() => toggleArea(area)} aria-expanded={isOpen} disabled={!!focusedProject}>
+          <span>{area}</span>
+          <b>{inArea.length}</b>
+          <i className={`accordion-chevron${isOpen ? ' open' : ''}`} aria-hidden="true">›</i>
+        </button>
+        {isOpen && <div className="accordion-section-body">
+          {topLevel.map((project) => <div key={project.id}>
+            <AccordionProject project={project} />
+            {childrenOf(project).map((child) => <AccordionProject project={child} nested key={child.id} />)}
+          </div>)}
+        </div>}
+      </section>
+    })}
+  </div>
+}
+
+function ProjectRegistry({ projects, tasks, repoHealth, onAddProject, onSeedProjects, onOpenProject }) {
   const [filter, setFilter] = useState('All')
   const [isAdding, setIsAdding] = useState(false)
   const [projectName, setProjectName] = useState('')
   const [formError, setFormError] = useState('')
-  const selectedProject = projects.find((project) => project.id === selectedProjectId) ?? projects[0]
+  const [focusedProjectId, setFocusedProjectId] = useState(null)
   const visibleProjects = filter === 'All' ? projects : projects.filter((project) => project.status === filter)
 
   async function submitProject(event) {
@@ -177,26 +305,8 @@ function ProjectRegistry({ projects, selectedProjectId, onSelectProject, onAddPr
     }
   }
 
-  // Group the currently-visible (post-filter) projects into fixed-order area
-  // sections, then within each section split into top-level rows and
-  // sub-project rows nested under a sibling by parentName. A child whose
-  // parent got filtered out of view (e.g. status filter hid it) still
-  // renders, just at the top level of its section, so nothing disappears.
-  const sectionNames = [...AREA_ORDER, ...Array.from(new Set(visibleProjects.map((project) => project.area))).filter((area) => !AREA_ORDER.includes(area))]
-  const sections = sectionNames.map((area) => {
-    const inArea = visibleProjects.filter((project) => project.area === area)
-    const names = new Set(inArea.map((project) => project.name))
-    const topLevel = inArea.filter((project) => !project.parentName || !names.has(project.parentName))
-    const childrenOf = (parentProject) => inArea.filter((project) => project.parentName === parentProject.name)
-    return { area, topLevel, childrenOf }
-  }).filter((section) => section.topLevel.length > 0)
-
-  function ProjectButton({ project, nested }) {
-    return <button className={`registry-row${selectedProject?.id === project.id ? ' selected' : ''}${nested ? ' registry-row-child' : ''}`} key={project.id} type="button" onClick={() => onSelectProject(project.id)}>
-      <Signal tone={project.tone} />
-      <span><strong>{project.name}</strong><small>{project.area} · {project.metric}</small></span>
-      <b>{project.status}</b>
-    </button>
+  function selectCard(id) {
+    setFocusedProjectId((current) => current === id ? null : id)
   }
 
   return <section className="registry-view" aria-labelledby="registry-heading">
@@ -218,37 +328,21 @@ function ProjectRegistry({ projects, selectedProjectId, onSelectProject, onAddPr
       {formError && <p role="alert">{formError}</p>}
     </form>}
 
+    <ProjectsTicker projects={projects} />
+
     <div className="registry-controls" role="group" aria-label="Filter projects by status">
       {['All', 'Active', 'Paused', 'Idea'].map((option) => <button className={filter === option ? 'selected' : ''} key={option} type="button" onClick={() => setFilter(option)}>{option}</button>)}
     </div>
 
-    <div className="registry-layout">
-      <div className="registry-list" aria-label="Registered projects">
-        {sections.map(({ area, topLevel, childrenOf }) => <div className="registry-section" key={area}>
-          <p className="registry-section-label">{area}<span>{topLevel.length + topLevel.reduce((sum, project) => sum + childrenOf(project).length, 0)}</span></p>
-          {topLevel.map((project) => <div key={project.id}>
-            <ProjectButton project={project} />
-            {childrenOf(project).map((child) => <ProjectButton project={child} nested key={child.id} />)}
-          </div>)}
-        </div>)}
-        {visibleProjects.length === 0 && <div className="empty-state"><p>No project records yet.</p><Button tone="coral" type="button" onClick={onSeedProjects}>Load portfolio registry</Button></div>}
+    <div className="registry-board">
+      <div className="registry-main">
+        <div className="project-cards-grid">
+          {visibleProjects.map((project) => <ProjectCard key={project.id} project={project} focused={focusedProjectId === project.id} onSelect={selectCard} onOpen={onOpenProject} />)}
+          {visibleProjects.length === 0 && <div className="empty-state"><p>No project records yet.</p><Button tone="coral" type="button" onClick={onSeedProjects}>Load portfolio registry</Button></div>}
+        </div>
+        <RepoActivityTable repoHealth={repoHealth} />
       </div>
-      {selectedProject && <article className="project-inspector" aria-live="polite">
-        <div className="inspector-topline"><span>{selectedProject.area} · {selectedProject.kind}</span><span>{selectedProject.health} health</span></div>
-        <h3>{selectedProject.name}</h3>
-        <p>{selectedProject.summary}</p>
-        <div className="signal-meter"><span style={{ width: `${selectedProject.signal}%` }} /></div>
-        <dl>
-          <div><dt>State</dt><dd><Signal tone={selectedProject.tone} /> {selectedProject.status}</dd></div>
-          <div><dt>Headline</dt><dd>{selectedProject.metric}</dd></div>
-          <div><dt>Next action</dt><dd>{selectedProject.nextAction}</dd></div>
-        </dl>
-        <section className="project-detail-notes" aria-label={`${selectedProject.name} project notes`}>
-          <span>Field notes</span>
-          <ul>{selectedProject.details.map((detail) => <li key={detail}>{detail}</li>)}</ul>
-        </section>
-        <Button tone="coral" className="open-project-page" type="button" onClick={() => onOpenProject(selectedProject.id)}>Open project page</Button>
-      </article>}
+      <AreaAccordion projects={projects} tasks={tasks} focusedProjectId={focusedProjectId} onClearFocus={() => setFocusedProjectId(null)} />
     </div>
   </section>
 }
@@ -1301,7 +1395,7 @@ function App() {
         </header>
         {databaseError && <p className="database-error" role="alert">Database error: {databaseError}</p>}
         {activeView === 'ProjectDetail' && selectedProject ? <ProjectDetailView project={selectedProject} tasks={tasks} onBack={() => setActiveView('Projects')} onAddTask={addTask} onUpdateTaskStatus={updateTaskStatus} onDeleteTask={deleteTask} />
-          : activeView === 'Projects' ? <ProjectRegistry projects={projects} selectedProjectId={selectedProjectId} onSelectProject={setSelectedProjectId} onAddProject={addProject} onSeedProjects={seedProjects} onOpenProject={openProject} />
+          : activeView === 'Projects' ? <ProjectRegistry projects={projects} tasks={tasks} repoHealth={repoHealth} onAddProject={addProject} onSeedProjects={seedProjects} onOpenProject={openProject} />
           : activeView === 'Flow' ? <FlowView tasks={tasks} projects={projects} onOpenProjects={() => setActiveView('Projects')} onAddTask={addTask} onUpdateTaskStatus={updateTaskStatus} onDeleteTask={deleteTask} />
           : activeView === 'Calendar' ? <CalendarView events={events} projects={projects} tasks={tasks} onAddEvent={addEvent} onDeleteEvent={deleteEvent} onUpdateTaskStatus={updateTaskStatus} onDeleteTask={deleteTask} />
           : activeView === 'Career' ? <CareerView jobs={jobs} jobError={jobError} />

@@ -154,31 +154,6 @@ function DotMatrix({ completed = 18, total = 35 }) {
   </div>
 }
 
-// Recently-updated ticker: an infinite CSS marquee, so the duplicated second
-// pass is aria-hidden to avoid double-announcing every project name.
-function ProjectsTicker({ projects }) {
-  const sorted = [...projects].sort((a, b) => {
-    if (!a.lastActivity && !b.lastActivity) return 0
-    if (!a.lastActivity) return 1
-    if (!b.lastActivity) return -1
-    return a.lastActivity < b.lastActivity ? 1 : -1
-  })
-  if (sorted.length === 0) return null
-
-  const item = (project, hidden) => <span className="projects-ticker-item" aria-hidden={hidden || undefined} key={`${project.id}${hidden ? '-dup' : ''}`}>
-    <Signal tone={project.tone} />
-    <strong>{project.name}</strong>
-    <small>updated {relativeTime(project.lastActivity)}</small>
-  </span>
-
-  return <div className="projects-ticker" aria-label="Recently updated projects">
-    <div className="projects-ticker-track">
-      {sorted.map((project) => item(project, false))}
-      {sorted.map((project) => item(project, true))}
-    </div>
-  </div>
-}
-
 function AreaCard({ area, projects, focused, onSelect }) {
   const activeCount = projects.filter((project) => project.status === 'Active').length
   const avgSignal = projects.length ? Math.round(projects.reduce((sum, project) => sum + project.signal, 0) / projects.length) : 0
@@ -353,7 +328,7 @@ function ProjectRegistry({ projects, tasks, repoHealth, onAddProject, onSeedProj
       {formError && <p role="alert">{formError}</p>}
     </form>}
 
-    <ProjectsTicker projects={projects} />
+    <div className="registry-hero" role="img" aria-label="Projects" />
 
     <div className="registry-controls" role="group" aria-label="Filter projects by status">
       {['All', 'Active', 'Paused', 'Idea'].map((option) => <button className={filter === option ? 'selected' : ''} key={option} type="button" onClick={() => setFilter(option)}>{option}</button>)}

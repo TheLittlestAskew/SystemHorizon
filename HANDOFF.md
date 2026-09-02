@@ -4,7 +4,9 @@
 > Handoff is **enabled** for this repo. Every change updates the DO NEXT block below and prepends a log entry.
 
 ## ▶ DO NEXT
-**Set up the changedetection.io watch for flight prices.** Full walkthrough is in `Scripts/travel-watch-sync/README.md` in the vault (Visual Selector + Extract Text, not the built-in Price/Restock mode — that only works on single-product pages, and Google Flights isn't one). Get the watch UUID, put it in `travel-watch-sync.config.json`. Not urgent yet — early November is the real PAX Unplugged (Dec 3-6) booking decision point, so this can wait for a natural window.
+**Visual-verify the Projects page redesign on `sh.tayloraritchie.com`.** Nothing in this pass has been seen live — Cloudflare Access blocks direct viewing from this session. Open Projects and check: (1) the ticker marquee scrolls smoothly and doesn't double-render project names, (2) clicking a project card focuses it (border highlights) and narrows the right-side accordion to that project's area with a "Show all areas" banner, (3) the accordion's per-section toggles work when nothing is focused, (4) `horizon_projects` re-seeds cleanly from the new `initialProjects` array — the table was empty going into this, so this is the first real test of the new `parent_name` column and the reworked area/parentName data. If Swiftwatch doesn't nest under Invisible String Theory or Aftermath Meridian doesn't nest under Rectrix Caedere, check that both rows' `name` fields match exactly (parentName matching is name-based, not id-based).
+
+**Then, the changedetection.io watch for flight prices.** Full walkthrough is in `Scripts/travel-watch-sync/README.md` in the vault (Visual Selector + Extract Text, not the built-in Price/Restock mode — that only works on single-product pages, and Google Flights isn't one). Get the watch UUID, put it in `travel-watch-sync.config.json`. Not urgent yet — early November is the real PAX Unplugged (Dec 3-6) booking decision point, so this can wait for a natural window.
 
 1. **Create `.env`** next to the script (same shape as Swiftwatch's, see README) with your changedetection API key and Horizon login.
 2. **Run `node travel-watch-sync.mjs` manually once**, confirm a real price lands in the Travel tab (nav 09), marked as an automated entry.
@@ -36,6 +38,55 @@ Standing repo notes:
 
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
+
+### 2026-09-02 03:03 ET · Claude chat
+- **Changed:** Full rebuild of the Projects page, in two parts across this
+  session.
+  - **Part 1 — registry reorg (commit `fb187d9`):** grouped the flat 16-row
+    project list into fixed area sections and moved four campaign-vault
+    projects (Sky Is The Limit, Where The Flowers Forget, Ashfall Britannia,
+    Pacts & Power) out of Aftermath into a new **Undercroft** area; moved
+    Invisible String Theory, Swiftwatch, and Fantasy Football into a new
+    **Sidequests** area. Added a `parentName` field (name-based linking, not
+    id-based — `horizon_projects` assigns real UUIDs on insert, so a seed
+    array can't know a sibling's future id) so Swiftwatch nests under
+    Invisible String Theory and Aftermath Meridian nests under Rectrix
+    Caedere. Corrected two stale entries found during the audit: System
+    Horizon (was still describing the retired single-file Babel/
+    control-panel.html era) and Fantasy Football (was still pre-draft).
+  - **Part 2 — layout redesign (commits `cc952ea` + `905e510`), per a
+    reference screenshot Taylor shared (a GO2DEN esports dashboard):**
+    replaced the flat list + inspector-panel layout entirely with an
+    auto-scrolling "recently updated" ticker, a project-card grid,
+    a repo-activity table below the cards (repurposes `horizon_repo_health`
+    — uncommitted/ahead/behind counts — rather than building new commit/
+    issue plumbing), and a collapsible area accordion on the right that
+    shows each project's open tasks inline. Selecting a card narrows the
+    accordion to that project's area; a "Show all areas" banner clears it.
+    All old `.registry-row`/`.registry-section`/`.project-inspector` CSS
+    removed as dead code in the same pass.
+  - **Migration:** added `parent_name text` to `horizon_projects` via
+    `apply_migration` (confirmed present via `list_tables` after) —
+    without this the seed insert would have failed outright, since
+    `projectToRow` now sends a field the table didn't have a column for.
+- **Verified before push (both commits):** `@babel/parser` (module, jsx)
+  parses clean, full `@babel/core` + `preset-react` compile succeeds each
+  time, brace counts balanced on both App.jsx (964/964 final) and App.css
+  (471/471 pre-final-push), all 16 project ids present exactly once,
+  single definition each for every new component, grepped for dangling
+  references to removed props/selectors. SHA re-checked immediately
+  before each push. Re-fetched both files via the Contents API after the
+  final push and confirmed the committed content matches byte-for-byte.
+- **Commit:** `fb187d9` (App.jsx, area reorg), `cc952ea` (App.jsx, layout
+  redesign), `905e510` (App.css, layout redesign)
+- **Next:** see DO NEXT — none of this has been seen live yet, and
+  `horizon_projects` is still empty (0 rows) going into the next load,
+  so the re-seed with the new schema is genuinely untested.
+- **Watch out:** `horizon_projects` had 0 rows for this entire session,
+  meaning `loadProjects()`'s auto-seed path (`initializePortfolioRegistry`)
+  ran every time — the parent_name/area changes have never actually
+  round-tripped through Supabase yet. First real load is the first real
+  test.
 
 ### 2026-09-01 09:20 ET · Claude chat
 - **Changed:** No code change — closed out the ESPN cookie rotation DO NEXT

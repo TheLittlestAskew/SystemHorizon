@@ -4,7 +4,7 @@
 > Handoff is **enabled** for this repo. Every change updates the DO NEXT block below and prepends a log entry.
 
 ## ▶ DO NEXT
-**Visual-verify the Projects page redesign on `sh.tayloraritchie.com`.** Nothing in this pass has been seen live — Cloudflare Access blocks direct viewing from this session. Open Projects and check: (1) the ticker marquee scrolls smoothly and doesn't double-render project names, (2) clicking a project card focuses it (border highlights) and narrows the right-side accordion to that project's area with a "Show all areas" banner, (3) the accordion's per-section toggles work when nothing is focused, (4) `horizon_projects` re-seeds cleanly from the new `initialProjects` array — the table was empty going into this, so this is the first real test of the new `parent_name` column and the reworked area/parentName data. If Swiftwatch doesn't nest under Invisible String Theory or Aftermath Meridian doesn't nest under Rectrix Caedere, check that both rows' `name` fields match exactly (parentName matching is name-based, not id-based).
+**Visual-verify the Projects page on `sh.tayloraritchie.com` — third pass this session.** Cards are now area-level rollups (one per area: Ops & Infra, Aftermath, Undercroft, Sidequests, Career, Learning), not one per project. Check: (1) each area card shows a sensible project/active count and signal average, (2) clicking a card narrows the accordion correctly, (3) the accordion now reads as one self-contained panel with its own header and independently-scrolling body — confirm the fixed height (`calc(100dvh - 40px)`) looks right next to the shorter cards+table column beside it, not comically tall or clipped, (4) clicking a project name inside the accordion opens its detail page (this is the only entry point into that page now). `horizon_projects` is still empty (0 rows) going into this — the re-seed with the new schema, area, and parent_name data has never round-tripped through Supabase yet.
 
 **Then, the changedetection.io watch for flight prices.** Full walkthrough is in `Scripts/travel-watch-sync/README.md` in the vault (Visual Selector + Extract Text, not the built-in Price/Restock mode — that only works on single-product pages, and Google Flights isn't one). Get the watch UUID, put it in `travel-watch-sync.config.json`. Not urgent yet — early November is the real PAX Unplugged (Dec 3-6) booking decision point, so this can wait for a natural window.
 
@@ -38,6 +38,47 @@ Standing repo notes:
 
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
+
+### 2026-09-02 05:24 ET · Claude chat
+- **Changed:** Two follow-up fixes to the Projects redesign, from Taylor's
+  live review of the previous pass in this same session.
+  - Cards changed from one-per-project to one-per-area (commit `e0d935e`):
+    "cards should only be the major projects (Ops & Infra, Aftermath,
+    Undercroft, etc.) — subprojects like a specific campaign, System
+    Horizon, Storybook Resume" belong in the accordion, not as cards.
+    `ProjectCard` → `AreaCard`, rolling up each area's member projects
+    into a project count, active count, and a signal-meter average.
+    Card focus state changed from `focusedProjectId` to `focusedArea`
+    (a plain string). Since a rollup card has no single project to
+    open, the "Open project page" entry point moved onto each
+    project's own row inside the accordion — `AccordionProject`'s
+    heading is now a button wired to `onOpenProject`.
+  - Accordion restructured into one self-contained scrolling panel
+    (commit `4ccb506` for the CSS half): "right panel should scroll
+    independently, make it look more like a component." Was a stack
+    of individually-bordered section cards with `max-height` (which
+    only engages if content actually overflows); now one panel with a
+    fixed header ("Areas" + count, reusing `.instrument-heading` for
+    consistency with the rest of the app) and a body that scrolls on
+    its own, using a real `height` instead of `max-height` so it
+    always reads as a stable widget rather than shrinking to fit.
+- **Verified before push (both commits):** `@babel/parser` parses
+  clean, `@babel/core` + `preset-react` compile succeeds, brace counts
+  balanced on both files, grepped for zero dangling
+  `ProjectCard`/`focusedProjectId`/`.project-card*` references,
+  confirmed `AreaCard`/`focusedArea`/`.area-card`/
+  `.accordion-project-heading` all present. SHA re-checked immediately
+  before each push.
+- **Commit:** `e0d935e` (App.jsx), `4ccb506` (App.css)
+- **Next:** see DO NEXT — third straight pass this session that hasn't
+  been seen live. `horizon_projects` is still empty (0 rows), so the
+  full area/parentName/signal-rollup path is still genuinely untested
+  against real Supabase data.
+- **Watch out:** the accordion's fixed height
+  (`calc(100dvh - 40px)`) is a guess at what looks balanced next to
+  the shorter cards+table column — this is exactly the kind of thing
+  that reads fine in source but wrong on screen, worth an actual look
+  before treating it as settled.
 
 ### 2026-09-02 03:03 ET · Claude chat
 - **Changed:** Full rebuild of the Projects page, in two parts across this

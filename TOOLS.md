@@ -13,7 +13,9 @@
 | **React** | Library | The dashboard UI | `dependencies` `react@^19.2.7` + `react-dom` | 2026-08-29 | Free | React 19 — unlike rectrixcaedere, which is pinned to 18.2 UMD |
 | **@vitejs/plugin-react** | Library | JSX transform for the Vite build | `devDependencies` `^6.0.3` | 2026-08-29 | Free | — |
 | **@supabase/supabase-js** | Library | Client reads of the `projects` heartbeat table | `dependencies` `^2.110.9` | 2026-08-29 | Free | — |
-| **Supabase** | Service | Backing database for the projects/status views | project `drtvlcgyjlofaffbwael` | 2026-09-02 | Free tier | Written by `push-status-to-systemhorizon.ps1`, not by the model |
+| **Supabase** | Service | Main app client — the data the Vite dashboard reads | project `drtvlcgyjlofaffbwael`, `src/supabase.js` | 2026-09-03 | Free tier | Publishable key, checked in |
+| **Supabase (projects heartbeat)** | Service | The `projects` table the heartbeat upserts one row per repo into | project `qzliydcrlhioradwacmd` | 2026-09-03 | Free tier | ⚠️ A **third** project, and it appears nowhere in this repo's `src/` — it's read by `meridian-keystone.html` here and by `taylorritchie/systemhorizon/index.html`. Written by `push-status-to-systemhorizon.ps1`, never by the model |
+| **Supabase (job pipeline)** | Service | Job-application tracker reads | project `vtrtyagltwdrbastpppl`, `src/jobPipeline.js` | ~2026-08-29 | Free tier | Same project as `Rectrix_Caedere`; anon key checked in |
 | **oxlint** | Library | Linting (`npm run lint`) | `devDependencies` `oxlint@^1.71.0`, `.oxlintrc.json` | ~2026-08-29 | Free | Rust-based; faster than eslint, which this repo does not use |
 | **Node.js + npm** | CLI | Build, lint, test, preview | local install | 2026-08-29 | Free | — |
 | **git** | CLI | Version control, handoff motion | `C:\Program Files\Git` | 2026-08-29 | Free | — |

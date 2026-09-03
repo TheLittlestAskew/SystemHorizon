@@ -27,6 +27,39 @@ not banked.
    order; do not clear or overwrite it for an incidental change.
 5. Commit `HANDOFF.md` as `docs: handoff update (<short-sha>)`, then push.
 
+### TOOLS.md — when a tool was used
+
+If this repo has `TOOLS.md` at its root, it is the standing inventory of what the
+project uses. Maintain it in the same motion as the handoff. If the file is
+absent, skip this entirely — never create it unless Taylor asks.
+
+**The trigger is use, not mention.** A skill you invoked, an MCP server you
+queried, a CLI you ran, an app or site you worked in, a service you called, a
+scheduled task that fired — here, this session. Something you only discussed does
+not count.
+
+| Situation | Do this |
+|---|---|
+| Row already under `## Active` | Bump **Last used** to today. Change nothing else. |
+| Tool not in the table | Add a row under `## Active`, all seven columns filled. |
+| Stopped using it for good | **Move** the row to `## Retired` with a date and a one-line why. |
+
+Fixed column order under `## Active`: Tool, Type, Used for, Access, Last used,
+Cost, Notes. Under `## Retired`: Tool, Type, Was used for, Retired, Why. Those two
+headings and these column orders are parsed mechanically by `septentrion-sync` to
+build the vault's `The Toolbox.md` — do not reorder, rename, or add columns.
+
+`Type` is a closed list: `Skill` · `MCP` · `CLI` · `App` · `Service` · `Site` ·
+`Library` · `Data` · `Task`.
+
+Dates carry an honesty marker: a bare `YYYY-MM-DD` means the use was observed,
+`~YYYY-MM-DD` means inferred, `—` means unknown. When you used the tool yourself,
+write it bare. Never invent a date, never bump a row for a tool you didn't use,
+and never delete a row — retiring is a move, not a deletion. `TOOLS.md` is never
+trimmed or archived.
+
+Stage it with the handoff commit: `git add HANDOFF.md TOOLS.md`.
+
 ### Rules
 
 - 🛑 **Do not restructure `HANDOFF.md`.** Preserve whatever section headings it

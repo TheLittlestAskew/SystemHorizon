@@ -39,6 +39,14 @@ Standing repo notes:
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
 
+### 2026-09-03 19:57 ET · Claude Code (26-commit divergence reconciled; TOOLS.md re-verified against the real tree)
+- **Changed:** This clone had been sitting **ahead 2, behind 26** — the whole Projects redesign, Calendar, full-dark rollout, nav icons and ESPN cookie work were on the remote and had never been pulled. Rebased the two local commits onto `origin/main`; one conflict, in `HANDOFF.md`, where both sides had prepended log entries. Resolved by **date order** (mine 22:20 sits above the 05:24 `Claude chat` entry) using a script rather than by hand, and verified by line arithmetic: 322 lines with markers → 320 after, exactly the 3 marker lines removed plus 1 blank added, so nothing was dropped. Tagged `pre-rebase-2026-09-03` at the old HEAD first. Then **re-verified `TOOLS.md` against the reconciled tree**, which was the whole point of doing this before trusting the table.
+- **Commit:** `19577f1` (table re-verification) · `5c6675e` (Supabase row correction) · rebased `7e85141`, `74d128c`
+- **Verification:** ✓ `package.json` and `package-lock.json` are **byte-unchanged** across all 26 commits, so every dependency row (Vite 8.1.1, React 19.2.7, oxlint 1.71.0) was still accurate despite being seeded from the stale tree. ✓ Only `src/App.jsx` and `src/App.css` changed. ✓ Rebase left a clean tree.
+- **Friction:** misread — my seeded table said `@supabase/supabase-js` performs "client reads of the `projects` heartbeat table". **It does not.** Grepping the actual `from(...)` calls shows the app reads `horizon_projects`, `horizon_tasks`, `horizon_events`, `horizon_swift_*`, `horizon_travel_watch` and `horizon_repo_health` in `drtvlcgyjlofaffbwael`, plus `dashboard_jobs` in `vtrtyagltwdrbastpppl` — and **never** touches `projects` in `qzliydcrlhioradwacmd`. I had assumed one Supabase per repo and written the row from that assumption. **Count the `from()` calls before naming a repo's database; "the app's Supabase" is not a single thing here, it is three.**
+- **Next:** Visual-verify the Projects page on `sh.tayloraritchie.com` — third pass, per the DO NEXT block above, which is unchanged and still owns the next action.
+- **Watch out:** ⚠️ **The 2026-09-02 22:20 entry below cites commit `e495121`, which no longer exists** — the rebase rewrote it to `7e85141`. Left as written rather than edited, per the never-amend rule; this line is the correction. ⚠️ **Three tools the 26 commits introduced were missing from the table entirely** and are now added: Cloudflare Access (gates the live site), ESPN Fantasy (War Room data, cookie auth needing rotation), and `localStorage` for War Room draft state — the last being a deliberate, documented exception to this repo's Supabase-everything rule. 🛑 **The heartbeat feeds a table nothing in `src/` reads.** `push-status-to-systemhorizon.ps1` upserts into `projects` (`qzliy`), which is consumed only by `meridian-keystone.html` and `taylorritchie/systemhorizon/index.html`. The Vite app's own registry is `horizon_projects` in a different project — and its DO NEXT notes that table is still **0 rows**. Worth deciding whether the heartbeat should target `horizon_projects` instead, or whether it is correctly feeding pages you are retiring.
+
 ### 2026-09-02 22:20 ET · Claude Code (TOOLS.md tool inventory added)
 - **Changed:** Added `TOOLS.md` (14 active rows) — Vite, React 19, oxlint, Supabase, the heartbeat push script, and the rest, with what each is used for and when last used. `AGENTS.md` gained a `### TOOLS.md` subsection so Codex maintains it too. One of 13 project tables that `septentrion-sync` v4 rolls into the vault's new `The Toolbox.md`.
 - **Commit:** `e495121`
@@ -311,10 +319,5 @@ Standing repo notes:
   - **No API code was duplicated.** Both endpoints already send `Access-Control-Allow-Origin: *`, so SH calls the existing Vercel functions cross-origin. One source of truth for the ESPN cookies, at the cost of a cross-repo runtime dependency.
   - **Draft state is in `localStorage` (`warroom_sh_v1`), not Supabase** — a deliberate, documented exception. See DO NEXT #3.
 
-### 2026-08-28 · Claude chat
-- **Changed:** Migrating SystemHorizon off `thelittlestaskew.github.io/SystemHorizon/` onto its own subdomain, `sh.tayloraritchie.com`, gated by Cloudflare Access. Root `tayloraritchie.com` is untouched and stays on the maintenance page.
-  - Set `vite.config.js` `base` from `/SystemHorizon/` to `/` — was hardcoded to the old GH Pages project-site subpath, would have broken all asset URLs at a domain root.
-  - Added `public/CNAME` = `sh.tayloraritchie.com` — Vite copies `public/*` straight into `dist/` on build, so this ships through the existing `deploy-pages.yml` workflow with zero workflow changes.
-- **Found while investigating (separate issue, fixed under `taylorritchie` repo's own HANDOFF):** a stale June 2026 snapshot of the old single-file SH build was still live and fully unauthenticated at `tayloraritchie.com/systemhorizon/`, hitting a Supabase project directly with an embedded anon key and RLS disabled. Neutralized.
-- **Commit:** `b71bfb9` (vite.config.js), `8d31e47` (public/CNAME)
-- **Next:** Cloudflare DNS + Access setup — **confirmed complete 2026-08-29.**
+
+> Older entries archived to `handoff-archive/2026-07.md` and `handoff-archive/2026-08.md`.

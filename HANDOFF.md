@@ -39,6 +39,12 @@ Standing repo notes:
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
 
+### 2026-09-02 22:20 ET · Claude Code (TOOLS.md tool inventory added)
+- **Changed:** Added `TOOLS.md` (14 active rows) — Vite, React 19, oxlint, Supabase, the heartbeat push script, and the rest, with what each is used for and when last used. `AGENTS.md` gained a `### TOOLS.md` subsection so Codex maintains it too. One of 13 project tables that `septentrion-sync` v4 rolls into the vault's new `The Toolbox.md`.
+- **Commit:** `e495121`
+- **Next:** Unchanged. See the block above this log.
+- **Watch out:** ⚠️ The sync now keeps **two separate lists**. `REPOS` (7 entries) still drives Return Point, the Ephemeris notes, and this repo's `projects` heartbeat. The new `TOOLS_REPOS` (13 entries) drives only the master tool table. This repo is in `TOOLS_REPOS` but **not** `REPOS`, so its handoff state still isn't on the dashboard. Do not merge the lists to "fix" that — widening `REPOS` silently adds six rows to the live table.
+
 ### 2026-09-02 05:24 ET · Claude chat
 - **Changed:** Two follow-up fixes to the Projects redesign, from Taylor's
   live review of the previous pass in this same session.

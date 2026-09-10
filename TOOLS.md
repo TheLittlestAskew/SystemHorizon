@@ -18,13 +18,14 @@
 | **Supabase (job pipeline)** | Service | Job-application tracker reads | project `vtrtyagltwdrbastpppl`, `src/jobPipeline.js` | ~2026-08-29 | Free tier | Same project as `Rectrix_Caedere`; anon key checked in |
 | **oxlint** | Library | Linting (`npm run lint`) | `devDependencies` `oxlint@^1.71.0`, `.oxlintrc.json` | ~2026-08-29 | Free | Rust-based; faster than eslint, which this repo does not use |
 | **Node.js + npm** | CLI | Build, lint, test, preview | local install | 2026-08-29 | Free | — |
-| **git** | CLI | Version control, handoff motion | `C:\Program Files\Git` | 2026-08-29 | Free | — |
+| **git** | CLI | Version control, handoff motion | `C:\Program Files\Git` | 2026-09-10 | Free | — |
 | **GitHub** | Service | Remote host for `TheLittlestAskew/SystemHorizon` | github.com | 2026-08-29 | Free | Has `.github/` workflows |
 | **GitHub Actions** | Service | CI on push | `.github/workflows` | ~2026-08-29 | Free | — |
 | **push-status-to-systemhorizon.ps1** | Task | Reads vault Ephemeris frontmatter, upserts one row per repo into `projects` | `~/.claude/skills/septentrion-sync/` | 2026-09-02 | Free | Runs from the sync wrapper; the deterministic half of the heartbeat |
 | **septentrion-sync** | Skill | Generates the Ephemeris notes the heartbeat reads | `~/.claude/skills/septentrion-sync` | 2026-09-02 | Free | ⚠️ In `TOOLS_REPOS` but **not** in `REPOS` — this repo has a `HANDOFF.md` that the dashboard does not currently read |
 | **Claude Code** | App | Feature work, spec work, handoffs | CLI / IDE extension | 2026-09-03 | Paid | — |
 | **Claude desktop** | App | Authored the Projects redesign, Calendar, dark rollout and nav icons — 26 commits between 2026-08-29 and 2026-09-02 | claude.ai / desktop | 2026-09-02 | Paid | Log entries here carry the legacy `Claude chat` label |
+| **Codex** | App | Read-only System Horizon architecture audit and repository handoff | Codex desktop | 2026-09-10 | Paid | No live database or deployment action in this audit |
 | **Cloudflare Access** | Service | Gates the live dashboard behind a login | `sh.tayloraritchie.com` | ~2026-08-29 | Free tier | Verified 2026-08-29 — an unauthenticated request 302s to the Access login |
 | **ESPN Fantasy** | Data | Fantasy football data behind the War Room draft view | `src/WarRoomView.jsx`, `src/warRoomLogic.js` | ~2026-08-29 | Free | Cookie-based auth; the cookie needs periodic rotation |
 | **localStorage** | Data | War Room draft state (`warroom_sh_v1`) | browser | ~2026-08-29 | Free | ⚠️ Deliberate exception to this repo's Supabase-everything rule — a live draft is single-device and latency-critical. Revisit post-draft |

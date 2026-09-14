@@ -326,18 +326,4 @@ Standing repo notes:
 - **Next:** See DO NEXT — the draft itself.
 - **Watch out:** **Clicking by screenshot coordinate in a scrolling editor is unreliable.** The first attempt at the route line landed after `</main>` instead of after the Travel route, because the page scrolled a few pixels between the screenshot and the click. Caught on the next screenshot, undone, and redone using **keyboard movement from a known cursor position** (`ctrl+End`, then `Up`/`End`) instead of coordinates. The pre-commit diff confirmed the undo left no residue. **Generalisable: for precise edits in a code editor, move the cursor with keys, not clicks, and always read the diff before committing.**
 
-### 2026-08-29 · Claude chat (War Room merge into System Horizon)
-- **Changed:** Ported the standalone War Room draft board into SH as nav panel 10, as a self-contained module rather than a rewrite of anything existing.
-  - `src/warRoomLogic.js` — all pure draft logic (snake math, position normalisation, CSV parsing, ADP shaping, rank merging, ESPN pick application). No DOM, no React, no network, so it is unit-testable.
-  - `src/warRoomLogic.test.mjs` — 22 tests covering happy paths and every edge case the original only asserted loosely (junk positions, out-of-range slots, malformed payloads, non-mutation of the rank order). Added a `test` script to `package.json`: `npm test`.
-  - `src/WarRoomView.jsx` — the React view. Board, position filters, search, hide-drafted, hand-reorderable ranks, per-player notes, my-team panel, CSV import, ADP refresh, ESPN sync with a 5s poll, undo, reset, and board-state export/import.
-  - `src/WarRoom.css` — fully scoped (`.warroom-*` / `.wr-pos-*`), so it can be deleted or relocated without touching `App.css`. Restyled from the standalone board's dark oklch theme into SH's daylight palette.
-- **Verified, not assumed:** build passes, oxlint 0 errors and 0 warnings from the new files, all 22 logic tests pass. The component was rendered in Node via an SSR probe across four boot states — cold start, corrupted localStorage, malformed saved state, and a real restored board — and all four render without throwing. Both Vercel endpoints called live: `/api/adp` returned 271 players, `/api/draft` returned HTTP 200 with valid ESPN auth.
-- **Commit:** `984ba54` (warRoomLogic.js), `909f7db` (tests), `4d5057f` (WarRoomView.jsx), `20b362a` (WarRoom.css), `5392b2a` (package.json)
-- **Watch out:**
-  - **A real bug was found and fixed during the port, by checking the live API instead of trusting the source.** The standalone board defaults to `rounds: 16`. `/api/draft` reports `teams: 20` and `totalPicks: 280`, and 280/20 = **14**. Sixteen invents two rounds that don't exist and pushes every "your next pick" number wrong in the late draft. **The standalone board still has this wrong.**
-  - **No API code was duplicated.** Both endpoints already send `Access-Control-Allow-Origin: *`, so SH calls the existing Vercel functions cross-origin. One source of truth for the ESPN cookies, at the cost of a cross-repo runtime dependency.
-  - **Draft state is in `localStorage` (`warroom_sh_v1`), not Supabase** — a deliberate, documented exception. See DO NEXT #3.
-
-
-> Older entries archived to `handoff-archive/2026-07.md` and `handoff-archive/2026-08.md`.
+> Older entries archived to `handoff-archive/2026-07.md`, `handoff-archive/2026-08.md` - everything before 2026-08-29 00:00 ET.

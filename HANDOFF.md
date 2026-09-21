@@ -4,7 +4,11 @@
 > Handoff is **enabled** for this repo. Every change updates the DO NEXT block below and prepends a log entry.
 
 ## ▶ DO NEXT
-**First, run a read-only live System Horizon data-contract audit.** The React app has a real task/Flow foundation, but the checked-in migrations only define `horizon_projects` and the older career tables. Before changing task behavior, adding a sync, or treating existing task data as durable, inspect the live `drtvlcgyjlofaffbwael` schema and owner-scoped RLS policies for every table the current app reads or writes: `horizon_tasks`, `horizon_events`, `horizon_repo_health`, `horizon_swift_watch`, `horizon_swift_collection`, `horizon_swift_events`, and `horizon_travel_watch`. Record the actual columns, primary/foreign keys, defaults, indexes, and policies; compare them to the app mappers in `src/App.jsx`; then add only the missing reproducible migrations or a deliberately maintained schema contract. Do not change live data during this audit.
+**The live schema audit is done — see the 2026-09-20 log entry for the full list of gaps found and fixed.** Every `horizon_*` table now has a matching migration file in `supabase/migrations/`, RLS policies normalized to `authenticated` everywhere, owner FKs consistently `on delete cascade`, and `anon` revoked at the table-grant level on every table.
+
+**Next: build the Google Calendar → SH one-way sync** for `taylor.ritchie14@gmail.com`. Decided: read-only pull into `horizon_events` (nothing pushed back to Google), built as an in-app OAuth button on the Calendar view rather than a scheduled script. Needs a Google Cloud Console OAuth client (redirect URI `sh.tayloraritchie.com`) that Taylor creates and authorizes herself before any code lands — Claude cannot create Google Cloud credentials.
+- `horizon_events.start_time`/`end_time` are stored as free-form `text` (e.g. "10:00 AM"), not `time`/`timestamptz` — decide how that reconciles with Google's RFC3339 datetimes before writing the mapper.
+- Separately flagged during the audit, not yet decided: `horizon_swift_watch`/`horizon_swift_collection`/`horizon_swift_events`'s `status`/`category`/`kind` columns have no DB-level `CHECK` constraint (enum values are enforced client-side only, in `App.jsx`).
 
 **Then, make SH task state handoff-aware without making it a second handoff system.** SH owns routine task state: project, status, next action, notes, and eventual handoff readiness. Septentrion owns durable cross-repo context, generated digests, collectors, and historical return points. Repository `HANDOFF.md` files remain for real banked implementation work only, never every task movement. After the live audit, design the smallest task fields needed for this boundary, likely a reliable update timestamp plus a promotion state such as `none` / `candidate` / `promoted`; do not add them until the audit proves what already exists and what the live RLS contract permits.
 
@@ -46,6 +50,16 @@ Standing repo notes:
 
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
+
+### 2026-09-20 19:33 ET · Claude chat (live schema audit + horizon_* consistency fixes)
+- **Changed:** Completed the read-only live data-contract audit from the DO NEXT block, then fixed what it found, with sign-off. Queried `drtvlcgyjlofaffbwael` directly: `list_tables` (verbose) for every `horizon_*` column/FK/default, `pg_policies` for RLS, `pg_constraint` for checks/uniques/FKs, `pg_indexes`, `information_schema.triggers`, and `information_schema.role_table_grants`.
+  - **Migration gap confirmed and closed:** 19 of 21 applied Supabase migrations had no file in `supabase/migrations/` (only `horizon_projects` and career tracking were checked in). Backfilled 8 files matching verified original live state: `create_horizon_tasks`, `create_horizon_events`, `create_horizon_repo_health`, `create_horizon_swift_tables`, `create_horizon_travel_watch`, `add_source_to_horizon_travel_watch`, `create_horizon_draft_board`, `add_horizon_projects_parent_name`.
+  - **Fixed live (4 new migrations, applied via `apply_migration`, files also checked in):** RLS policies on `horizon_repo_health`/`swift_watch`/`swift_collection`/`swift_events`/`travel_watch`/`draft_board` were scoped to `public`, not `authenticated` like every other `horizon_*` table — normalized. `owner` FK was entirely missing on `swift_watch`/`swift_collection`/`swift_events`/`draft_board`, and present-but-no-cascade on `repo_health`/`travel_watch` — all now `references auth.users(id) on delete cascade`. `anon` had full table-level grants on 8 of 10 `horizon_*` tables (including `horizon_events`) despite RLS policies never matching that role — revoked everywhere. `horizon_travel_watch` had no owner-scoped index; `horizon_draft_board` had an `updated_at` column with no trigger to maintain it — both added.
+  - **Confirmed not broken:** `horizon_projects`'s `.upsert(..., {onConflict:'owner,name'})` does have a matching `unique(owner,name)` constraint — a suspected gap that turned out fine.
+- **Verification:** ✓ Every fix applied live via `apply_migration`, confirmed via `list_migrations` showing the new versions. ✓ Backfill file content is the verified pre-fix state for each table (confirmed via the same queries), not a guess, so replaying the migration chain from scratch reproduces today's fixes as separate, real steps. ✓ Re-read `supabase/migrations/` after push to confirm all 12 files landed.
+- **Commit:** `844f75f`
+- **Next:** Build the Google Calendar → SH sync — see DO NEXT above.
+- **Watch out:** ⚠️ Two `execute_sql`/`push_files` calls silently timed out mid-session ("No approval received" / no response from the local MCP server) before working on retry — if a Supabase or GitHub write call hangs, don't assume it partially landed; re-read the actual state before retrying. ⚠️ Left alone, on purpose: the `showcase`/`campaigns`/`moments` schema (not part of this audit's scope) and the missing `CHECK` constraints on the Swift tables' `status`/`category`/`kind` columns (enum values are client-side only in `App.jsx`) — flagged, not fixed, needs its own sign-off.
 
 ### 2026-09-10 02:34 ET · Codex (System Horizon and Septentrion task/handoff architecture audit)
 - **Changed:** No application code, live Supabase data, or scheduled automation changed. Banked a read-only audit of the current System Horizon repo and replaced the return point with the agreed implementation order.
@@ -319,11 +333,4 @@ Standing repo notes:
 - **Next:** Open `sh.tayloraritchie.com` → **War Room** and visually verify the new board before draft day.
 - **Watch out:** Local visual review reaches the owner-only access gate; it cannot inspect the signed-in board without the owner session.
 
-### 2026-08-29 · Claude chat (War Room wire-up completed via browser)
-- **Changed:** Added the three lines to `src/App.jsx` that make the War Room reachable: the `WarRoomView` import, `['War Room', '10']` in `navItems`, and the `activeView === 'War Room'` route between the Travel route and the Horizon fallback. Done by driving the GitHub web editor through the Chrome extension, because the Contents API cannot patch a file and re-sending 76KB read only in fragments was the larger risk.
-- **Verified:** Pre-commit diff showed exactly 3 additions and 0 deletions. The committed file was re-downloaded and rebuilt: **the JS bundle hash matched the locally tested build exactly** (`index-BPDgdCTd.js`), proving the browser typing introduced nothing. Lint clean, 22/22 tests pass, deploy run #57 green in 33s.
-- **Commit:** `7a2106a`
-- **Next:** See DO NEXT — the draft itself.
-- **Watch out:** **Clicking by screenshot coordinate in a scrolling editor is unreliable.** The first attempt at the route line landed after `</main>` instead of after the Travel route, because the page scrolled a few pixels between the screenshot and the click. Caught on the next screenshot, undone, and redone using **keyboard movement from a known cursor position** (`ctrl+End`, then `Up`/`End`) instead of coordinates. The pre-commit diff confirmed the undo left no residue. **Generalisable: for precise edits in a code editor, move the cursor with keys, not clicks, and always read the diff before committing.**
-
-> Older entries archived to `handoff-archive/2026-07.md`, `handoff-archive/2026-08.md` - everything before 2026-08-29 00:00 ET.
+> Older entries archived to `handoff-archive/2026-07.md`, `handoff-archive/2026-08.md` - everything through the 2026-08-29 "War Room wire-up completed via browser" entry.

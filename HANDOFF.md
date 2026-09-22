@@ -333,12 +333,4 @@ Standing repo notes:
 - **Next:** Open `sh.tayloraritchie.com` → **War Room**, turn on ESPN Sync, and visually confirm live picks fill the center board before draft day.
 - **Watch out:** The 20-team board scrolls horizontally by design on smaller screens; shrinking its cells would make it unreadable.
 
-### 2026-08-29 18:54 ET · Codex
-- **Changed:** Restyled `src/WarRoom.css` as a contained dark draft-day command surface using the approved mockup direction.
-  - Preserved the existing ESPN sync, CSV fallback, player ranking board, and local board-state behavior.
-  - Reworked hierarchy, spacing, contrast, controls, board rows, position chips, and roster rail without changing shared System Horizon styles.
-- **Commit:** `dd13524`
-- **Next:** Open `sh.tayloraritchie.com` → **War Room** and visually verify the new board before draft day.
-- **Watch out:** Local visual review reaches the owner-only access gate; it cannot inspect the signed-in board without the owner session.
-
-> Older entries archived to `handoff-archive/2026-07.md`, `handoff-archive/2026-08.md` - everything through the 2026-08-29 "War Room wire-up completed via browser" entry.
+> Older entries archived to `handoff-archive/2026-07.md`, `handoff-archive/2026-08.md` - everything through the 2026-08-29 18:54 ET "WarRoom.css restyle" entry.

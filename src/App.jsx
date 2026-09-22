@@ -4,22 +4,27 @@ import { jobPipeline } from './jobPipeline'
 import WarRoomView from './WarRoomView'
 import './App.css'
 
-const navItems = ['Horizon', 'Projects', 'Flow', 'Calendar', 'Career', 'Mirrors', 'Archive', 'Swift', 'Travel', 'War Room']
+const navGroups = [
+  { id: 'core', label: 'Core', items: ['Horizon', 'Projects', 'Flow', 'Calendar'] },
+  { id: 'life', label: 'Life & Watch', items: ['Swift', 'Travel'] },
+  { id: 'career', label: 'Career', items: ['Career'] },
+  { id: 'system', label: 'System', items: ['Mirrors', 'Archive', 'War Room'] },
+]
 
 // Minimal line icons, hand-drawn in a thin-stroke/rounded-terminal style (not
 // copied from any licensed set) - one per nav item, 24x24 viewBox, currentColor
 // stroke so they pick up the existing nav-item/active color rules for free.
 const navIcons = {
-  Horizon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="11" r="5" /><line x1="3" y1="18" x2="21" y2="18" /></svg>,
-  Projects: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" /></svg>,
-  Flow: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="4" height="14" rx="1" /><rect x="10" y="5" width="4" height="9" rx="1" /><rect x="17" y="5" width="4" height="12" rx="1" /></svg>,
-  Calendar: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="16" rx="2" /><line x1="3" y1="10" x2="21" y2="10" /><line x1="8" y1="3" x2="8" y2="7" /><line x1="16" y1="3" x2="16" y2="7" /></svg>,
-  Career: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="8" width="18" height="12" rx="2" /><path d="M8 8V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><line x1="3" y1="13" x2="21" y2="13" /></svg>,
-  Mirrors: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20 11a8 8 0 0 0-14.9-3.5" /><path d="M4 5v4h4" /><path d="M4 13a8 8 0 0 0 14.9 3.5" /><path d="M20 19v-4h-4" /></svg>,
-  Archive: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M3 8l3-4h12l3 4" /><rect x="3" y="8" width="18" height="12" rx="1" /><line x1="3" y1="8" x2="21" y2="8" /></svg>,
-  Swift: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="7" cy="18" r="2.4" /><circle cx="17" cy="16" r="2.4" /><path d="M9.4 18V6l10-2v12" /></svg>,
-  Travel: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2L11 13" /><path d="M22 2l-7 20-4-9-9-4 20-7z" /></svg>,
-  'War Room': <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z" /></svg>,
+  Horizon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="11" r="5" /><line x1="3" y1="18" x2="21" y2="18" /></svg>,
+  Projects: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" /></svg>,
+  Flow: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="4" height="14" rx="1" /><rect x="10" y="5" width="4" height="9" rx="1" /><rect x="17" y="5" width="4" height="12" rx="1" /></svg>,
+  Calendar: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="16" rx="2" /><line x1="3" y1="10" x2="21" y2="10" /><line x1="8" y1="3" x2="8" y2="7" /><line x1="16" y1="3" x2="16" y2="7" /></svg>,
+  Career: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="8" width="18" height="12" rx="2" /><path d="M8 8V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><line x1="3" y1="13" x2="21" y2="13" /></svg>,
+  Mirrors: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 11a8 8 0 0 0-14.9-3.5" /><path d="M4 5v4h4" /><path d="M4 13a8 8 0 0 0 14.9 3.5" /><path d="M20 19v-4h-4" /></svg>,
+  Archive: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 8l3-4h12l3 4" /><rect x="3" y="8" width="18" height="12" rx="1" /><line x1="3" y1="8" x2="21" y2="8" /></svg>,
+  Swift: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="7" cy="18" r="2.4" /><circle cx="17" cy="16" r="2.4" /><path d="M9.4 18V6l10-2v12" /></svg>,
+  Travel: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2L11 13" /><path d="M22 2l-7 20-4-9-9-4 20-7z" /></svg>,
+  'War Room': <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z" /></svg>,
 }
 
 // Section order for the registry: the machine, the live Aftermath stack, the
@@ -1175,6 +1180,7 @@ function App() {
     try { return window.localStorage.getItem('system-horizon-nav-collapsed') === 'true' }
     catch { return false }
   })
+  const [openNavGroups, setOpenNavGroups] = useState(() => new Set(navGroups.map((group) => group.id)))
   const [session, setSession] = useState(null)
   const [projects, setProjects] = useState([])
   const [selectedProjectId, setSelectedProjectId] = useState(null)
@@ -1297,6 +1303,15 @@ function App() {
     setActiveView('ProjectDetail')
   }
 
+  function toggleNavGroup(groupId) {
+    setOpenNavGroups((current) => {
+      const next = new Set(current)
+      if (next.has(groupId)) next.delete(groupId)
+      else next.add(groupId)
+      return next
+    })
+  }
+
   async function addTask(task) {
     const { data, error } = await supabase.from('horizon_tasks').insert(taskToRow(task)).select().single()
     if (error) { setDatabaseError(error.message || 'Could not save the task.'); return }
@@ -1382,9 +1397,21 @@ function App() {
   return <div className="app-provider">
     <div className={`app-shell${navCollapsed ? ' nav-collapsed' : ''}${isWarRoom ? ' warroom-active' : ''}`}>
       <aside className="side-nav" aria-label="Primary navigation">
-        <button className="brand-mark" type="button" aria-label="Open Horizon" onClick={() => setActiveView('Horizon')}><span>SH</span><i aria-hidden="true" /></button>
-        <button className="nav-collapse" type="button" aria-label={navCollapsed ? 'Expand navigation' : 'Collapse navigation'} aria-pressed={navCollapsed} onClick={() => setNavCollapsed((collapsed) => !collapsed)}><span aria-hidden="true">{navCollapsed ? '›' : '‹'}</span><b>{navCollapsed ? 'Expand' : 'Collapse'}</b></button>
-        <nav>{navItems.map((label) => <button className={activeView === label || (activeView === 'ProjectDetail' && label === 'Projects') ? 'nav-item active' : 'nav-item'} key={label} type="button" onClick={() => setActiveView(label)}><span className="nav-icon" aria-hidden="true">{navIcons[label]}</span><b>{label}</b></button>)}</nav>
+        <div className="side-nav-head">
+          <button className="brand-mark" type="button" aria-label="Open Horizon" onClick={() => setActiveView('Horizon')}><span>SH</span><i aria-hidden="true" /></button>
+          <button className="nav-collapse-toggle" type="button" aria-label={navCollapsed ? 'Expand navigation' : 'Collapse navigation'} aria-pressed={navCollapsed} onClick={() => setNavCollapsed((collapsed) => !collapsed)}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="11 6 5 12 11 18" /><polyline points="17 6 11 12 17 18" /></svg>
+          </button>
+        </div>
+        <nav>
+          {navGroups.map((group) => <div className="nav-group" key={group.id}>
+            {!navCollapsed && <button type="button" className="nav-group-toggle" aria-expanded={openNavGroups.has(group.id)} onClick={() => toggleNavGroup(group.id)}>
+              <span>{group.label}</span>
+              <i className={`nav-group-chevron${openNavGroups.has(group.id) ? ' open' : ''}`} aria-hidden="true">›</i>
+            </button>}
+            {(navCollapsed || openNavGroups.has(group.id)) && group.items.map((label) => <button className={activeView === label || (activeView === 'ProjectDetail' && label === 'Projects') ? 'nav-item active' : 'nav-item'} key={label} type="button" onClick={() => setActiveView(label)}><span className="nav-icon" aria-hidden="true">{navIcons[label]}</span><b>{label}</b></button>)}
+          </div>)}
+        </nav>
         <div className="nav-footer"><Signal /><span>Sync stable</span></div>
       </aside>
 

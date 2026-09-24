@@ -256,7 +256,7 @@ A 200 response from any tool is not verification. Re-read the actual state.
 |---|---|---|
 | M0 | Environment check + housekeeping | Done: `ac3ccf7` |
 | M1 | Nav migration to the locked IA | Done (pending Taylor visual): `e5e335f` |
-| M2 | Projects re-seed + round trip | Not started (re-seed not needed: 16 rows already live; see Q6 for the area drift) |
+| M2 | Projects re-seed + round trip | Blocked: needs Taylor's login (owner-scoped seed) + Q6's two answers. **Re-seed IS needed** — 8 of 16 live rows carry a stale taxonomy, see Q6 |
 | M3 | Home: persistent Now + Capture (IA step 1) | Not started |
 | M4 | Home: Needs Attention aggregator (IA step 2) | Not started |
 | M5 | Home: Today and Next timeline (IA step 3) | Not started |
@@ -422,6 +422,31 @@ So `Swift` exists only in the database, `Undercroft` exists only in the code, an
 ⚠️ **Also: every row's `parent_name` is null.** M2 expects Swiftwatch under Invisible String Theory and Aftermath Meridian under Rectrix Caedere. Neither link exists live, though the hardcoded registry in `App.jsx:44` does carry `parentName: 'Invisible String Theory'`.
 
 **Recommended:** make the database match `App.jsx`'s `AREA_ORDER` (`Undercroft`, `Sidequests`), and correct M2's acceptance text in this file to drop the "The". Rationale: the code is what renders, `AREA_ORDER` drives the display sort, and "The Undercroft" appears in no code path at all. **Which spelling do you actually want?** Not blocking M1.
+
+**🛑 Updated 2026-09-24 (M1 session, read-only `execute_sql` full-outer-join of the live table against `App.jsx`'s hardcoded registry): this is not a spelling drift. It is a different taxonomy, and M2 *does* need a re-seed.** All 16 rows are present, none missing, none extra — but only **8 of 16 match**. The other 8:
+
+| Project | Live area | Code area | Live parent | Code parent |
+|---|---|---|---|---|
+| Sky Is The Limit | `Aftermath` | `Undercroft` | — | — |
+| Where The Flowers Forget | `Aftermath` | `Undercroft` | — | — |
+| Ashfall Britannia | `Aftermath` | `Undercroft` | — | — |
+| Pacts & Power | `Aftermath` | `Undercroft` | — | — |
+| Invisible String Theory | `Swift` | `Sidequests` | — | — |
+| Swiftwatch | `Swift` | `Sidequests` | `null` | `Invisible String Theory` |
+| Fantasy Football | `Learning` | `Sidequests` | — | — |
+| Aftermath Meridian | `Aftermath` | `Aftermath` | `null` | `Rectrix Caedere` |
+
+So **7 rows carry the wrong area and 2 are missing their `parent_name` link.** The live table is a **pre-split 5-area model**: `Undercroft` and `Sidequests` do not exist in it at all, the four campaign vaults are still lumped into `Aftermath` (making it 7 instead of 3), and `Swift` is an area that appears in no code path.
+
+⚠️ **This is already a visible defect on the Projects page.** `AREA_ORDER` renders six area cards, so `Undercroft` and `Sidequests` are currently **empty**, `Aftermath` reads 7, `Learning` reads 2 instead of 1, and the 2 `Swift` rows fall into the trailing "area outside `AREA_ORDER`" section. That is very likely what the long-standing "Projects visual verification" item in `HANDOFF.md` would have surfaced.
+
+**This supersedes M0's "M2 needs no re-seed" conclusion.** M0 checked `count(*)` and stopped at 16; the count was never the problem. ▶ **A row count is not a data-contract check. Compare values, not cardinality.**
+
+**Good news:** the fix needs no new code. `initializePortfolioRegistry` upserts on `(owner, name)` and `projectToRow` writes both `area` and `parent_name`, so re-running the seed as Taylor corrects all 8 rows in place with no duplicates. That is exactly M2's existing plan, and it is GREEN — it only needs her login so the rows are owner-scoped to her.
+
+**Two questions now, not one:**
+1. `Undercroft` or `The Undercroft`? (Recommended: `Undercroft`, matching the code.)
+2. **Is `Fantasy Football` a Side Quest or Learning?** The code says `Sidequests`; the live row says `Learning`; its `kind` is `'app + learning'`, which honestly supports either. This one is a real taxonomy call, not a drift, and I have no basis to pick. ⚠️ Re-seeding will silently move it to `Sidequests` unless you say otherwise.
 
 ### Q7 · Process · 2026-09-24
 **Six of the twelve skills section 8 mandates do not exist on this machine.** Verified against `~/.claude/skills/`: `minimal-diff`, `verified-done`, `root-cause-first`, `finish-the-turn`, `evidence-audited-analysis`, and `lessons-ledger` are all absent. `repo-handoff` is absent too, but `handoff` exists and is clearly the same thing under a different name. Present and used: `karpathy-guidelines`, `delegation-protocol`, `cynosure`, `tufte`.

@@ -1,5 +1,7 @@
 # Repository Guidelines
 
+**Standing goal and autonomy rules:** read `docs/NORTH_STAR.md` before starting any work. It defines what SH is for, the locked nav, the milestone queue, and when to stop and ask.
+
 ## Handoff Contract (required)
 
 This repo has `HANDOFF.md` at its root, which means handoffs are **enabled** here.

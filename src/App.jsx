@@ -1,15 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from './supabase'
 import { jobPipeline } from './jobPipeline'
+import { navGroups, navUtilityItems, defaultOpenNavGroups } from './navConfig'
 import WarRoomView from './WarRoomView'
 import './App.css'
-
-const navGroups = [
-  { id: 'core', label: 'Core', items: ['Horizon', 'Projects', 'Flow', 'Calendar'] },
-  { id: 'life', label: 'Life & Watch', items: ['Swift', 'Travel'] },
-  { id: 'career', label: 'Career', items: ['Career'] },
-  { id: 'system', label: 'System', items: ['Mirrors', 'Archive', 'War Room'] },
-]
 
 // Minimal line icons, hand-drawn in a thin-stroke/rounded-terminal style (not
 // copied from any licensed set) - one per nav item, 24x24 viewBox, currentColor
@@ -25,6 +19,13 @@ const navIcons = {
   Swift: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="7" cy="18" r="2.4" /><circle cx="17" cy="16" r="2.4" /><path d="M9.4 18V6l10-2v12" /></svg>,
   Travel: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 2L11 13" /><path d="M22 2l-7 20-4-9-9-4 20-7z" /></svg>,
   'War Room': <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z" /></svg>,
+}
+
+// One nav button, shared by the pinned Calendar utility and every area group so
+// the two render paths can never drift apart.
+function NavItem({ label, activeView, onSelect }) {
+  const active = activeView === label || (activeView === 'ProjectDetail' && label === 'Projects')
+  return <button className={active ? 'nav-item active' : 'nav-item'} type="button" aria-current={active ? 'page' : undefined} onClick={() => onSelect(label)}><span className="nav-icon" aria-hidden="true">{navIcons[label]}</span><b>{label}</b></button>
 }
 
 // Section order for the registry: the machine, the live Aftermath stack, the
@@ -1180,7 +1181,7 @@ function App() {
     try { return window.localStorage.getItem('system-horizon-nav-collapsed') === 'true' }
     catch { return false }
   })
-  const [openNavGroups, setOpenNavGroups] = useState(() => new Set(navGroups.map((group) => group.id)))
+  const [openNavGroups, setOpenNavGroups] = useState(defaultOpenNavGroups)
   const [session, setSession] = useState(null)
   const [projects, setProjects] = useState([])
   const [selectedProjectId, setSelectedProjectId] = useState(null)
@@ -1404,13 +1405,22 @@ function App() {
           </button>
         </div>
         <nav>
-          {navGroups.map((group) => <div className="nav-group" key={group.id}>
-            {!navCollapsed && <button type="button" className="nav-group-toggle" aria-expanded={openNavGroups.has(group.id)} onClick={() => toggleNavGroup(group.id)}>
-              <span>{group.label}</span>
-              <i className={`nav-group-chevron${openNavGroups.has(group.id) ? ' open' : ''}`} aria-hidden="true">›</i>
-            </button>}
-            {(navCollapsed || openNavGroups.has(group.id)) && group.items.map((label) => <button className={activeView === label || (activeView === 'ProjectDetail' && label === 'Projects') ? 'nav-item active' : 'nav-item'} key={label} type="button" onClick={() => setActiveView(label)}><span className="nav-icon" aria-hidden="true">{navIcons[label]}</span><b>{label}</b></button>)}
-          </div>)}
+          <div className="nav-utility">
+            {navUtilityItems.map((label) => <NavItem key={label} label={label} activeView={activeView} onSelect={setActiveView} />)}
+          </div>
+          {navGroups.map((group) => {
+            // Collapsed groups keep their items in the DOM and hide them in CSS:
+            // the 1000px and 680px layouts hide the group toggles entirely, so a
+            // JS-only collapse would strand Side Quests' views on narrow screens.
+            const expanded = navCollapsed || group.direct || openNavGroups.has(group.id)
+            return <div className={`nav-group${group.tier === 'side' ? ' nav-group-side' : ''}${expanded ? '' : ' nav-group-collapsed'}`} key={group.id}>
+              {!navCollapsed && !group.direct && <button type="button" className="nav-group-toggle" aria-expanded={openNavGroups.has(group.id)} onClick={() => toggleNavGroup(group.id)}>
+                <span>{group.label}</span>
+                <i className={`nav-group-chevron${openNavGroups.has(group.id) ? ' open' : ''}`} aria-hidden="true">›</i>
+              </button>}
+              {group.items.map((label) => <NavItem key={label} label={label} activeView={activeView} onSelect={setActiveView} />)}
+            </div>
+          })}
         </nav>
         <div className="nav-footer"><Signal /><span>Sync stable</span></div>
       </aside>

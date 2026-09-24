@@ -401,6 +401,35 @@ The heartbeat (`push-status-to-systemhorizon.ps1`) feeds a table nothing in the 
 ### Q4 · Naming · 2026-09-24
 Project area `Sidequests` versus nav group `Side Quests`: keep both as-is, or rename the project area? Recommended: keep as-is; they answer different questions. Not blocking.
 
+### Q5 · M0 · 2026-09-24
+**The `systemhorizon-build` skill: retire it rather than rewrite it.** Confirmed stale at `~/.claude/skills/systemhorizon-build/SKILL.md` (126 lines, last touched 2026-08-30). It describes `tayls-task-manager.jsx` compiled by `@babel/core` into a single `control-panel.html`, React 18 UMD from CDN, no import/export, and Davies-shelter framing. Every one of those is dead.
+
+🛑 **The live hazard is its `description:` frontmatter, not its body.** It auto-triggers on "SystemHorizon", "control panel", and "React productivity app", and it asserts *"Claude cannot build SystemHorizon correctly without it."* A skill loads **before** a doc gets read, so section 0's "ignore this source" instruction arrives too late to prevent the mislead. This is the same failure shape as the `septentrion-sync` warning that sat in the file you only consult after the failure.
+
+**Recommended: retire, do not rewrite.** A rewrite would restate section 4's architecture contract in a second location, which section 2 forbids on principle. `NORTH_STAR.md`, `AGENTS.md`, and the IA doc already carry the live architecture, and they live in the repo where the code is.
+
+**Default action if you agree:** move the folder to `~/.claude/skills/_superseded/systemhorizon-build/` (the vault already uses a `_superseded` convention) and leave the content untouched for archaeology. One move, no deletion, reversible.
+
+⚠️ Two things worth knowing before you answer: it is a **user-level** skill, so it is live on every repo, not just this one. And its description names your former employer and job title, which is employment detail sitting in an always-loaded file.
+
+**This is RED on two counts** (it is outside this repo, and retiring reads as deleting), so nothing has been touched. `references/` was not read.
+
+### Q6 · M2 · 2026-09-24
+**`horizon_projects` area values disagree three ways, and nothing can satisfy all three.** Live DB (16 rows, verified by `count(*)`) has: `Aftermath` 7, `Career` 3, `Learning` 2, `Ops & Infra` 2, **`Swift`** 2. But `src/App.jsx:55` `AREA_ORDER` expects `Ops & Infra, Aftermath, **Undercroft**, **Sidequests**, Career, Learning`, and this file's M2 acceptance expects `Ops & Infra, Aftermath, **The Undercroft**, Sidequests, Career, Learning`.
+
+So `Swift` exists only in the database, `Undercroft` exists only in the code, and `The Undercroft` exists only in this document. Invisible String Theory and Swiftwatch are currently filed under `Swift`; the code's hardcoded registry files them under `Sidequests`.
+
+⚠️ **Also: every row's `parent_name` is null.** M2 expects Swiftwatch under Invisible String Theory and Aftermath Meridian under Rectrix Caedere. Neither link exists live, though the hardcoded registry in `App.jsx:44` does carry `parentName: 'Invisible String Theory'`.
+
+**Recommended:** make the database match `App.jsx`'s `AREA_ORDER` (`Undercroft`, `Sidequests`), and correct M2's acceptance text in this file to drop the "The". Rationale: the code is what renders, `AREA_ORDER` drives the display sort, and "The Undercroft" appears in no code path at all. **Which spelling do you actually want?** Not blocking M1.
+
+### Q7 · Process · 2026-09-24
+**Six of the twelve skills section 8 mandates do not exist on this machine.** Verified against `~/.claude/skills/`: `minimal-diff`, `verified-done`, `root-cause-first`, `finish-the-turn`, `evidence-audited-analysis`, and `lessons-ledger` are all absent. `repo-handoff` is absent too, but `handoff` exists and is clearly the same thing under a different name. Present and used: `karpathy-guidelines`, `delegation-protocol`, `cynosure`, `tufte`.
+
+This matters because section 8 reads as a contract, so a session either silently skips half of it or quietly substitutes. M0 substituted and is recording it here rather than hiding it.
+
+**Recommended:** correct section 8 to name what exists (`repo-handoff` → `handoff`; `root-cause-first` → `superpowers:systematic-debugging`; `verified-done` → `verification-quality`), and either build the four with no equivalent (`minimal-diff`, `finish-the-turn`, `evidence-audited-analysis`, `lessons-ledger`) or drop them from the list. ⚠️ `evidence-audited-analysis` is the one with real consequences: M4 and M6 both require it for ranking and aggregation logic, so M6 in particular should not start until it exists or is formally replaced. Not blocking M1.
+
 ---
 
 ## 13. Known traps (read before pushing)

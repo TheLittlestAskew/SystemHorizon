@@ -50,6 +50,20 @@ The sections must not use interchangeable cards:
 
 ## Existing system mapping
 
+> **Amended 2026-09-24.** The area list and navigation model in this section are
+> superseded by [`NORTH_STAR.md`](NORTH_STAR.md) section 3, which locks the
+> navigation as **Calendar (utility), Horizon, Projects, Career, System, Side
+> Quests**. Life is retired as a concept: Travel moved to Side Quests and Calendar
+> became a pinned utility rather than an area. The Home field-status strip
+> correspondingly becomes **Horizon | Projects | Career | System**, with no Side
+> Quests or Calendar slot.
+>
+> The original text below is kept deliberately and is still authoritative for
+> everything else in this document: the information priority, the Home layout, the
+> section-by-section rules, the data and behavior rules, the visual direction, and
+> the build sequence. Read it for those; read `NORTH_STAR.md` section 3 for the
+> areas and navigation.
+
 | Area | Home summary | Full destination |
 | --- | --- | --- |
 | Horizon | Now, attention queue, capture, cross-area state | Home page |

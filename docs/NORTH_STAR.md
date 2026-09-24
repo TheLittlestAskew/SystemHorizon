@@ -255,7 +255,7 @@ A 200 response from any tool is not verification. Re-read the actual state.
 | # | Milestone | Status |
 |---|---|---|
 | M0 | Environment check + housekeeping | Done: `ac3ccf7` |
-| M1 | Nav migration to the locked IA | In progress |
+| M1 | Nav migration to the locked IA | Done (pending Taylor visual): `e5e335f` |
 | M2 | Projects re-seed + round trip | Not started (re-seed not needed: 16 rows already live; see Q6 for the area drift) |
 | M3 | Home: persistent Now + Capture (IA step 1) | Not started |
 | M4 | Home: Needs Attention aggregator (IA step 2) | Not started |
@@ -429,6 +429,44 @@ So `Swift` exists only in the database, `Undercroft` exists only in the code, an
 This matters because section 8 reads as a contract, so a session either silently skips half of it or quietly substitutes. M0 substituted and is recording it here rather than hiding it.
 
 **Recommended:** correct section 8 to name what exists (`repo-handoff` → `handoff`; `root-cause-first` → `superpowers:systematic-debugging`; `verified-done` → `verification-quality`), and either build the four with no equivalent (`minimal-diff`, `finish-the-turn`, `evidence-audited-analysis`, `lessons-ledger`) or drop them from the list. ⚠️ `evidence-audited-analysis` is the one with real consequences: M4 and M6 both require it for ranking and aggregation logic, so M6 in particular should not start until it exists or is formally replaced. Not blocking M1.
+
+### Q8 · Process · 2026-09-24
+**The stale-skill hazard in Q5 has a second source, and Q5's fix does not cover it.** `~/.claude/skills/cynosure/references/brand-hooks.md` carries this line under "Active brands":
+
+> **SystemHorizon** — Single-file React control panel (GitHub Pages + Supabase). Builds go through the `systemhorizon-build` skill; it owns the build pipeline and design system. Do not restyle it from generic taste.
+
+Every clause is wrong now: not single-file, not a control panel, not GitHub-Pages-generic (it is a Cloudflare-Access-gated custom subdomain), and `systemhorizon-build` is the skill Q5 proposes retiring. `cynosure` is section 8's mandated skill for **all** UI work, so any SH styling session reads that pointer on the way in. Retiring `systemhorizon-build` per Q5 without fixing this line leaves cynosure pointing at a skill that no longer exists.
+
+**Recommended:** replace that one paragraph with a pointer to this repo (`docs/NORTH_STAR.md` section 4 for architecture, section 3 for the nav IA) and keep the "do not restyle from generic taste" sentence, which is still correct. One paragraph, no deletion of the file.
+
+**RED** (outside this repo), so nothing was touched. Pairs with Q5; answer them together.
+
+### Q9 · Gate · 2026-09-24
+**`npm run lint` passes on warnings, so gate item 1 is weaker than section 9 reads.** `oxlint` exits 0 when it emits warnings, and the repo's rules include a `"warn"` level (`react/only-export-components`). Verified by probe: a file with an unused variable produced `warning eslint(no-unused-vars): ...` **and exit code 0**. So "lint clean" currently means "no errors", not "no output".
+
+There are **zero** warnings on `main` today, so tightening this breaks nothing right now.
+
+**Recommended:** change the script to `"lint": "oxlint --deny-warnings"` so gate item 1 means what it says. **Default action if you agree:** one line in `package.json`, no lockfile change (verified 2026-08-29 that `npm ci` tolerates script-only edits).
+
+Held as a question rather than done, because changing the gate is scope expansion past M1's acceptance criteria (section 6, last RED bullet). Not blocking.
+
+### Q10 · a11y · 2026-09-24
+**The nav group labels fail WCAG AA, and they did before M1.** `.nav-group-toggle` is `#6d7485` on the `#0a0b1b` sidebar = **4.17:1**, under the 4.5:1 minimum, on 10px uppercase monospace text where contrast matters more, not less. These are interactive button labels ("Projects", "System", "Side Quests"), not decoration.
+
+Measured for comparison on the same background: `.nav-item` text `#adb5c6` = 9.48:1 ✓, and M1's new Side Quests item text `#8f97a8` = 6.65:1 ✓.
+
+⚠️ This is why M1 made Side Quests read quieter through **item** color and icon opacity rather than by dimming its group label: the obvious move would have pushed an already-failing value further down.
+
+**Recommended:** raise `#6d7485` to about `#8a93a6` (≈6.2:1), which stays clearly subordinate to the `#adb5c6` items. **Pre-existing and a visible color change to your design, so RED** — not touched. Not blocking.
+
+### Q11 · Process · 2026-09-24
+**Two of your instruction files disagree about how a commit message ends, and M1's commit got it wrong.** `AGENTS.md` step 1 says the last line must be `NEXT: <single next step>`. Your global `CLAUDE.md` says end every commit message with a `Co-Authored-By:` trailer. Both cannot be last.
+
+`e5e335f` followed the global rule, so it has the trailer and **no `NEXT:` line**. It is pushed and the never-amend rule applies, so it stays wrong.
+
+The repo's own history is unanimous the other way: `ac3ccf7`, `d93270f`, `8f4b1e1` all end in `NEXT:`, and **none** of the last four commits carries a `Co-Authored-By:` trailer.
+
+**Recommended:** `AGENTS.md` wins inside this repo, and `NEXT:` stays last with no trailer, since `NEXT:` is load-bearing for the handoff tooling and a trailer is not. **Default action if you agree:** every further commit here ends `NEXT: ...`, and I stop adding the trailer in this repo. If you would rather keep the trailer everywhere, say so and I will put `NEXT:` immediately above it. Not blocking.
 
 ---
 

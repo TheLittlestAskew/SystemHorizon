@@ -5,7 +5,7 @@
 
 ## ▶ DO NEXT
 
-> 🆕 **2026-09-24: `docs/NORTH_STAR.md` now owns the milestone queue.** Read it before this block. The next action is **M1, nav migration to the locked IA** (section 3); M0 is `Done: ac3ccf7`. Three decisions are waiting in its section 12 (Q5 retire the stale `systemhorizon-build` skill, Q6 the `horizon_projects` area drift, Q7 six mandated skills that do not exist). ✅ **The "`horizon_projects` is empty (0 rows)" line below is wrong** — it holds **16** rows; `list_tables` reports a planner estimate, not a count. **M2 needs no re-seed.**
+> 🆕 **2026-09-24: `docs/NORTH_STAR.md` now owns the milestone queue.** Read it before this block. The next action is **M2, Projects re-seed + round trip** (section 10); M0 is `Done: ac3ccf7` and M1 is `Done (pending Taylor visual): e5e335f`. **M1's only open item is gate item 8** — Taylor logging into the app to confirm the new nav at desktop, 1000px and 680px. Seven decisions are waiting in section 12 (Q5 retire the stale `systemhorizon-build` skill, Q6 the `horizon_projects` area drift, Q7 six mandated skills that do not exist, Q8 `cynosure` points at the same stale skill, Q9 `npm run lint` passes on warnings, Q10 nav group labels fail WCAG AA, Q11 `NEXT:` versus `Co-Authored-By:` in commit messages). ✅ **The "`horizon_projects` is empty (0 rows)" line below is wrong** — it holds **16** rows; `list_tables` reports a planner estimate, not a count. **M2 needs no re-seed.**
 >
 > The rest of this block is kept deliberately: it still holds the only written detail for the changedetection.io flight watch, the War Room and `warroom-merge` items, and the standing repo notes. Where it and `NORTH_STAR.md` disagree on sequencing, NORTH_STAR wins.
 
@@ -42,7 +42,7 @@ Design note carried forward: **`predicted` + `confidence` on `horizon_swift_even
 Standing repo notes:
 - Naming is locked: **Rectrix Caedere** is the campaign and brand; **Aftermath Meridian** is the live website/app; **Aftermath Atlas** is its Supabase data layer.
 - Remote: `origin` is `TheLittlestAskew/SystemHorizon`. The prior standalone HTML control panel is preserved as `meridian-keystone.html`.
-- `README.md` is still the stock Vite template text.
+- ~~`README.md` is still the stock Vite template text.~~ Corrected 2026-09-24: M0 (`ac3ccf7`) replaced it with a short pointer to `NORTH_STAR.md`, `AGENTS.md`, `HANDOFF.md`, and the IA doc.
 - The Supabase project is named `aftermath-atlas-dev` (id `drtvlcgyjlofaffbwael`) despite the `horizon_*` table naming — same project `src/supabase.js` points at.
 - **The mirror-freshness sync script is not in this repo.** It's in `TheLittlestAskew/septentrion` at `Scripts/mirror-freshness/`. **Swiftwatch (`Scripts/swiftwatch-sync/`) and Travel watch (`Scripts/travel-watch-sync/`) both follow this exact same pattern and location.**
 - **This repo's own GitHub connector cannot reach `TheLittlestAskew/septentrion`** — confirmed 2026-08-27, a `get_file_contents` call returned 404 even though the repo exists and is private. Edits there go through the local filesystem instead.
@@ -55,6 +55,16 @@ Standing repo notes:
 
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
+
+### 2026-09-24 18:23 ET · Claude Code
+- **Changed:** Ran **M1 (nav migration to the locked IA)** from `docs/NORTH_STAR.md` section 3. Nav reading order is now Calendar (pinned utility), Horizon, Projects (Projects, Flow), Career, System (Mirrors, Archive), Side Quests (Swift, War Room, Travel, collapsed by default). `Core` and `Life & Watch` are gone, and Travel left the retired Life concept. No view was removed or renamed: all 10 stay reachable. Moved the nav structure out of `App.jsx` into a new `src/navConfig.js` so the "order is exactly X" and "every view reachable" criteria are assertable without booting the app, and extracted a `NavItem` component so the utility and group render paths cannot drift apart. `NavItem` carries `aria-current="page"` on the active item, per the ARIA navigation pattern.
+- **Verification:** ✓ `npm run lint` clean, `npm test` **38/38** (was 28 — 10 new in `src/navConfig.test.mjs`), `npm run build` 2.91s. ✓ Grep: `'Core'`, `Life & Watch` and `id: 'core'` appear nowhere in `src/` except the one test that asserts their absence. ✓ The Pages deploy run for `e5e335f` was **polled to `conclusion: success`**, not assumed. ⏳ **Gate item 8 is still open** — Taylor had not logged in when this was banked, so the live visual check at desktop/1000px/680px has not happened.
+- **Commit:** `e5e335f` + this one
+- **🛑 A JS-only collapse would have stranded three views on narrow screens.** Both the 1000px and 680px blocks set `.nav-group-toggle{display:none}`, so the moment Side Quests started collapsed, the previous `{open && group.items.map(...)}` pattern would have made **Swift, War Room and Travel unreachable** at those widths, with no visible control to expand them. Collapsed groups now always render their items and hide them via `.nav-group-collapsed .nav-item{display:none}`, which the 1000px block overrides (and 680px inherits, since both queries match at ≤680). **Any future group that defaults closed inherits this fix, and any future breakpoint that hides the group toggles must keep that override.**
+- **Measured, not eyeballed:** Side Quests reads quieter through item color `#8f97a8` (**6.65:1** on the `#0a0b1b` sidebar, passes AA) plus 0.78 icon opacity — deliberately *not* by dimming its group label, because `.nav-group-toggle`'s `#6d7485` is already **4.17:1** and failed AA before M1 touched anything. Existing `.nav-item` text is 9.48:1. See Q10.
+- **Friction:** convention miss — the `e5e335f` commit message ends with a `Co-Authored-By:` trailer and carries **no `NEXT:` line**, breaking `AGENTS.md` step 1. It is pushed, so per the never-amend rule it stays wrong and this line is the correction. Cause: a global instruction says end every commit with the trailer while `AGENTS.md` says end with `NEXT:`, and I followed the global one without checking that this repo's last four commits are 4-for-4 the other way (`NEXT:` last, no trailer anywhere). ▶ **Read the repo's recent commit bodies before writing the first one; a convention that is mechanically parsed beats a global default.** Needs Taylor's ruling — Q11.
+- **Next:** Taylor logs into the dev server (Chrome is already open on `localhost:5173`) so M1's gate item 8 can close, then M2.
+- **Watch out:** ⚠️ **`chrome-devtools-mcp` is not connected in this session**, so section 8's named tool for the live visual check was unavailable; used the `chrome-devtools` **CLI** (v1.9.0, global install) instead. Its syntax differs from the skill doc: every tool takes `<pageId>` as a **required positional** (`take_snapshot 2`, `resize_page 2 1440 900`), and a bare call fails with "Not enough non-option arguments". ⚠️ **`npm run lint` exits 0 on warnings** — proved with a deliberate unused-variable probe — so gate item 1 currently means "no errors", not "no output". See Q9. ⚠️ `cynosure`'s `references/brand-hooks.md` routes **all** SH styling work at the stale `systemhorizon-build` skill, which is a second copy of the Q5 hazard and would break if Q5's retirement happens alone. See Q8.
 
 ### 2026-09-24 11:52 ET · Claude Code
 - **Changed:** Ran **M0 (environment check + housekeeping)** from `docs/NORTH_STAR.md`, the new standing contract that arrived in `68915e7`. Verified the starting line on current `main`: `npm ci`, `npm run lint` (oxlint), `npm test` (28/28) and `npm run build` (vite 8.1.5, ~4s) all pass. Supabase MCP reaches `drtvlcgyjlofaffbwael`. Moved `storygraph-mcp-spec.md` → `docs/side-quests/`, replaced the stock Vite `README.md` with a pointer to NORTH_STAR / AGENTS / HANDOFF / the IA doc, and amended the IA doc's area section to defer to NORTH_STAR section 3 for the locked nav without removing any of its original text.
@@ -344,12 +354,4 @@ Standing repo notes:
 - **Next:** Open `sh.tayloraritchie.com` → **War Room** and verify each top tab in the signed-in draft workspace.
 - **Watch out:** The Player Pool repeats the player-action controls intentionally, so you can claim, fade, rank, or note a player without returning to the Draft Board.
 
-### 2026-08-29 19:12 ET · Codex
-- **Changed:** Added a persistent desktop navigation collapse control and made War Room a full-bleed working surface.
-  - The collapsed navigation reduces to a 72px rail while preserving labels for assistive technology and the active state.
-  - War Room now removes the app-wide grey canvas, max-width cap, outer card treatment, and excess margin while keeping a minimal safe inner gutter.
-- **Commit:** `b23e627`
-- **Next:** Open `sh.tayloraritchie.com` → **War Room**, collapse the navigation, and confirm the board uses the full remaining screen width.
-- **Watch out:** The navigation preference is browser-local; a different browser or cleared storage starts expanded.
-
-> Older entries archived to `handoff-archive/2026-07.md`, `handoff-archive/2026-08.md` - everything before 2026-08-29 19:12 ET.
+> Older entries archived to `handoff-archive/2026-07.md`, `handoff-archive/2026-08.md` - everything before 2026-08-29 19:22 ET.

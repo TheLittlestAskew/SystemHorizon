@@ -352,12 +352,4 @@ Standing repo notes:
 - **Next:** Open `sh.tayloraritchie.com` → **War Room**, collapse the navigation, and confirm the board uses the full remaining screen width.
 - **Watch out:** The navigation preference is browser-local; a different browser or cleared storage starts expanded.
 
-### 2026-08-29 19:06 ET · Codex
-- **Changed:** Rebuilt the War Room draft page as the requested three-panel draft-room workflow.
-  - Available players now sit left, the center renders a 20-team, 14-round snake board, and the right rail keeps My Team plus the next five picks visible.
-  - ESPN picks now retain their overall draft number in local state, so synced cells appear in their actual board position. Manual marks claim the next unfilled position and Undo restores its prior slot.
-- **Commit:** `427c2ed`
-- **Next:** Open `sh.tayloraritchie.com` → **War Room**, turn on ESPN Sync, and visually confirm live picks fill the center board before draft day.
-- **Watch out:** The 20-team board scrolls horizontally by design on smaller screens; shrinking its cells would make it unreadable.
-
-> Older entries archived to `handoff-archive/2026-07.md`, `handoff-archive/2026-08.md` - everything through the 2026-08-29 18:54 ET "WarRoom.css restyle" entry.
+> Older entries archived to `handoff-archive/2026-07.md`, `handoff-archive/2026-08.md` - everything before 2026-08-29 19:12 ET.

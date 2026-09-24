@@ -254,9 +254,9 @@ A 200 response from any tool is not verification. Re-read the actual state.
 
 | # | Milestone | Status |
 |---|---|---|
-| M0 | Environment check + housekeeping | Not started |
-| M1 | Nav migration to the locked IA | Not started |
-| M2 | Projects re-seed + round trip | Not started |
+| M0 | Environment check + housekeeping | Done: `ac3ccf7` |
+| M1 | Nav migration to the locked IA | In progress |
+| M2 | Projects re-seed + round trip | Not started (re-seed not needed: 16 rows already live; see Q6 for the area drift) |
 | M3 | Home: persistent Now + Capture (IA step 1) | Not started |
 | M4 | Home: Needs Attention aggregator (IA step 2) | Not started |
 | M5 | Home: Today and Next timeline (IA step 3) | Not started |

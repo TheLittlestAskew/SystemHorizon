@@ -16,7 +16,7 @@
 6. Continue to the next unblocked milestone. Do not stop between milestones to ask permission to continue.
 
 **Ignore these sources. They describe a dead architecture and will mislead you:**
-- The `systemhorizon-build` skill (describes the retired single-file `control-panel.html` + browser Babel era, React 18 UMD, Davies branding).
+- ~~The `systemhorizon-build` skill~~ — **retired 2026-09-25 (Q5)**, moved to `~/.claude/skills/_superseded/systemhorizon-build/`. It described the single-file `control-panel.html` + browser-Babel era, React 18 UMD, Davies branding. It should no longer auto-load at all; if it does, something restored it, and that is a bug worth reporting.
 - `SystemHorizon_Master_Context.md` and any other Claude Project knowledge file about SH.
 - `meridian-keystone.html` and `push-status-to-systemhorizon.ps1` as architecture references. They point at a different Supabase project and table. Do not retarget or merge them based on naming.
 
@@ -202,7 +202,7 @@ Taylor is not watching the terminal. She is reachable by phone.
 | `evidence-audited-analysis` | Any ranking, aggregation, or "the data shows" logic (Needs Attention, Active Work ranking) |
 | `lessons-ledger` | End of any session where something non-obvious was learned |
 
-Do **not** use `systemhorizon-build` (stale, see section 0).
+`systemhorizon-build` was **retired 2026-09-25** (Q5) and moved to `~/.claude/skills/_superseded/`. It should no longer auto-load. `cynosure` is now the only skill that routes SH styling, and its `brand-hooks.md` points back here rather than restating the architecture contract.
 
 ### Models
 
@@ -256,7 +256,7 @@ A 200 response from any tool is not verification. Re-read the actual state.
 |---|---|---|
 | M0 | Environment check + housekeeping | Done: `ac3ccf7` |
 | M1 | Nav migration to the locked IA | Done (pending Taylor visual): `e5e335f` |
-| M2 | Projects re-seed + round trip | Blocked: needs Taylor's login (owner-scoped seed) + Q6's two answers. **Re-seed IS needed** — 8 of 16 live rows carry a stale taxonomy, see Q6 |
+| M2 | Projects re-seed + round trip | Blocked: needs Taylor's login only (owner-scoped seed). Q6 answered 2026-09-25 — `Undercroft`, Fantasy Football is a Side Quest, no code change needed. **Re-seed IS needed**: 8 of 16 live rows carry a stale taxonomy, see Q6 |
 | M3 | Home: persistent Now + Capture (IA step 1) | Not started |
 | M4 | Home: Needs Attention aggregator (IA step 2) | Not started |
 | M5 | Home: Today and Next timeline (IA step 3) | Not started |
@@ -303,7 +303,8 @@ Status values: `Not started` · `In progress` · `Blocked: <reason>` · `Done (p
 
 **Goal:** `horizon_projects` holds the real registry and survives a reload.
 - Ask Taylor (push) to log in to the local dev server so the app's own seed path (`initializePortfolioRegistry`) runs as her user. Do not seed by hand with a guessed owner id.
-- Verify with SQL: 16 projects, correct `area` values (Ops & Infra, Aftermath, The Undercroft, Sidequests, Career, Learning), correct `parent_name` links (Swiftwatch under Invisible String Theory, Aftermath Meridian under Rectrix Caedere).
+- Verify with SQL: 16 projects, correct `area` values (Ops & Infra, Aftermath, `Undercroft`, Sidequests, Career, Learning — spelling settled in Q6, 2026-09-25), correct `parent_name` links (Swiftwatch under Invisible String Theory, Aftermath Meridian under Rectrix Caedere).
+- **Known starting state (measured 2026-09-24, see Q6):** 8 of the 16 rows are wrong — 7 bad `area`, 2 missing `parent_name`. Expect the seed to correct exactly those 8 and leave the other 8 untouched. Re-run the Q6 join query afterward; a clean run returns 16 `match` verdicts.
 - Reload the app and confirm no duplicate seed (the `unique(owner, name)` upsert holds).
 - Complete the outstanding Projects visual verification from `HANDOFF.md`: area card counts and signal averages, card-click filtering, accordion height (`calc(100dvh - 40px)`) balance, project name opens detail page.
 
@@ -414,6 +415,21 @@ Project area `Sidequests` versus nav group `Side Quests`: keep both as-is, or re
 
 **This is RED on two counts** (it is outside this repo, and retiring reads as deleting), so nothing has been touched. `references/` was not read.
 
+**Answered 2026-09-25: retire it, and fix the pointers. Done.** `~/.claude/skills/systemhorizon-build/` moved to `~/.claude/skills/_superseded/systemhorizon-build/`, all 6 files byte-untouched, nothing deleted. Added `_superseded/README.md` documenting the convention (that directory did not exist before; it is now the home for retired skills and is never loaded).
+
+🛑 **The pointer count in Q8 was wrong — it was 5 pointers across 4 files, not 1.** Found by grepping the whole skills tree instead of trusting the one I had already spotted:
+
+| File | What it said |
+|---|---|
+| `SKILLS-INDEX.md` | Index row describing the single-file/Babel/Davies build |
+| `cynosure/SKILL.md` | **`description:` frontmatter** — "Defer architecture/deploy decisions to rectrix-caedere-site and systemhorizon-build" |
+| `cynosure/references/brand-hooks.md` | The paragraph in Q8 |
+| `rectrix-caedere-site/SKILL.md` | **`description:` frontmatter** *and* a "Not SystemHorizon" disambiguation bullet |
+
+All five now point at this repo's `docs/NORTH_STAR.md`. The two `rectrix-caedere-site` mentions were **disambiguation guards**, so they were rewritten, not removed — the two apps genuinely look alike (both React + Supabase) and that guard still earns its place. Because the skills tree is **not** version-controlled, a copy of all four pre-edit files is at `…/scratchpad/skills-backup-2026-09-25/`.
+
+▶ **Two of the five were in `description:` frontmatter, which is the half that actually drives auto-triggering.** A retirement that only fixes prose pointers leaves the real problem in place. Grep the whole tree before declaring a skill retired.
+
 ### Q6 · M2 · 2026-09-24
 **`horizon_projects` area values disagree three ways, and nothing can satisfy all three.** Live DB (16 rows, verified by `count(*)`) has: `Aftermath` 7, `Career` 3, `Learning` 2, `Ops & Infra` 2, **`Swift`** 2. But `src/App.jsx:55` `AREA_ORDER` expects `Ops & Infra, Aftermath, **Undercroft**, **Sidequests**, Career, Learning`, and this file's M2 acceptance expects `Ops & Infra, Aftermath, **The Undercroft**, Sidequests, Career, Learning`.
 
@@ -448,6 +464,10 @@ So **7 rows carry the wrong area and 2 are missing their `parent_name` link.** T
 1. `Undercroft` or `The Undercroft`? (Recommended: `Undercroft`, matching the code.)
 2. **Is `Fantasy Football` a Side Quest or Learning?** The code says `Sidequests`; the live row says `Learning`; its `kind` is `'app + learning'`, which honestly supports either. This one is a real taxonomy call, not a drift, and I have no basis to pick. ⚠️ Re-seeding will silently move it to `Sidequests` unless you say otherwise.
 
+**Answered 2026-09-25:** (1) **`Undercroft`**, matching `App.jsx`. M2's acceptance text in section 10 has been corrected to drop the "The". (2) **Fantasy Football is a Side Quest**, so the live `Learning` row is the stale one.
+
+✅ **Both answers land on "the code is already right, the database is stale," so no code change is needed for either.** `AREA_ORDER` and the hardcoded registry in `App.jsx` stay exactly as they are, and re-running `initializePortfolioRegistry` as Taylor fixes all 8 drifted rows in one pass. **Q6 is closed; M2's only remaining blocker is Taylor's login.**
+
 ### Q7 · Process · 2026-09-24
 **Six of the twelve skills section 8 mandates do not exist on this machine.** Verified against `~/.claude/skills/`: `minimal-diff`, `verified-done`, `root-cause-first`, `finish-the-turn`, `evidence-audited-analysis`, and `lessons-ledger` are all absent. `repo-handoff` is absent too, but `handoff` exists and is clearly the same thing under a different name. Present and used: `karpathy-guidelines`, `delegation-protocol`, `cynosure`, `tufte`.
 
@@ -465,6 +485,8 @@ Every clause is wrong now: not single-file, not a control panel, not GitHub-Page
 **Recommended:** replace that one paragraph with a pointer to this repo (`docs/NORTH_STAR.md` section 4 for architecture, section 3 for the nav IA) and keep the "do not restyle from generic taste" sentence, which is still correct. One paragraph, no deletion of the file.
 
 **RED** (outside this repo), so nothing was touched. Pairs with Q5; answer them together.
+
+**Answered 2026-09-25: fixed, as part of Q5's retirement.** 🛑 **And this question undercounted the problem.** It named one pointer in one file; a tree-wide grep found **five across four files**, two of them in `description:` frontmatter, which is the half that actually drives auto-triggering. Full table under Q5. ▶ **I found the second pointer by accident, not by looking. The grep should have come first.**
 
 ### Q9 · Gate · 2026-09-24
 **`npm run lint` passes on warnings, so gate item 1 is weaker than section 9 reads.** `oxlint` exits 0 when it emits warnings, and the repo's rules include a `"warn"` level (`react/only-export-components`). Verified by probe: a file with an unused variable produced `warning eslint(no-unused-vars): ...` **and exit code 0**. So "lint clean" currently means "no errors", not "no output".

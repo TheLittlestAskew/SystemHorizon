@@ -36,6 +36,16 @@ button { -webkit-tap-highlight-color: transparent; }
 .nav-group-side .nav-item.active .nav-icon { opacity:1; }
 .nav-footer { display:flex; gap:8px; align-items:center; margin-top:auto; padding:10px 12px; border:1px solid rgb(255 255 255 / .1); border-radius:12px; background:rgb(255 255 255 / .03); color:#aab6c7; font:10px 'Cascadia Mono', Consolas, monospace; text-transform:uppercase; }
 .signal { display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--cyan); box-shadow:0 0 0 3px rgb(59 130 246 / .14); }.signal.coral { background:var(--coral); box-shadow:0 0 0 3px rgb(239 119 113 / .14); }.signal.violet { background:#ab75d2; box-shadow:0 0 0 3px rgb(117 75 157 / .16); }
+.signal.peach { background:var(--peach); box-shadow:0 0 0 3px rgb(255 209 26 / .16); }
+.attention-stack { margin-top:16px; padding:18px 20px; border-radius:20px; border:1px solid rgb(154 170 255 / .22); background:linear-gradient(135deg, rgb(28 32 69 / .82), rgb(18 20 45 / .82)); }
+.attention-list { margin:14px 0 0; padding:0; list-style:none; }
+.attention-list li { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:start; gap:12px; padding:11px 0; border-top:1px solid rgb(155 171 255 / .14); }
+.attention-list li:first-child { border-top:0; padding-top:0; }
+.attention-list .signal { margin-top:6px; }
+.attention-list span { min-width:0; overflow-wrap:anywhere; color:var(--mist); font-size:14px; line-height:1.45; }
+.attention-list time { color:#8d99c1; font:10px 'DM Mono', monospace; letter-spacing:.06em; white-space:nowrap; }
+.attention-clear { display:flex; align-items:center; gap:10px; margin:14px 0 0; color:#9aa8c6; font-size:13px; }
+.attention-note { margin:12px 0 0; color:#8d99c1; font-size:12px; }
 .main-content { width:min(1540px, 100%); padding:22px clamp(20px,3vw,52px) 42px; margin:0 auto; color:var(--cloud); }
 .topbar { display:flex; align-items:center; justify-content:space-between; gap:18px; min-height:62px; }.topbar h1 { margin:3px 0 0; font-size:18px; letter-spacing:-.04em; color:var(--cloud); }.topbar > div > span { color:#a9b2d3; }.topbar-tools { display:flex; gap:10px; align-items:center; }
 .search-field { display:flex; align-items:center; gap:10px; width:230px; padding:10px 12px; border:1px solid rgb(148 166 211 / .3); border-radius:999px; background:rgb(18 20 45 / .6); color:#a9b2d3; font:10px 'Cascadia Mono', Consolas, monospace; text-transform:uppercase; }.search-field input { width:100%; border:0; outline:0; background:transparent; color:var(--cloud); font:500 12px 'Segoe UI Variable', 'Segoe UI', sans-serif; }.search-field input::placeholder { color:#8892b7; }

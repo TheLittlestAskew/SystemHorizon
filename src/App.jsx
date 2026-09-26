@@ -3,6 +3,7 @@ import { supabase } from './supabase'
 import { jobPipeline } from './jobPipeline'
 import { navGroups, navUtilityItems, defaultOpenNavGroups } from './navConfig'
 import { captureBodyError, captureFromRow, captureToRow, nowFromRow, nowToRow, pendingCaptures, resolveNow, routeCapturePatch } from './homeState'
+import { A_RATED_STATUS, SEVERITY, UNREPORTED_STATUS, buildNeedsAttention, gdolWeekEnding, gdolWeekWindow, inGdolWindow, repoStatusFlags, shiftDays } from './needsAttention'
 import WarRoomView from './WarRoomView'
 import './App.css'
 
@@ -418,32 +419,6 @@ function ProjectDetailView({ project, tasks, onBack, onAddTask, onUpdateTaskStat
 
 // GDOL weeks end on Saturday. Mirrors Septentrion's dashboard/collectors/jobs.js
 // so the two panels agree on what "this week" and "last week" mean.
-function gdolWeekEnding(now = new Date()) {
-  const d = new Date(now)
-  d.setDate(d.getDate() + ((6 - d.getDay() + 7) % 7))
-  const pad = (n) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-}
-
-function gdolWeekWindow(weekEnding) {
-  const end = new Date(`${weekEnding}T00:00:00Z`)
-  const start = new Date(end)
-  start.setUTCDate(start.getUTCDate() - 6)
-  return { start: start.toISOString().slice(0, 10), end: weekEnding }
-}
-
-function shiftDays(dateStr, days) {
-  const d = new Date(`${dateStr}T00:00:00Z`)
-  d.setUTCDate(d.getUTCDate() + days)
-  return d.toISOString().slice(0, 10)
-}
-
-function inGdolWindow(dateStr, win) {
-  return !!dateStr && dateStr >= win.start && dateStr <= win.end
-}
-
-const A_RATED_STATUS = new Set(['Discovered', 'Saved'])
-const UNREPORTED_STATUS = new Set(['Applied', 'Interview'])
 
 function CareerView({ jobs, jobError }) {
   const now = new Date()
@@ -536,7 +511,33 @@ function CaptureControl({ onSave }) {
   </div>
 }
 
-function Horizon({ projects, tasks, now, captures, onProjects, onChooseNow, onUpdateTaskStatus, onCaptureIntoTask, onDismissCapture }) {
+// Needs attention, IA information priority 2. A stacked queue and deliberately
+// not cards: these alerts are unlike each other and are read top-down, so
+// equal-weight cards would flatten the ordering the aggregator exists to
+// produce. Color never carries the meaning on its own, because each row states
+// its reason in words.
+function NeedsAttention({ jobs, jobError, repoHealth, repoHealthError }) {
+  const { alerts, overflow, errors } = useMemo(
+    () => buildNeedsAttention({ jobs, jobError, repoHealth, repoError: repoHealthError }),
+    [jobs, jobError, repoHealth, repoHealthError],
+  )
+
+  return <section className="attention-stack" aria-labelledby="attention-heading">
+    <div className="instrument-heading"><span id="attention-heading">Needs attention</span><b>{String(alerts.length).padStart(2, '0')}</b></div>
+    {errors.map((error) => <p className="database-error" role="alert" key={error.source}>{error.source === 'career' ? 'Career pipeline' : 'Repository health'} unavailable: {error.message}</p>)}
+    {alerts.length > 0 && <ul className="attention-list">
+      {alerts.map((alert) => <li key={alert.id}>
+        <Signal tone={alert.severity === SEVERITY.action ? 'coral' : 'peach'} />
+        <span>{alert.reason}</span>
+        <time dateTime={alert.date ?? undefined}>{alert.date ?? 'no date'}</time>
+      </li>)}
+    </ul>}
+    {alerts.length === 0 && errors.length === 0 && <p className="attention-clear"><Signal />Nothing needs you right now.</p>}
+    {overflow > 0 && <p className="attention-note">{overflow} more not shown.</p>}
+  </section>
+}
+
+function Horizon({ projects, tasks, now, captures, jobs, jobError, repoHealth, repoHealthError, onProjects, onChooseNow, onUpdateTaskStatus, onCaptureIntoTask, onDismissCapture }) {
   const [capacity, setCapacity] = useState('Steady')
   const [picking, setPicking] = useState(false)
   const [pickTaskId, setPickTaskId] = useState('')
@@ -598,6 +599,8 @@ function Horizon({ projects, tasks, now, captures, onProjects, onChooseNow, onUp
       </div>
       <div className="stage-coordinate">041° 28′ / field depth</div>
     </section>
+
+    <NeedsAttention jobs={jobs} jobError={jobError} repoHealth={repoHealth} repoHealthError={repoHealthError} />
 
     <section className="instrument-grid" aria-label="Horizon modules">
       <article className="instrument capacity-instrument">
@@ -885,18 +888,7 @@ function relativeTime(iso) {
   return `${days}d ago`
 }
 
-function repoStatusFlags(repo) {
-  if (!repo.hasLocalMirror) return { flags: [repo.checkError || 'No local mirror on this machine'], tone: 'violet' }
-  const flags = []
-  if (repo.checkError) flags.push(repo.checkError)
-  if (repo.uncommittedCount > 0) flags.push(`${repo.uncommittedCount} uncommitted change${repo.uncommittedCount === 1 ? '' : 's'}`)
-  if (repo.aheadCount > 0) flags.push(`${repo.aheadCount} unpushed commit${repo.aheadCount === 1 ? '' : 's'}`)
-  if (repo.behindCount > 0) flags.push(`${repo.behindCount} commit${repo.behindCount === 1 ? '' : 's'} behind remote`)
-  if (repo.localHeadAt && repo.lastHandoffAt && repo.localHeadAt > repo.lastHandoffAt) flags.push('Unbanked handoff')
-  return { flags, tone: flags.length ? 'coral' : 'cyan' }
-}
-
-function MirrorsView({ repoHealth }) {
+function MirrorsView({ repoHealth, repoHealthError }) {
   const rows = [...repoHealth].sort((a, b) => {
     const aFlags = repoStatusFlags(a).flags.length
     const bFlags = repoStatusFlags(b).flags.length
@@ -913,6 +905,7 @@ function MirrorsView({ repoHealth }) {
         <p>GitHub repos and local mirrors, checked for uncommitted work, unpushed commits, commits behind, and unbanked handoffs.</p>
       </div>
     </header>
+    {repoHealthError && <p className="database-error" role="alert">Repository health error: {repoHealthError}</p>}
     {rows.length > 0 && <div className="mirrors-summary">
       <div><span>Attention needed</span><p>{rows.length} repositor{rows.length === 1 ? 'y' : 'ies'} tracked across GitHub and local mirrors.</p></div>
       <strong className={flaggedCount === 0 ? 'clean' : ''}>{flaggedCount === 0 ? 'All clean' : flaggedCount}</strong>
@@ -1282,6 +1275,7 @@ function App() {
   const [jobs, setJobs] = useState([])
   const [jobError, setJobError] = useState('')
   const [repoHealth, setRepoHealth] = useState([])
+  const [repoHealthError, setRepoHealthError] = useState('')
   const [swiftWatch, setSwiftWatch] = useState([])
   const [swiftCollection, setSwiftCollection] = useState([])
   const [swiftEvents, setSwiftEvents] = useState([])
@@ -1329,10 +1323,17 @@ function App() {
     setJobError('')
   }
 
+  // Reports its own failure instead of throwing, so one dead source cannot
+  // blank the whole dashboard and Home's Needs Attention can still show Career.
   async function loadRepoHealth() {
     const { data, error } = await supabase.from('horizon_repo_health').select('*').order('repo_name', { ascending: true })
-    if (error) throw error
+    if (error) {
+      setRepoHealth([])
+      setRepoHealthError(error.message || 'Could not load repository health.')
+      return
+    }
     setRepoHealth((data ?? []).map(repoHealthFromRow))
+    setRepoHealthError('')
   }
 
   async function loadSwiftWatch() {
@@ -1587,12 +1588,12 @@ function App() {
           : activeView === 'Flow' ? <FlowView tasks={tasks} projects={projects} onOpenProjects={() => setActiveView('Projects')} onAddTask={addTask} onUpdateTaskStatus={updateTaskStatus} onDeleteTask={deleteTask} />
           : activeView === 'Calendar' ? <CalendarView events={events} projects={projects} tasks={tasks} onAddEvent={addEvent} onDeleteEvent={deleteEvent} onUpdateTaskStatus={updateTaskStatus} onDeleteTask={deleteTask} />
           : activeView === 'Career' ? <CareerView jobs={jobs} jobError={jobError} />
-          : activeView === 'Mirrors' ? <MirrorsView repoHealth={repoHealth} />
+          : activeView === 'Mirrors' ? <MirrorsView repoHealth={repoHealth} repoHealthError={repoHealthError} />
           : activeView === 'Archive' ? <ArchiveView />
           : activeView === 'Swift' ? <SwiftView watches={swiftWatch} collection={swiftCollection} events={swiftEvents} onAddCollectionItem={addSwiftCollectionItem} onUpdateCollectionStatus={updateSwiftCollectionStatus} onDeleteCollectionItem={deleteSwiftCollectionItem} onAddEvent={addSwiftEvent} onDeleteEvent={deleteSwiftEvent} />
           : activeView === 'Travel' ? <TravelView entries={travelWatch} onAdd={addTravelEntry} onDelete={deleteTravelEntry} />
           : activeView === 'War Room' ? <WarRoomView />
-          : <Horizon projects={projects} tasks={tasks} now={now} captures={captures} onProjects={() => setActiveView('Projects')} onChooseNow={chooseNow} onUpdateTaskStatus={updateTaskStatus} onCaptureIntoTask={captureIntoTask} onDismissCapture={dismissCapture} />}
+          : <Horizon projects={projects} tasks={tasks} now={now} captures={captures} jobs={jobs} jobError={jobError} repoHealth={repoHealth} repoHealthError={repoHealthError} onProjects={() => setActiveView('Projects')} onChooseNow={chooseNow} onUpdateTaskStatus={updateTaskStatus} onCaptureIntoTask={captureIntoTask} onDismissCapture={dismissCapture} />}
       </main>
     </div>
   </div>

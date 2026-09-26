@@ -255,9 +255,9 @@ A 200 response from any tool is not verification. Re-read the actual state.
 | # | Milestone | Status |
 |---|---|---|
 | M0 | Environment check + housekeeping | Done: `ac3ccf7` |
-| M1 | Nav migration to the locked IA | Done (pending Taylor visual): `e5e335f` |
-| M2 | Projects re-seed + round trip | Done (pending Taylor visual): seed trigger `766eb6e`, re-seed run by Taylor 2026-09-26. 🛑 **M2's plan was unrunnable as written** — the seed button only rendered in the empty state and the table has 16 rows, so signing in gave the seed path no trigger; an always-available "Re-sync registry" button fixed that. **Data verified:** all 16 rows `match` the code registry on `area` and `parent_name`, 0 duplicate `(owner,name)` pairs, 0 phantom `Swift`, 0 broken parent links. Only the Projects-page visual check remains |
-| M3 | Home: persistent Now + Capture (IA step 1) | Done (pending Taylor visual): `830f2b6` (+ `8f9799c` migration filename fix) |
+| M1 | Nav migration to the locked IA | Done: `e5e335f` (Taylor confirmed live 2026-09-26) |
+| M2 | Projects re-seed + round trip | Done: `766eb6e` (Taylor confirmed live 2026-09-26), re-seed run by Taylor 2026-09-26. 🛑 **M2's plan was unrunnable as written** — the seed button only rendered in the empty state and the table has 16 rows, so signing in gave the seed path no trigger; an always-available "Re-sync registry" button fixed that. **Data verified:** all 16 rows `match` the code registry on `area` and `parent_name`, 0 duplicate `(owner,name)` pairs, 0 phantom `Swift`, 0 broken parent links. Only the Projects-page visual check remains |
+| M3 | Home: persistent Now + Capture (IA step 1) | Done: `830f2b6` (+ `8f9799c` migration filename fix). Taylor confirmed live 2026-09-26: Ctrl+K popover, Enter-saves, capture → Make task → Set as Now, and Now surviving a reload |
 | M4 | Home: Needs Attention aggregator (IA step 2) | Not started |
 | M5 | Home: Today and Next timeline (IA step 3) | Not started |
 | M6 | Home: three ranked Active Work return points (IA step 4) | Not started |

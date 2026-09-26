@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from './supabase'
 import { jobPipeline } from './jobPipeline'
 import { navGroups, navUtilityItems, defaultOpenNavGroups } from './navConfig'
+import { captureBodyError, captureFromRow, captureToRow, nowFromRow, nowToRow, pendingCaptures, resolveNow, routeCapturePatch } from './homeState'
 import WarRoomView from './WarRoomView'
 import './App.css'
 
@@ -484,18 +485,78 @@ function AccessGate() {
   return <main className="access-gate"><div><p className="eyebrow">Private system access</p><h1>System Horizon</h1><p>Your project and career data is owner-only in Supabase.</p><label>Email<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" /></label><label>Password<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" /></label><div><Button tone="coral" type="button" disabled={isWorking} onClick={() => submit('signin')}>Sign in</Button><Button type="button" disabled={isWorking} onClick={() => submit('signup')}>Create account</Button></div>{message && <p role="alert">{message}</p>}</div></main>
 }
 
-function Horizon({ projects, onProjects }) {
-  const [capture, setCapture] = useState('')
-  const [captures, setCaptures] = useState([])
-  const [focusDone, setFocusDone] = useState(false)
-  const [capacity, setCapacity] = useState('Steady')
+// Universal capture lives in the header because it is an interruption tool, not
+// a destination (IA doc, section rules). Ctrl/Cmd+K opens it: a shortcut that
+// includes a modifier key is out of scope for WCAG 2.1.4, so it needs no
+// turn-off or remap mechanism, which a bare letter key would.
+function CaptureControl({ onSave }) {
+  const [open, setOpen] = useState(false)
+  const [body, setBody] = useState('')
+  const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
+  const inputRef = useRef(null)
 
-  function saveCapture(event) {
+  useEffect(() => {
+    function handleKeyDown(event) {
+      if ((event.ctrlKey || event.metaKey) && event.key?.toLowerCase() === 'k') {
+        event.preventDefault()
+        setOpen(true)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
+  useEffect(() => { if (open) inputRef.current?.focus() }, [open])
+
+  async function submit(event) {
     event.preventDefault()
-    const nextCapture = capture.trim()
-    if (!nextCapture) return
-    setCaptures((current) => [nextCapture, ...current])
-    setCapture('')
+    const message = captureBodyError(body)
+    if (message) { setError(message); return }
+    setSaving(true)
+    const failure = await onSave(body)
+    setSaving(false)
+    // A failed save keeps the typed text exactly where it is. Only success clears it.
+    if (failure) { setError(failure); return }
+    setBody('')
+    setError('')
+    setOpen(false)
+  }
+
+  return <div className="capture-control">
+    <Button type="button" aria-expanded={open} onClick={() => setOpen((current) => !current)}>Capture</Button>
+    {open && <form className="capture-popover" onSubmit={submit} onKeyDown={(event) => { if (event.key === 'Escape') setOpen(false) }}>
+      <label htmlFor="universal-capture">Catch it before it evaporates</label>
+      <div>
+        <input id="universal-capture" ref={inputRef} value={body} onChange={(event) => { setBody(event.target.value); setError('') }} placeholder="Loose thread, task, or thought" />
+        <Button tone="coral" type="submit" disabled={saving}>{saving ? 'Saving' : 'Save'}</Button>
+      </div>
+      {error && <p role="alert">{error}</p>}
+    </form>}
+  </div>
+}
+
+function Horizon({ projects, tasks, now, captures, onProjects, onChooseNow, onUpdateTaskStatus, onCaptureIntoTask, onDismissCapture }) {
+  const [capacity, setCapacity] = useState('Steady')
+  const [picking, setPicking] = useState(false)
+  const [pickTaskId, setPickTaskId] = useState('')
+  const [pickNote, setPickNote] = useState('')
+
+  const resolved = resolveNow(now, tasks)
+  const inbox = pendingCaptures(captures)
+  const choosable = tasks.filter((task) => task.status !== 'Done')
+
+  function startPicking() {
+    setPickTaskId(resolved.task?.id ?? '')
+    setPickNote(resolved.note)
+    setPicking(true)
+  }
+
+  function submitNow(event) {
+    event.preventDefault()
+    if (!pickTaskId) return
+    onChooseNow(pickTaskId, pickNote)
+    setPicking(false)
   }
 
   return <>
@@ -508,8 +569,32 @@ function Horizon({ projects, onProjects }) {
         <p>One clear move is enough to alter the whole field.</p>
       </div>
       <div className="focus-console">
-        <div><span>Primary vector</span><strong>{focusDone ? 'Vector complete' : 'Define the first System Horizon data model.'}</strong><small>{focusDone ? 'The system has a new return point.' : 'Projects, moving parts, state, then next action.'}</small></div>
-        <Button tone={focusDone ? 'quiet' : 'coral'} onClick={() => setFocusDone((done) => !done)}>{focusDone ? 'Reopen' : 'Mark done'}</Button>
+        {resolved.state === 'set' && !picking ? <>
+          <div><span>Primary vector</span><strong>{resolved.done ? `${resolved.task.name} — complete` : resolved.task.name}</strong><small>{resolved.note || (resolved.done ? 'The system has a new return point.' : 'Projects, moving parts, state, then next action.')}</small></div>
+          <div className="focus-actions">
+            <Button tone={resolved.done ? 'quiet' : 'coral'} type="button" onClick={() => onUpdateTaskStatus(resolved.task.id, resolved.done ? 'Active' : 'Done')}>{resolved.done ? 'Reopen' : 'Mark done'}</Button>
+            <Button type="button" onClick={startPicking}>Change</Button>
+          </div>
+        </> : <form className="focus-picker" onSubmit={submitNow}>
+          <div>
+            <span>Primary vector</span>
+            <strong>{resolved.state === 'missing' ? 'That task is no longer in the list.' : 'Choose the next true thing.'}</strong>
+            <small>{choosable.length ? 'One clear move is enough to alter the whole field.' : 'Add a task in Flow first, then choose it here.'}</small>
+          </div>
+          {choosable.length > 0 && <div className="focus-picker-fields">
+            <label htmlFor="now-task">Task</label>
+            <select id="now-task" value={pickTaskId} onChange={(event) => setPickTaskId(event.target.value)}>
+              <option value="">Pick a task</option>
+              {choosable.map((task) => <option key={task.id} value={task.id}>{task.name}</option>)}
+            </select>
+            <label htmlFor="now-note">Context, optional</label>
+            <input id="now-note" value={pickNote} onChange={(event) => setPickNote(event.target.value)} placeholder="Enough context to start it" />
+            <div className="focus-actions">
+              <Button tone="coral" type="submit" disabled={!pickTaskId}>Set as Now</Button>
+              {resolved.state === 'set' && <Button type="button" onClick={() => setPicking(false)}>Cancel</Button>}
+            </div>
+          </div>}
+        </form>}
       </div>
       <div className="stage-coordinate">041° 28′ / field depth</div>
     </section>
@@ -537,12 +622,16 @@ function Horizon({ projects, onProjects }) {
       </article>
 
       <article className="instrument capture-instrument">
-        <div className="instrument-heading"><span>Quick capture</span><b>04</b></div>
-        <form onSubmit={saveCapture}>
-          <label htmlFor="quick-capture">Loose thread, task, or thought</label>
-          <div><input id="quick-capture" value={capture} onChange={(event) => setCapture(event.target.value)} placeholder="Catch it before it evaporates" /><Button tone="coral" type="submit">Save</Button></div>
-        </form>
-        <p className={captures.length ? 'capture-confirmed' : 'capture-note'}>{captures.length ? `${captures.length} ${captures.length === 1 ? 'item' : 'items'} captured. It has a home.` : 'Do not solve the whole thing here.'}</p>
+        <div className="instrument-heading"><span>Capture inbox</span><b>04</b></div>
+        {inbox.length === 0
+          ? <p className="capture-note">Nothing waiting. Capture from the header, or press Ctrl+K.</p>
+          : <ul className="capture-inbox">
+            {inbox.slice(0, 5).map((item) => <li key={item.id}>
+              <span>{item.body}</span>
+              <div><button type="button" onClick={() => onCaptureIntoTask(item)}>Make task</button><button type="button" onClick={() => onDismissCapture(item)}>Dismiss</button></div>
+            </li>)}
+          </ul>}
+        {inbox.length > 5 && <p className="capture-note">{inbox.length - 5} more waiting.</p>}
       </article>
     </section>
   </>
@@ -1197,6 +1286,8 @@ function App() {
   const [swiftCollection, setSwiftCollection] = useState([])
   const [swiftEvents, setSwiftEvents] = useState([])
   const [travelWatch, setTravelWatch] = useState([])
+  const [captures, setCaptures] = useState([])
+  const [now, setNow] = useState(null)
   const [databaseError, setDatabaseError] = useState('')
   const greeting = useMemo(() => new Date().getHours() < 12 ? 'Morning field check' : new Date().getHours() < 18 ? 'Afternoon field check' : 'Evening field check', [])
 
@@ -1268,6 +1359,20 @@ function App() {
     setTravelWatch((data ?? []).map(travelFromRow))
   }
 
+  async function loadCaptures() {
+    const { data, error } = await supabase.from('horizon_capture').select('*').order('created_at', { ascending: false })
+    if (error) throw error
+    setCaptures((data ?? []).map(captureFromRow))
+  }
+
+  // horizon_now holds at most one row per owner (owner is the primary key), so
+  // an empty result is the normal "nothing chosen yet" state, not an error.
+  async function loadNow() {
+    const { data, error } = await supabase.from('horizon_now').select('*').maybeSingle()
+    if (error) throw error
+    setNow(data ? nowFromRow(data) : null)
+  }
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
     const { data: subscription } = supabase.auth.onAuthStateChange((_event, nextSession) => setSession(nextSession))
@@ -1281,7 +1386,7 @@ function App() {
 
   useEffect(() => {
     if (!session) return
-    Promise.all([loadProjects(), loadTasks(), loadEvents(), loadJobPipeline(), loadRepoHealth(), loadSwiftWatch(), loadSwiftCollection(), loadSwiftEvents(), loadTravelWatch()]).catch((error) => setDatabaseError(error.message || 'Could not load private records.'))
+    Promise.all([loadProjects(), loadTasks(), loadEvents(), loadJobPipeline(), loadRepoHealth(), loadSwiftWatch(), loadSwiftCollection(), loadSwiftEvents(), loadTravelWatch(), loadCaptures(), loadNow()]).catch((error) => setDatabaseError(error.message || 'Could not load private records.'))
   }, [session])
 
   async function addProject(project) {
@@ -1332,7 +1437,51 @@ function App() {
   async function deleteTask(id) {
     setTasks((current) => current.filter((task) => task.id !== id))
     const { error } = await supabase.from('horizon_tasks').delete().eq('id', id)
-    if (error) { setDatabaseError(error.message || 'Could not delete the task.'); await loadTasks() }
+    if (error) { setDatabaseError(error.message || 'Could not delete the task.'); await loadTasks(); return }
+    // horizon_now.task_id is `on delete set null`, so mirror that locally
+    // instead of leaving a Now pointing at a task that no longer exists.
+    setNow((current) => current && current.taskId === id ? { ...current, taskId: null } : current)
+  }
+
+  // Returns an error message rather than throwing, so the header control can
+  // show it and keep the typed text on screen (M3 acceptance).
+  async function addCapture(body) {
+    const { data, error } = await supabase.from('horizon_capture').insert(captureToRow(body)).select().single()
+    if (error) return error.message || 'Could not save the capture.'
+    setCaptures((current) => [captureFromRow(data), ...current])
+    return ''
+  }
+
+  async function applyCaptureRoute(id, patch) {
+    const { data, error } = await supabase.from('horizon_capture').update(patch).eq('id', id).select().single()
+    if (error) { setDatabaseError(error.message || 'Could not route the capture.'); return }
+    const saved = captureFromRow(data)
+    setCaptures((current) => current.map((capture) => capture.id === id ? saved : capture))
+  }
+
+  async function dismissCapture(capture) {
+    await applyCaptureRoute(capture.id, routeCapturePatch('dismissed'))
+  }
+
+  async function captureIntoTask(capture) {
+    // horizon_tasks.name is capped at 200 characters and a capture can run to
+    // 2000, so a long capture keeps its full text in notes rather than losing
+    // the tail to the task name.
+    const body = capture.body.trim()
+    const isLong = body.length > 200
+    const { data, error } = await supabase.from('horizon_tasks').insert(taskToRow({ name: isLong ? body.slice(0, 200) : body, status: 'Active', notes: isLong ? body : null })).select().single()
+    if (error) { setDatabaseError(error.message || 'Could not turn the capture into a task.'); return }
+    const task = taskFromRow(data)
+    setTasks((current) => [task, ...current])
+    await applyCaptureRoute(capture.id, routeCapturePatch('task', task.id))
+  }
+
+  // One atomic upsert on the owner primary key, so Now is never briefly empty.
+  async function chooseNow(taskId, note) {
+    if (!session?.user?.id) { setDatabaseError('Sign in again before setting Now.'); return }
+    const { data, error } = await supabase.from('horizon_now').upsert({ owner: session.user.id, ...nowToRow(taskId, note) }, { onConflict: 'owner' }).select().single()
+    if (error) { setDatabaseError(error.message || 'Could not set the next true thing.'); return }
+    setNow(nowFromRow(data))
   }
 
   async function addEvent(event) {
@@ -1430,7 +1579,7 @@ function App() {
       <main className={isWarRoom ? 'main-content warroom-main' : 'main-content'}>
         <header className="topbar">
           <div><span>{greeting}</span><h1>{pageTitle}</h1></div>
-          <div className="topbar-tools"><label className="search-field"><span>Search</span><input aria-label="Search System Horizon" placeholder="Find a system" /></label><Button type="button" onClick={() => supabase.auth.signOut()}>Sign out</Button><DateReadout /></div>
+          <div className="topbar-tools"><label className="search-field"><span>Search</span><input aria-label="Search System Horizon" placeholder="Find a system" /></label><CaptureControl onSave={addCapture} /><Button type="button" onClick={() => supabase.auth.signOut()}>Sign out</Button><DateReadout /></div>
         </header>
         {databaseError && <p className="database-error" role="alert">Database error: {databaseError}</p>}
         {activeView === 'ProjectDetail' && selectedProject ? <ProjectDetailView project={selectedProject} tasks={tasks} onBack={() => setActiveView('Projects')} onAddTask={addTask} onUpdateTaskStatus={updateTaskStatus} onDeleteTask={deleteTask} />
@@ -1443,7 +1592,7 @@ function App() {
           : activeView === 'Swift' ? <SwiftView watches={swiftWatch} collection={swiftCollection} events={swiftEvents} onAddCollectionItem={addSwiftCollectionItem} onUpdateCollectionStatus={updateSwiftCollectionStatus} onDeleteCollectionItem={deleteSwiftCollectionItem} onAddEvent={addSwiftEvent} onDeleteEvent={deleteSwiftEvent} />
           : activeView === 'Travel' ? <TravelView entries={travelWatch} onAdd={addTravelEntry} onDelete={deleteTravelEntry} />
           : activeView === 'War Room' ? <WarRoomView />
-          : <Horizon projects={projects} onProjects={() => setActiveView('Projects')} />}
+          : <Horizon projects={projects} tasks={tasks} now={now} captures={captures} onProjects={() => setActiveView('Projects')} onChooseNow={chooseNow} onUpdateTaskStatus={updateTaskStatus} onCaptureIntoTask={captureIntoTask} onDismissCapture={dismissCapture} />}
       </main>
     </div>
   </div>

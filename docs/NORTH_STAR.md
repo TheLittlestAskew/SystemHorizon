@@ -256,8 +256,8 @@ A 200 response from any tool is not verification. Re-read the actual state.
 |---|---|---|
 | M0 | Environment check + housekeeping | Done: `ac3ccf7` |
 | M1 | Nav migration to the locked IA | Done (pending Taylor visual): `e5e335f` |
-| M2 | Projects re-seed + round trip | Blocked: needs Taylor's login only (owner-scoped seed). Q6 answered 2026-09-25 — `Undercroft`, Fantasy Football is a Side Quest, no code change needed. **Re-seed IS needed**: 8 of 16 live rows carry a stale taxonomy, see Q6 |
-| M3 | Home: persistent Now + Capture (IA step 1) | Not started |
+| M2 | Projects re-seed + round trip | In progress: seed trigger shipped `766eb6e`. 🛑 **M2's plan was unrunnable as written** — the seed button only rendered in the empty state and the table has 16 rows, so signing in gave the seed path no trigger. Now an always-available "Re-sync registry" button. Waiting on Taylor to click it while signed in; the 8 drifted rows were still unfixed as of 2026-09-26 |
+| M3 | Home: persistent Now + Capture (IA step 1) | Done (pending Taylor visual): `830f2b6` (+ `8f9799c` migration filename fix) |
 | M4 | Home: Needs Attention aggregator (IA step 2) | Not started |
 | M5 | Home: Today and Next timeline (IA step 3) | Not started |
 | M6 | Home: three ranked Active Work return points (IA step 4) | Not started |

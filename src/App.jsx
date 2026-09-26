@@ -336,8 +336,11 @@ function ProjectRegistry({ projects, tasks, repoHealth, onAddProject, onSeedProj
 
     <div className="registry-hero" role="img" aria-label="Projects" />
 
-    <div className="registry-controls" role="group" aria-label="Filter projects by status">
-      {['All', 'Active', 'Paused', 'Idea'].map((option) => <button className={filter === option ? 'selected' : ''} key={option} type="button" onClick={() => setFilter(option)}>{option}</button>)}
+    <div className="registry-controls">
+      <div className="registry-filters" role="group" aria-label="Filter projects by status">
+        {['All', 'Active', 'Paused', 'Idea'].map((option) => <button className={filter === option ? 'selected' : ''} key={option} type="button" onClick={() => setFilter(option)}>{option}</button>)}
+      </div>
+      <button className="registry-resync" type="button" onClick={onSeedProjects}>Re-sync registry</button>
     </div>
 
     <div className="registry-board">
@@ -1292,11 +1295,10 @@ function App() {
   async function seedProjects() {
     try {
       await initializePortfolioRegistry()
+      await loadProjects()
     } catch (error) {
       setDatabaseError(error.message || 'Could not load the portfolio registry.')
-      return
     }
-    await loadProjects()
   }
 
   function openProject(projectId) {

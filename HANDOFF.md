@@ -5,6 +5,8 @@
 
 ## ▶ DO NEXT
 
+> 🆕 **2026-09-26 (latest): M0 through M4 are `Done`. Next is M5, the Today and Next timeline.** Taylor confirmed M1/M2/M3 live, so gate item 8 is closed on all three and nothing is pending her eyes except **M4's new Needs Attention stack**, which she has not seen yet. **M4 shipped** (`a9aae74`): `src/needsAttention.js` aggregates Career + Mirrors into at most 5 alerts with explicit reasons and dates, 75/75 tests. It also **moved** the GA DOL maths, `A_RATED_STATUS`/`UNREPORTED_STATUS` and `repoStatusFlags` out of `App.jsx` so Career, Mirrors and Home share one definition. 🛑 **Two things to know:** the **mirror-freshness collector has not run since 2026-08-24**, so every repo flag is a month stale and M4 now raises that as its own alert rather than presenting stale flags as current; and **`dashboard_jobs` is in a Supabase project neither MCP server can reach**, so M4's Career half is fixture-tested only and has never been seen against real job rows. **Two open decisions from M4:** **Q12** (Needs Attention sits under the hero, not in the IA's right-hand column, because the hero is already a 2-column grid) and **Q13** (`evidence-audited-analysis` still does not exist; ⚠️ settle Q7 before **M6**, whose ranking is explicitly judgement). For M5: `horizon_events.start_time`/`end_time` are free-form `text` and retyping them is RED (Q2), so parse defensively and surface parse failures.
+>
 > 🆕 **2026-09-26: M0–M3 are all `Done`, and only one visual check is left across the three.** ✅ **M2's data is fixed and verified** — Taylor clicked the new "Re-sync registry" button (`766eb6e`) and all 16 `horizon_projects` rows now `match` the code registry on `area` and `parent_name`: 0 duplicates, 0 phantom `Swift`, 0 broken parent links, areas exactly `AREA_ORDER` (Ops & Infra 2, Aftermath 3, Undercroft 4, Sidequests 3, Career 3, Learning 1). 🛑 M2's written plan was unrunnable — the seed path had **no reachable trigger** with 16 rows present, so "blocked on Taylor's login" was the wrong diagnosis for three days. ✅ **M3 shipped** (`830f2b6`): `horizon_capture` + `horizon_now`, Capture moved to a header control on Ctrl/Cmd+K, instrument 04 became the routing inbox, 56/56 tests, and all five illegal-write cases proven rejected live. **The one thing left is a UI look-over** of the capture popover, the Now picker, and the Projects area cards — the tooling cannot do it, because the `chrome-devtools` CLI only sees browsers **it** launched and Taylor works in her own Chrome. Next buildable milestone is **M4, Needs Attention**. Q11 answered 2026-09-25: commits here end with `NEXT:` and carry **no** `Co-Authored-By:` trailer.
 >
 > 🆕 **2026-09-24: `docs/NORTH_STAR.md` now owns the milestone queue.** Read it before this block. M0 is `Done: ac3ccf7` and M1 is `Done (pending Taylor visual): e5e335f`. **M2 is now Blocked** (needs Taylor's login plus Q6's two answers), so the next buildable action is **M3, Home: persistent Now + Capture**. **One thing needs Taylor: log into the app.** That closes M1's gate item 8 and lets M2's owner-scoped re-seed run. **Q5, Q6 and Q8 were answered 2026-09-25** — `Undercroft` wins, Fantasy Football is a Side Quest (so no code change: the DB is the stale side), and the `systemhorizon-build` skill is retired to `~/.claude/skills/_superseded/` with all 5 pointers across 4 files corrected. Q7, Q9, Q10, Q11 remain open and none of them block anything. Seven decisions are waiting in section 12 (Q5 retire the stale `systemhorizon-build` skill, Q6 the `horizon_projects` area drift, Q7 six mandated skills that do not exist, Q8 `cynosure` points at the same stale skill, Q9 `npm run lint` passes on warnings, Q10 nav group labels fail WCAG AA, Q11 `NEXT:` versus `Co-Authored-By:` in commit messages). ✅ **The "`horizon_projects` is empty (0 rows)" line below is wrong** — it holds **16** rows; `list_tables` reports a planner estimate, not a count. ~~**M2 needs no re-seed.**~~ 🛑 **Corrected 2026-09-24: M2 DOES need a re-seed.** The count was never the problem — **8 of those 16 rows carry a stale taxonomy** (7 wrong `area`, 2 missing `parent_name`; the live table is still a pre-split 5-area model with no `Undercroft`/`Sidequests` and a phantom `Swift`). Full row-by-row table in `NORTH_STAR.md` Q6. A row count is not a data-contract check.
@@ -23,7 +25,7 @@
 
 **Only then decide whether an Obsidian link or embed adds enough convenience.** It is not synchronization and may be brittle under Cloudflare Access or frame restrictions. The default should be a normal SH link plus the generated digest. A read-only Obsidian Base over existing Ephemeris material can proceed independently; defer any SH-connected Base until the digest has a stable data shape.
 
-**The previous Projects visual verification remains required after the schema audit.** Cards are now area-level rollups (one per area: Ops & Infra, Aftermath, Undercroft, Sidequests, Career, Learning), not one per project. Check: (1) each area card shows a sensible project/active count and signal average, (2) clicking a card narrows the accordion correctly, (3) the accordion reads as one self-contained panel with its own header and independently-scrolling body, including whether `calc(100dvh - 40px)` looks balanced beside the shorter cards/table column, and (4) clicking a project name inside the accordion opens its detail page. `horizon_projects` was reported as empty (0 rows) in the prior handoff, so re-seeding with the current `area` and `parent_name` data still needs a live round trip.
+~~**The previous Projects visual verification remains required after the schema audit.**~~ ✅ **Done 2026-09-26** as part of M2: Taylor confirmed the area cards, card-click filtering, the accordion, and project names opening detail pages, and the re-seed fixed the taxonomy the empty Undercroft/Sidequests cards were caused by. The original text is kept below because its four numbered checks are the standing definition of this check if the Projects page changes again. Cards are now area-level rollups (one per area: Ops & Infra, Aftermath, Undercroft, Sidequests, Career, Learning), not one per project. Check: (1) each area card shows a sensible project/active count and signal average, (2) clicking a card narrows the accordion correctly, (3) the accordion reads as one self-contained panel with its own header and independently-scrolling body, including whether `calc(100dvh - 40px)` looks balanced beside the shorter cards/table column, and (4) clicking a project name inside the accordion opens its detail page. `horizon_projects` was reported as empty (0 rows) in the prior handoff, so re-seeding with the current `area` and `parent_name` data still needs a live round trip.
 
 **Then, the changedetection.io watch for flight prices.** Full walkthrough is in `Scripts/travel-watch-sync/README.md` in the vault (Visual Selector + Extract Text, not the built-in Price/Restock mode — that only works on single-product pages, and Google Flights isn't one). Get the watch UUID, put it in `travel-watch-sync.config.json`. Not urgent yet — early November is the real PAX Unplugged (Dec 3-6) booking decision point, so this can wait for a natural window.
 
@@ -57,6 +59,17 @@ Standing repo notes:
 
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
+
+### 2026-09-26 16:05 ET · Claude Code
+- **Changed:** Closed gate item 8 on **M1, M2 and M3** (Taylor confirmed all of it live: nav, area cards, Ctrl+K capture, capture → Make task → Set as Now, Now surviving a reload), then ran **M4, the Home Needs Attention aggregator**. New `src/needsAttention.js` turns Career (`dashboard_jobs`) and Mirrors (`horizon_repo_health`) into at most five alerts, each with an explicit reason and date. Rendered as a hairline-separated stacked section under the hero. Also **moved** the GA DOL week maths, `A_RATED_STATUS`/`UNREPORTED_STATUS` and `repoStatusFlags` out of `App.jsx` into that module, because Career, Mirrors and Home now all need the same rules and the IA data rules forbid a second source of truth.
+- **Verification:** ✓ `npm run lint` clean, `npm test` **75/75** (was 56; +19 in `src/needsAttention.test.mjs`), `npm run build` 1.28s. ✓ Tests cover M4's named cases: 0 / 5 / 12 inputs, the five-alert cap plus overflow count, missing dates, undated alerts sorting last, severity-before-date ordering, order independent of input order, and **each source failing independently while the other still renders**. ✓ Grep: all seven moved definitions now appear **exactly once**, in `needsAttention.js`, and zero times in `App.jsx`. ✓ Deploy run for `a9aae74` polled to `conclusion: success`.
+- **🛑 Added a `mirrors:stale` alert, because the collector is a month behind.** Live `horizon_repo_health` has all 11 rows at `checked_at = 2026-08-24`, so **every** repo flag it produces is 33 days old. Surfacing `SystemHorizon: 12 commits behind remote` as a current alert would be the same class of error as rendering a forecast as a fact, which this repo already has a design rule against. Staleness is now its own alert, and every row carries its check date. ▶ **The mirror-freshness collector in the vault has not run since 2026-08-24 and nobody noticed for a month. Worth a scheduled-task check.**
+- **Fixed a regression I created in the same change.** Making `loadRepoHealth` report its own error (so one dead source cannot blank the dashboard, which M4's acceptance requires) meant repo failures no longer reached the shared `databaseError` banner, making them **invisible on Mirrors**. `MirrorsView` now renders `repoHealthError` itself.
+- **Invoked `cynosure` this time**, closing the M3 contract miss. Its brand hook correctly points at `NORTH_STAR.md` (the Q5/Q8 pointer fix held). Consequences: rows not cards, and **no side-stripe border** (an explicit cynosure ban that was my first instinct). Awareness reuses the existing `--peach` token rather than introducing an amber, and severity now carries **no** color at all — the component maps it, so the palette lives in one place and two surfaces cannot disagree about what amber means. A test asserts alerts have no `tone` field.
+- **Two deviations raised rather than buried:** **Q12** — Needs Attention is a full-width section under the hero, not the IA's right-hand column, because `.horizon-stage` is already a 2-column grid holding the stage copy and the Now console, so the IA layout would restructure a hero Taylor designed. **Q13** — M4 is aggregation logic, which section 8 says needs `evidence-audited-analysis`, and that skill still does not exist (Q7). Substituted pure functions with executable tests and per-alert evidence. ⚠️ **M6's ranking is the one that should not start until Q7 is settled.**
+- **Commit:** `a9aae74` · this handoff
+- **Next:** M5, the Today and Next timeline from `horizon_events`. ⚠️ Its `start_time`/`end_time` are free-form `text` and changing the type is RED (Q2), so parse defensively and show parse failures rather than hiding events.
+- **Watch out:** ⚠️ **`npx node --test` hangs** — npx tries to resolve a package named `node`. Use `node --test` directly. ⚠️ The new stale-alert threshold is `MIRROR_STALE_DAYS = 7`; if the collector is fixed and runs daily this alert disappears on its own, so do not "fix" it by raising the threshold. ⚠️ `dashboard_jobs` lives in a **different** Supabase project (`vtrtyagltwdrbastpppl`) that neither connected MCP server reaches, so the Career half of M4 is tested against fixtures only and has **not** been seen against real job rows.
 
 ### 2026-09-26 15:10 ET · Claude Code
 - **Changed:** No code. **M2's data is fixed** — Taylor signed in and clicked the new "Re-sync registry" button, `initializePortfolioRegistry` ran as her user, and all 8 drifted rows corrected in place.
@@ -322,44 +335,4 @@ Standing repo notes:
   glance to confirm the copy and layout read the way they're supposed to
   with real data, not just that they don't crash.
 
-### 2026-08-31 18:05 ET · Claude chat
-- **Changed:** Ran a full-app visual-direction audit (all 10 nav views against
-  the current cascade output) at Taylor's request, sourced partly from two
-  Pinterest boards (Septentrion, UI/UX) pulled live via the Zapier Pinterest
-  connector's raw API passthrough. Findings: Horizon/Projects/Career already
-  hybrid (light base + dark accent module); Flow/Mirrors/Archive untouched
-  light-only; Travel has zero dedicated CSS at all; War Room is the fully-dark
-  reference implementation and closely matches the Pinterest palette
-  (`#070b14` vs. pinned refs around `#0f1014`).
-  - Fixed the previously-known Swift CSS bug and traced its real cause: a dead
-    "dark-mode adjustments" block at the end of `App.css`, written for the
-    superseded Neon field-console skin, was winning the cascade by load order
-    and resetting several Swift text colors to light lavender/gray values
-    meant for a dark background — but their backgrounds stayed white. Affected
-    `swift-watch-meta dd`, `swift-panel-note`, `swift-checkbox`, and both row
-    types, not just the form as the prior HANDOFF entry scoped it.
-  - Consolidated 5 sequential `:root` passes (base, Neon field-console,
-    Modular daylight, Saturation, No navy) into one canonical block using the
-    values that were already winning the cascade — no visual change, removes
-    the duplication pattern that caused the bug in the first place.
-- **Verified before push:** brace count balanced (560/560 in the new file),
-  zero CSS selectors lost or added versus the old file, dead block confirmed
-  absent, single `:root` confirmed.
-- **Commit:** `38fa495` (bad — see Friction), `8f16755` (corrected)
-- **Friction:** gen-fail — the first `create_or_update_file` call passed the
-  local file *path* (`/home/claude/App.css.new`) as the `content` argument
-  instead of the file's actual text, so the live commit briefly overwrote
-  `App.css` with a 24-byte string containing just that path. Caught
-  immediately by re-fetching the file after the push and seeing `size: 24`.
-  Corrected in the next commit by reading the file's literal content into
-  context first and passing that. **Generalisable: after any
-  `create_or_update_file` call, re-fetch and check the returned `size`/content
-  before considering the change done — don't trust the tool call succeeding
-  just because it returned 200.**
-- **Next:** Open `sh.tayloraritchie.com`, verify Swift renders clean and no
-  other view visibly shifted, then start Phase 2 (Flow/Mirrors/Archive/Travel
-  dark-module treatment) — see DO NEXT.
-- **Watch out:** Travel needs a stylistic build from scratch, not a dark pass
-  like the other three — it currently inherits no dedicated styling.
-
-> Older entries archived to `handoff-archive/2026-07.md`, `handoff-archive/2026-08.md` - everything before 2026-08-31 18:05 ET.
+> Older entries archived to `handoff-archive/2026-07.md`, `handoff-archive/2026-08.md` - everything before 2026-08-31 18:32 ET.

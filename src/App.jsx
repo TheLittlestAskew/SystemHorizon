@@ -4,6 +4,7 @@ import { jobPipeline } from './jobPipeline'
 import { navGroups, navUtilityItems, defaultOpenNavGroups } from './navConfig'
 import { captureBodyError, captureFromRow, captureToRow, nowFromRow, nowToRow, pendingCaptures, resolveNow, routeCapturePatch } from './homeState'
 import { A_RATED_STATUS, SEVERITY, UNREPORTED_STATUS, buildNeedsAttention, gdolWeekEnding, gdolWeekWindow, inGdolWindow, repoStatusFlags, shiftDays } from './needsAttention'
+import { buildTimeline } from './timeline'
 import WarRoomView from './WarRoomView'
 import './App.css'
 
@@ -537,7 +538,34 @@ function NeedsAttention({ jobs, jobError, repoHealth, repoHealthError }) {
   </section>
 }
 
-function Horizon({ projects, tasks, now, captures, jobs, jobError, repoHealth, repoHealthError, onProjects, onChooseNow, onUpdateTaskStatus, onCaptureIntoTask, onDismissCapture }) {
+// Today and next, IA information priority 3: chronological and grouped by day,
+// deliberately not a mini month grid. start_time is a free-text column, so an
+// unreadable time keeps its original text and is flagged rather than dropped.
+function TodayAndNext({ events }) {
+  const { groups, hidden, unparsedCount } = useMemo(() => buildTimeline({ events }), [events])
+  const shownCount = groups.reduce((total, group) => total + group.items.length, 0)
+
+  return <section className="timeline-stack" aria-labelledby="timeline-heading">
+    <div className="instrument-heading"><span id="timeline-heading">Today and next</span><b>{String(shownCount).padStart(2, '0')}</b></div>
+    {groups.length === 0
+      ? <p className="timeline-clear">Nothing scheduled ahead.</p>
+      : <ol className="timeline-days">
+        {groups.map((group) => <li key={group.date}>
+          <h3 className={group.isToday ? 'timeline-day is-today' : 'timeline-day'}>{group.label}</h3>
+          <ul>
+            {group.items.map((item) => <li key={item.id}>
+              <span className="timeline-time">{item.allDay ? 'All day' : item.display}</span>
+              <span className="timeline-title">{item.title}{item.unparsed && <b className="timeline-unreadable">unreadable time</b>}</span>
+            </li>)}
+          </ul>
+        </li>)}
+      </ol>}
+    {hidden > 0 && <p className="timeline-note">{hidden} more further ahead.</p>}
+    {unparsedCount > 0 && <p className="timeline-note">{unparsedCount === 1 ? 'One event has a start time this cannot read' : `${unparsedCount} events have start times this cannot read`}. Fix them in Calendar.</p>}
+  </section>
+}
+
+function Horizon({ projects, tasks, now, captures, events, jobs, jobError, repoHealth, repoHealthError, onProjects, onChooseNow, onUpdateTaskStatus, onCaptureIntoTask, onDismissCapture }) {
   const [capacity, setCapacity] = useState('Steady')
   const [picking, setPicking] = useState(false)
   const [pickTaskId, setPickTaskId] = useState('')
@@ -600,7 +628,10 @@ function Horizon({ projects, tasks, now, captures, jobs, jobError, repoHealth, r
       <div className="stage-coordinate">041° 28′ / field depth</div>
     </section>
 
-    <NeedsAttention jobs={jobs} jobError={jobError} repoHealth={repoHealth} repoHealthError={repoHealthError} />
+    <div className="home-queues">
+      <NeedsAttention jobs={jobs} jobError={jobError} repoHealth={repoHealth} repoHealthError={repoHealthError} />
+      <TodayAndNext events={events} />
+    </div>
 
     <section className="instrument-grid" aria-label="Horizon modules">
       <article className="instrument capacity-instrument">
@@ -1593,7 +1624,7 @@ function App() {
           : activeView === 'Swift' ? <SwiftView watches={swiftWatch} collection={swiftCollection} events={swiftEvents} onAddCollectionItem={addSwiftCollectionItem} onUpdateCollectionStatus={updateSwiftCollectionStatus} onDeleteCollectionItem={deleteSwiftCollectionItem} onAddEvent={addSwiftEvent} onDeleteEvent={deleteSwiftEvent} />
           : activeView === 'Travel' ? <TravelView entries={travelWatch} onAdd={addTravelEntry} onDelete={deleteTravelEntry} />
           : activeView === 'War Room' ? <WarRoomView />
-          : <Horizon projects={projects} tasks={tasks} now={now} captures={captures} jobs={jobs} jobError={jobError} repoHealth={repoHealth} repoHealthError={repoHealthError} onProjects={() => setActiveView('Projects')} onChooseNow={chooseNow} onUpdateTaskStatus={updateTaskStatus} onCaptureIntoTask={captureIntoTask} onDismissCapture={dismissCapture} />}
+          : <Horizon projects={projects} tasks={tasks} now={now} captures={captures} events={events} jobs={jobs} jobError={jobError} repoHealth={repoHealth} repoHealthError={repoHealthError} onProjects={() => setActiveView('Projects')} onChooseNow={chooseNow} onUpdateTaskStatus={updateTaskStatus} onCaptureIntoTask={captureIntoTask} onDismissCapture={dismissCapture} />}
       </main>
     </div>
   </div>

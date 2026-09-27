@@ -6,6 +6,7 @@ import { captureBodyError, captureFromRow, captureToRow, nowFromRow, nowToRow, p
 import { A_RATED_STATUS, SEVERITY, UNREPORTED_STATUS, buildNeedsAttention, gdolWeekEnding, gdolWeekWindow, inGdolWindow, repoStatusFlags, shiftDays } from './needsAttention'
 import { buildTimeline } from './timeline'
 import { rankActiveWork } from './activeWork'
+import { buildFieldStatus } from './fieldStatus'
 import WarRoomView from './WarRoomView'
 import './App.css'
 
@@ -542,6 +543,25 @@ function NeedsAttention({ jobs, jobError, repoHealth, repoHealthError }) {
   </section>
 }
 
+// Field status, IA information priority 6 and NORTH_STAR section 3: a thin strip
+// of exactly Horizon | Projects | Career | System. Side Quests and Calendar get
+// no slot. Each slot links into its area, so it changes what she does next
+// rather than only reporting a number.
+function FieldStatus({ now, tasks, captures, projects, jobs, jobError, repoHealth, repoHealthError, onSelectView }) {
+  const slots = useMemo(
+    () => buildFieldStatus({ now, tasks, captures, projects, jobs, jobError, repoHealth, repoHealthError }),
+    [now, tasks, captures, projects, jobs, jobError, repoHealth, repoHealthError],
+  )
+
+  return <nav className="field-status" aria-label="Field status">
+    {slots.map((slot) => <button key={slot.id} type="button" onClick={() => onSelectView(slot.view)}>
+      <span className="field-status-label"><Signal tone={slot.tone} />{slot.label}</span>
+      <strong>{slot.value}</strong>
+      <small>{slot.detail}</small>
+    </button>)}
+  </nav>
+}
+
 // Today and next, IA information priority 3: chronological and grouped by day,
 // deliberately not a mini month grid. start_time is a free-text column, so an
 // unreadable time keeps its original text and is flagged rather than dropped.
@@ -569,7 +589,7 @@ function TodayAndNext({ events }) {
   </section>
 }
 
-function Horizon({ projects, tasks, now, captures, events, jobs, jobError, repoHealth, repoHealthError, onProjects, onOpenProject, onChooseNow, onUpdateTaskStatus, onCaptureIntoTask, onDismissCapture }) {
+function Horizon({ projects, tasks, now, captures, events, jobs, jobError, repoHealth, repoHealthError, onProjects, onOpenProject, onSelectView, onChooseNow, onUpdateTaskStatus, onCaptureIntoTask, onDismissCapture }) {
   const [capacity, setCapacity] = useState('Steady')
   const [picking, setPicking] = useState(false)
   const [pickTaskId, setPickTaskId] = useState('')
@@ -683,6 +703,8 @@ function Horizon({ projects, tasks, now, captures, events, jobs, jobError, repoH
         {inbox.length > 5 && <p className="capture-note">{inbox.length - 5} more waiting.</p>}
       </article>
     </section>
+
+    <FieldStatus now={now} tasks={tasks} captures={captures} projects={projects} jobs={jobs} jobError={jobError} repoHealth={repoHealth} repoHealthError={repoHealthError} onSelectView={onSelectView} />
   </>
 }
 
@@ -1653,7 +1675,7 @@ function App() {
           : activeView === 'Swift' ? <SwiftView watches={swiftWatch} collection={swiftCollection} events={swiftEvents} onAddCollectionItem={addSwiftCollectionItem} onUpdateCollectionStatus={updateSwiftCollectionStatus} onDeleteCollectionItem={deleteSwiftCollectionItem} onAddEvent={addSwiftEvent} onDeleteEvent={deleteSwiftEvent} />
           : activeView === 'Travel' ? <TravelView entries={travelWatch} onAdd={addTravelEntry} onDelete={deleteTravelEntry} />
           : activeView === 'War Room' ? <WarRoomView />
-          : <Horizon projects={projects} tasks={tasks} now={now} captures={captures} events={events} jobs={jobs} jobError={jobError} repoHealth={repoHealth} repoHealthError={repoHealthError} onProjects={() => setActiveView('Projects')} onOpenProject={openProject} onChooseNow={chooseNow} onUpdateTaskStatus={updateTaskStatus} onCaptureIntoTask={captureIntoTask} onDismissCapture={dismissCapture} />}
+          : <Horizon projects={projects} tasks={tasks} now={now} captures={captures} events={events} jobs={jobs} jobError={jobError} repoHealth={repoHealth} repoHealthError={repoHealthError} onProjects={() => setActiveView('Projects')} onOpenProject={openProject} onSelectView={setActiveView} onChooseNow={chooseNow} onUpdateTaskStatus={updateTaskStatus} onCaptureIntoTask={captureIntoTask} onDismissCapture={dismissCapture} />}
       </main>
     </div>
   </div>

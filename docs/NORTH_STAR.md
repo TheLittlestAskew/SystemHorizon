@@ -261,7 +261,7 @@ A 200 response from any tool is not verification. Re-read the actual state.
 | M4 | Home: Needs Attention aggregator (IA step 2) | Done (pending Taylor visual): `a9aae74`. 19 new tests (75 total). ⚠️ Placed as its own stacked section between the hero and the instrument grid, **not** as the IA's right-hand column beside Now: the hero is already a 2-column grid holding stage copy and the Now console, so the IA layout would mean restructuring a pre-existing design. Raised as Q12 |
 | M5 | Home: Today and Next timeline (IA step 3) | Done (pending Taylor visual): `f3139d3`. 17 new tests (92 total). ⚠️ `horizon_events` is **empty**, so this has never rendered with real data: add one event in Calendar before judging it, or Home will only ever show "Nothing scheduled ahead" |
 | M6 | Home: three ranked Active Work return points (IA step 4) | Done (pending Taylor visual): `3aa4099`. Ranking input answered 2026-09-27: **recency of activity**. 13 new tests (105 total). 🛑 **The input was broken before it was used** — the re-seed had stamped all 16 rows with one `last_activity`, so recency could not discriminate. Semantics fixed (DB default, client no longer writes it) and the tie is disclosed in the UI. ⚠️ **Nothing writes `last_activity` on real activity yet, so it stays tied: Q14** |
-| M7 | Home: field-status strip (IA step 5) | Not started |
+| M7 | Home: field-status strip (IA step 5) | Done (pending Taylor visual): `1ac7d17`. 16 new tests (121 total). Exercised against the real live state: No Now set / 12 active, 2 need attention / contacts this week / 2 flagged, 11 repos tracked |
 | M8 | Google Calendar one-way sync | Blocked: Taylor must create the Google OAuth client |
 | M9 | Handoff-aware task fields | Not started |
 | M10 | Horizon Task Digest (Septentrion side) | Not started |
@@ -549,6 +549,12 @@ Not blocking M5.
 3. **Commits, via Mirrors**: `horizon_repo_health.local_head_at` is real work. ⚠️ Two problems: it keys on `repo_name`, which would need a hand-maintained map to project names (`ashfall_vault` → `Ashfall Britannia`), and **the collector has not run since 2026-08-24**, so it is stale anyway.
 
 **Recommended: option 1, and only option 1 for now.** It is the smallest change, it uses data SH owns, and it degrades honestly. **Default action if you agree:** stamp `last_activity` on the parent project in `addTask` and `updateTaskStatus`. Not blocking M7.
+
+**Answered 2026-09-27: option 1. Done in `2452bc3`.** `touchProjectActivity(projectId)` updates only the parent project's `last_activity` after a task is added or its status changes, and updates local state so Home re-ranks without a reload. Options 2 and 3 were not built: option 2 measures bookkeeping, which is the category error `last_activity` just had, and option 3 needs a hand-maintained repo-name map plus a collector that has not run since 2026-08-24.
+
+✓ **Mechanism verified with a reversible probe**, not just unit tests: setting one project's `last_activity` to `now()` moved **Learn JavaScript (signal 30, the lowest)** to rank 1 ahead of **Sky Is The Limit (signal 91)**, proving recency overrides the signal tiebreak. Restored from a sibling row's value, leaving the table byte-identical (16 rows, `distinct last_activity = 1`, spread `00:00:00`).
+
+⚠️ **The client function itself is unexecuted** — it needs Taylor's session, and runs the first time she adds a task or changes one's status. Until then `horizon_tasks` is empty, so the ranking stays tied and Home keeps saying so.
 
 ---
 

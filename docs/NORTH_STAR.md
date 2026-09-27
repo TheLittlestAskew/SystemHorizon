@@ -260,7 +260,7 @@ A 200 response from any tool is not verification. Re-read the actual state.
 | M3 | Home: persistent Now + Capture (IA step 1) | Done: `830f2b6` (+ `8f9799c` migration filename fix). Taylor confirmed live 2026-09-26: Ctrl+K popover, Enter-saves, capture → Make task → Set as Now, and Now surviving a reload |
 | M4 | Home: Needs Attention aggregator (IA step 2) | Done (pending Taylor visual): `a9aae74`. 19 new tests (75 total). ⚠️ Placed as its own stacked section between the hero and the instrument grid, **not** as the IA's right-hand column beside Now: the hero is already a 2-column grid holding stage copy and the Now console, so the IA layout would mean restructuring a pre-existing design. Raised as Q12 |
 | M5 | Home: Today and Next timeline (IA step 3) | Done (pending Taylor visual): `f3139d3`. 17 new tests (92 total). ⚠️ `horizon_events` is **empty**, so this has never rendered with real data: add one event in Calendar before judging it, or Home will only ever show "Nothing scheduled ahead" |
-| M6 | Home: three ranked Active Work return points (IA step 4) | Not started |
+| M6 | Home: three ranked Active Work return points (IA step 4) | Done (pending Taylor visual): `3aa4099`. Ranking input answered 2026-09-27: **recency of activity**. 13 new tests (105 total). 🛑 **The input was broken before it was used** — the re-seed had stamped all 16 rows with one `last_activity`, so recency could not discriminate. Semantics fixed (DB default, client no longer writes it) and the tie is disclosed in the UI. ⚠️ **Nothing writes `last_activity` on real activity yet, so it stays tied: Q14** |
 | M7 | Home: field-status strip (IA step 5) | Not started |
 | M8 | Google Calendar one-way sync | Blocked: Taylor must create the Google OAuth client |
 | M9 | Handoff-aware task fields | Not started |
@@ -536,6 +536,19 @@ Not blocking M5.
 ⚠️ **M6 is the one to worry about.** Its ranking is explicitly judgment, Q7 already flags it, and it is RED until you pick the ranking inputs. **Recommended:** settle Q7 (either build the skill or formally replace it in section 8) **before M6**, not before M5, which is date handling rather than judgement.
 
 ✅ **Closed 2026-09-27: `evidence-audited-analysis` now exists** (see Q7), so M6 can use it as section 8 intends. M4 remains the one milestone that shipped without it. Its aggregator is pure functions with executable tests and per-alert evidence, so **re-running it under the skill is optional, not remedial** — worth doing only if M6's pass turns up a rule M4 should share. M6's real blocker is unchanged and was never this: Taylor still has to pick the ranking inputs.
+
+### Q14 · M6 · 2026-09-27
+**Recency of activity is now the ranking input, but nothing in System Horizon ever records activity.** `last_activity` is a plain column with a `now()` default on insert. Before 2026-09-27 the client overwrote it on every upsert, so the registry re-seed flattened all 16 rows to a single timestamp (`distinct last_activity = 1`, spread `00:00:00`). That is fixed: the column defaults in the database and the client no longer sends it, so a future re-seed will not flatten it again.
+
+**What is still missing is a writer.** Nothing updates `last_activity` after insert, so the existing 16 rows stay tied forever and the ranking falls back to `signal`. M6 discloses this honestly (`tiedOnActivity` → "Ordered by signal: no distinct activity is recorded yet"), but disclosure is not a fix.
+
+**The decision is what counts as "activity", and it is a judgment call, not a lookup:**
+
+1. **Task movement** (recommended): adding a task under a project, or changing its status, stamps that project's `last_activity`. Closest to "what am I actually working on", and SH already owns `horizon_tasks`. ⚠️ Depends on Taylor using tasks; `horizon_tasks` is currently empty, so recency stays tied until she does.
+2. **Any project edit**: stamp it whenever a project row is edited through the app. Simple, but it measures bookkeeping rather than work, which is the same category error `last_activity` just had.
+3. **Commits, via Mirrors**: `horizon_repo_health.local_head_at` is real work. ⚠️ Two problems: it keys on `repo_name`, which would need a hand-maintained map to project names (`ashfall_vault` → `Ashfall Britannia`), and **the collector has not run since 2026-08-24**, so it is stale anyway.
+
+**Recommended: option 1, and only option 1 for now.** It is the smallest change, it uses data SH owns, and it degrades honestly. **Default action if you agree:** stamp `last_activity` on the parent project in `addTask` and `updateTaskStatus`. Not blocking M7.
 
 ---
 

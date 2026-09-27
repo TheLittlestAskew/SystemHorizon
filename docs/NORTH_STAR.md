@@ -195,7 +195,7 @@ Taylor is not watching the terminal. She is reachable by phone.
 | `verified-done` | Before any "done", status update, or handoff |
 | `root-cause-first` | Any bug, failing gate, or unexpected output. Also after a fix that did not work |
 | `finish-the-turn` | Before asking any question or ending a turn |
-| `repo-handoff` + `AGENTS.md` | Every banked change. `AGENTS.md` wins where they differ (label `Claude Code`, update DO NEXT only when it truly changed) |
+| `handoff` + `AGENTS.md` | Every banked change. `AGENTS.md` wins where they differ (label `Claude Code`, update DO NEXT only when it truly changed) |
 | `delegation-protocol` | Milestones with independent parallel strands (see below) |
 | `cynosure` | Any UI or styling work |
 | `tufte` | Any chart, meter, sparkline, or status visualization |
@@ -259,7 +259,7 @@ A 200 response from any tool is not verification. Re-read the actual state.
 | M2 | Projects re-seed + round trip | Done: `766eb6e` (Taylor confirmed live 2026-09-26), re-seed run by Taylor 2026-09-26. 🛑 **M2's plan was unrunnable as written** — the seed button only rendered in the empty state and the table has 16 rows, so signing in gave the seed path no trigger; an always-available "Re-sync registry" button fixed that. **Data verified:** all 16 rows `match` the code registry on `area` and `parent_name`, 0 duplicate `(owner,name)` pairs, 0 phantom `Swift`, 0 broken parent links. Only the Projects-page visual check remains |
 | M3 | Home: persistent Now + Capture (IA step 1) | Done: `830f2b6` (+ `8f9799c` migration filename fix). Taylor confirmed live 2026-09-26: Ctrl+K popover, Enter-saves, capture → Make task → Set as Now, and Now surviving a reload |
 | M4 | Home: Needs Attention aggregator (IA step 2) | Done (pending Taylor visual): `a9aae74`. 19 new tests (75 total). ⚠️ Placed as its own stacked section between the hero and the instrument grid, **not** as the IA's right-hand column beside Now: the hero is already a 2-column grid holding stage copy and the Now console, so the IA layout would mean restructuring a pre-existing design. Raised as Q12 |
-| M5 | Home: Today and Next timeline (IA step 3) | Not started |
+| M5 | Home: Today and Next timeline (IA step 3) | Done (pending Taylor visual): `f3139d3`. 17 new tests (92 total). ⚠️ `horizon_events` is **empty**, so this has never rendered with real data: add one event in Calendar before judging it, or Home will only ever show "Nothing scheduled ahead" |
 | M6 | Home: three ranked Active Work return points (IA step 4) | Not started |
 | M7 | Home: field-status strip (IA step 5) | Not started |
 | M8 | Google Calendar one-way sync | Blocked: Taylor must create the Google OAuth client |
@@ -475,6 +475,10 @@ This matters because section 8 reads as a contract, so a session either silently
 
 **Recommended:** correct section 8 to name what exists (`repo-handoff` → `handoff`; `root-cause-first` → `superpowers:systematic-debugging`; `verified-done` → `verification-quality`), and either build the four with no equivalent (`minimal-diff`, `finish-the-turn`, `evidence-audited-analysis`, `lessons-ledger`) or drop them from the list. ⚠️ `evidence-audited-analysis` is the one with real consequences: M4 and M6 both require it for ranking and aggregation logic, so M6 in particular should not start until it exists or is formally replaced. Not blocking M1.
 
+✅ **Resolved 2026-09-27: all six now exist.** Verified on disk, each with a `SKILL.md`, at `~/.claude/skills/`: `minimal-diff`, `verified-done`, `root-cause-first`, `finish-the-turn`, `evidence-audited-analysis`, `lessons-ledger`. They appeared between the M4 and M5 sessions, so section 8's list is accurate as written and **no renaming is needed** for those six. `minimal-diff` and `verified-done` were both invoked during M5 and both changed the outcome (see the 2026-09-27 handoff entry).
+
+⚠️ **One correction still stands:** `repo-handoff` does **not** exist; the skill is named `handoff`. Section 8's row has been changed to say `handoff`, which is what every session has actually been using. **This unblocks M6** — `evidence-audited-analysis` exists now, so Q13's concern is closed and M6's only remaining blocker is Taylor picking the ranking inputs, which was always RED.
+
 ### Q8 · Process · 2026-09-24
 **The stale-skill hazard in Q5 has a second source, and Q5's fix does not cover it.** `~/.claude/skills/cynosure/references/brand-hooks.md` carries this line under "Active brands":
 
@@ -530,6 +534,8 @@ Not blocking M5.
 **What was done instead:** every rule is a pure function with an executable test, the ordering is total and input-order independent (asserted), and each alert states its own evidence in words rather than asserting a conclusion. That is the substance the skill is for, but it was self-directed, not the mandated procedure.
 
 ⚠️ **M6 is the one to worry about.** Its ranking is explicitly judgment, Q7 already flags it, and it is RED until you pick the ranking inputs. **Recommended:** settle Q7 (either build the skill or formally replace it in section 8) **before M6**, not before M5, which is date handling rather than judgement.
+
+✅ **Closed 2026-09-27: `evidence-audited-analysis` now exists** (see Q7), so M6 can use it as section 8 intends. M4 remains the one milestone that shipped without it. Its aggregator is pure functions with executable tests and per-alert evidence, so **re-running it under the skill is optional, not remedial** — worth doing only if M6's pass turns up a rule M4 should share. M6's real blocker is unchanged and was never this: Taylor still has to pick the ranking inputs.
 
 ---
 

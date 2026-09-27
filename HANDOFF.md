@@ -5,7 +5,9 @@
 
 ## ▶ DO NEXT
 
-> 🆕 **2026-09-26 (latest): M0 through M4 are `Done`. Next is M5, the Today and Next timeline.** Taylor confirmed M1/M2/M3 live, so gate item 8 is closed on all three and nothing is pending her eyes except **M4's new Needs Attention stack**, which she has not seen yet. **M4 shipped** (`a9aae74`): `src/needsAttention.js` aggregates Career + Mirrors into at most 5 alerts with explicit reasons and dates, 75/75 tests. It also **moved** the GA DOL maths, `A_RATED_STATUS`/`UNREPORTED_STATUS` and `repoStatusFlags` out of `App.jsx` so Career, Mirrors and Home share one definition. 🛑 **Two things to know:** the **mirror-freshness collector has not run since 2026-08-24**, so every repo flag is a month stale and M4 now raises that as its own alert rather than presenting stale flags as current; and **`dashboard_jobs` is in a Supabase project neither MCP server can reach**, so M4's Career half is fixture-tested only and has never been seen against real job rows. **Two open decisions from M4:** **Q12** (Needs Attention sits under the hero, not in the IA's right-hand column, because the hero is already a 2-column grid) and **Q13** (`evidence-audited-analysis` still does not exist; ⚠️ settle Q7 before **M6**, whose ranking is explicitly judgement). For M5: `horizon_events.start_time`/`end_time` are free-form `text` and retyping them is RED (Q2), so parse defensively and surface parse failures.
+> 🆕 **2026-09-27 (latest): M0 through M5 are `Done`. Next is M6, and it must NOT be built yet.** 🛑 **M6 is RED**: section 10 says propose the ranking inputs in Open Questions and wait for Taylor to pick, so the next session drafts options and stops. **M5 shipped** (`f3139d3`): `src/timeline.js` groups upcoming `horizon_events` by day, parses the free-text `start_time` forgivingly ("10:00 AM", "10 AM", "14:30" all work) and flags anything unreadable rather than hiding it; 92/92 tests. ⚠️ **Three of Home's five modules have never met real data** — `horizon_events` and `horizon_tasks` are both empty and `dashboard_jobs` is unreachable from this machine. **Add one event in Calendar and one task in Flow before judging Home**, or the empty states are all that render and a glance proves nothing. ✅ **Q7 resolved**: the six missing skills now exist, `minimal-diff` and `verified-done` both changed M5's outcome, and **Q13/M6's skill blocker is closed** (`evidence-audited-analysis` exists). ⚠️ **Noted, not fixed** (`minimal-diff` says separate change): `CalendarView` at `App.jsx:737` sorts times with `localeCompare` on raw strings, so "9:00 AM" sorts after "10:00 AM"; `compareEvents` in `src/timeline.js` is the fix.
+>
+> 🆕 **2026-09-26: M0 through M4 are `Done`. Next is M5, the Today and Next timeline.** Taylor confirmed M1/M2/M3 live, so gate item 8 is closed on all three and nothing is pending her eyes except **M4's new Needs Attention stack**, which she has not seen yet. **M4 shipped** (`a9aae74`): `src/needsAttention.js` aggregates Career + Mirrors into at most 5 alerts with explicit reasons and dates, 75/75 tests. It also **moved** the GA DOL maths, `A_RATED_STATUS`/`UNREPORTED_STATUS` and `repoStatusFlags` out of `App.jsx` so Career, Mirrors and Home share one definition. 🛑 **Two things to know:** the **mirror-freshness collector has not run since 2026-08-24**, so every repo flag is a month stale and M4 now raises that as its own alert rather than presenting stale flags as current; and **`dashboard_jobs` is in a Supabase project neither MCP server can reach**, so M4's Career half is fixture-tested only and has never been seen against real job rows. **Two open decisions from M4:** **Q12** (Needs Attention sits under the hero, not in the IA's right-hand column, because the hero is already a 2-column grid) and **Q13** (`evidence-audited-analysis` still does not exist; ⚠️ settle Q7 before **M6**, whose ranking is explicitly judgement). For M5: `horizon_events.start_time`/`end_time` are free-form `text` and retyping them is RED (Q2), so parse defensively and surface parse failures.
 >
 > 🆕 **2026-09-26: M0–M3 are all `Done`, and only one visual check is left across the three.** ✅ **M2's data is fixed and verified** — Taylor clicked the new "Re-sync registry" button (`766eb6e`) and all 16 `horizon_projects` rows now `match` the code registry on `area` and `parent_name`: 0 duplicates, 0 phantom `Swift`, 0 broken parent links, areas exactly `AREA_ORDER` (Ops & Infra 2, Aftermath 3, Undercroft 4, Sidequests 3, Career 3, Learning 1). 🛑 M2's written plan was unrunnable — the seed path had **no reachable trigger** with 16 rows present, so "blocked on Taylor's login" was the wrong diagnosis for three days. ✅ **M3 shipped** (`830f2b6`): `horizon_capture` + `horizon_now`, Capture moved to a header control on Ctrl/Cmd+K, instrument 04 became the routing inbox, 56/56 tests, and all five illegal-write cases proven rejected live. **The one thing left is a UI look-over** of the capture popover, the Now picker, and the Projects area cards — the tooling cannot do it, because the `chrome-devtools` CLI only sees browsers **it** launched and Taylor works in her own Chrome. Next buildable milestone is **M4, Needs Attention**. Q11 answered 2026-09-25: commits here end with `NEXT:` and carry **no** `Co-Authored-By:` trailer.
 >
@@ -59,6 +61,17 @@ Standing repo notes:
 
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
+
+### 2026-09-27 10:40 ET · Claude Code
+- **Changed:** Ran **M5, the Home Today and Next timeline**. New `src/timeline.js` groups upcoming `horizon_events` by day as a short chronological list, rendered beside Needs Attention in a new `.home-queues` two-column grid that collapses to one at 1000px. `src/timeline.test.mjs` adds 17 tests.
+- **Verification:** ✓ `npm run lint` clean, `npm test` **92/92** (was 75), `npm run build` succeeded, all after the final edit. ✓ Grep: all 8 new selectors present in **both** `App.jsx` and `App.css`; no `horizonDays` leftovers. ✓ Deploy run for `f3139d3` polled to `conclusion: success`. ✓ **Exercised the real code path**, not just unit tests: ran `buildTimeline` over rows shaped by `eventFromRow` and printed what `TodayAndNext` would render, which also asserts every field the component destructures exists. Output was correct end to end, including `9:00 AM` sorting before `10:00 AM` and `14:30` rendering as `2:30 PM`.
+- **🛑 The component has never been rendered, and a casual look will not verify it.** `horizon_events` holds **0 rows**, so Home currently shows only "Nothing scheduled ahead". ▶ **Add one event in Calendar before judging this milestone**, otherwise the empty state is the only thing on screen and glancing at it proves nothing. The logic is thoroughly tested; the React render and CSS are **unverified**.
+- **Time parsing is deliberately forgiving because the column is not.** `start_time` is free-form `text` fed by a plain text input (`App.jsx`, placeholder "10:00 AM"), and retyping the column is RED until Q2. So `"10:00 AM"`, `"10 AM"`, `"10a.m."` and `"14:30"` all parse and render normalized, midnight and noon are kept distinct, and anything else keeps its original text with an "unreadable time" badge rather than being hidden. Within a day: all-day first, then by time, then unreadable last.
+- **⚠️ Found a real pre-existing bug and did not fix it.** `CalendarView`'s upcoming list (`App.jsx:737`) sorts with `(a.startTime||'').localeCompare(...)` on raw strings, so **"9:00 AM" sorts after "10:00 AM"**. `minimal-diff` is explicit that a nearby fix belongs in its own change, so it is noted here instead of bundled. `compareEvents` in `src/timeline.js` is the drop-in fix. A test in `timeline.test.mjs` asserts the broken string comparison as a precondition, so the bug is documented executably.
+- **✅ Q7 is resolved, and it changed how this session ran.** All six skills Q7 reported missing now exist on disk with a `SKILL.md`: `minimal-diff`, `verified-done`, `root-cause-first`, `finish-the-turn`, `evidence-audited-analysis`, `lessons-ledger`. Two were invoked and **both changed the outcome**: `minimal-diff` stopped the CalendarView fix from being bundled in **and** caught that my own new `horizonDays` parameter was a hypothetical future that would have *hidden* a genuinely-next event, so it was removed; `verified-done` stopped a "the feature works" claim that no tool result supported, which is what prompted the exercise script. `repo-handoff` still does not exist, so section 8's row now reads `handoff`. **Q13 is closed and M6 is unblocked** on the skill; its remaining blocker is Taylor picking the ranking inputs, which was always RED.
+- **Commit:** `f3139d3` · this handoff
+- **Next:** M6, three ranked Active Work return points. 🛑 **Do not start building it.** Section 10 says propose the ranking inputs in Open Questions **before** building, and it is RED until Taylor picks. Draft the options, then stop.
+- **Watch out:** ⚠️ Both `horizon_events` and `horizon_tasks` are empty and `dashboard_jobs` is unreachable from here, so **three of Home's five modules have never met real data**. The Home page is far better tested than it is proven. ⚠️ `buildTimeline` calls `new Date()` internally and `TodayAndNext` memoizes on `events` alone, so an open tab will not relabel "Today" when the clock passes midnight. Harmless for a tab that gets reloaded; worth knowing before anyone debugs a stale label.
 
 ### 2026-09-26 16:05 ET · Claude Code
 - **Changed:** Closed gate item 8 on **M1, M2 and M3** (Taylor confirmed all of it live: nav, area cards, Ctrl+K capture, capture → Make task → Set as Now, Now surviving a reload), then ran **M4, the Home Needs Attention aggregator**. New `src/needsAttention.js` turns Career (`dashboard_jobs`) and Mirrors (`horizon_repo_health`) into at most five alerts, each with an explicit reason and date. Rendered as a hairline-separated stacked section under the hero. Also **moved** the GA DOL week maths, `A_RATED_STATUS`/`UNREPORTED_STATUS` and `repoStatusFlags` out of `App.jsx` into that module, because Career, Mirrors and Home now all need the same rules and the IA data rules forbid a second source of truth.
@@ -299,40 +312,4 @@ Standing repo notes:
 - **Watch out:** nothing new; dark-module work is fully closed unless a
   fresh visual direction comes up.
 
-### 2026-08-31 18:32 ET · Claude chat
-- **Changed:** Phase 2 of the visual-direction audit (see prior entry for
-  Phase 1). Extended the light-canvas/dark-module hybrid pattern to the
-  four views that had no unique treatment:
-  - `FlowView` (App.jsx): the Active column gets a conditional
-    `flow-column-active` class; App.css darkens it to match the urgency
-    semantic already used by Horizon's time-instrument.
-  - `MirrorsView` (App.jsx): computes `flaggedCount` and renders a new
-    `.mirrors-summary` panel above the repo list.
-  - Archive: CSS-only, `.archive-feed .archive-entry:first-child` — no
-    JSX change needed since entries are already sorted newest-first in
-    the component.
-  - `TravelView` (App.jsx): was missing `.travel-view { padding-top:44px; }`
-    entirely — every other view has this, Travel didn't. Also restructured
-    the trip-group render into two passes (build `{tripName, sorted,
-    lowestCents, first, departIn}` objects, then sort by soonest
-    departure) so the soonest-departing trip can get a `travel-soonest`
-    highlight. Directly useful for the PAX Unplugged Dec 3-6 booking
-    decision — the highlighted trip is whichever one needs a decision
-    soonest.
-- **Verified before push:** CSS brace count balanced (586/586), each new
-  selector confirmed present exactly once. JSX verified with
-  `@babel/parser` (sourceType module, jsx plugin) — parses clean, grep
-  confirmed each new class name appears exactly once. **Re-fetched both
-  files after push and diffed byte-for-byte against the intended local
-  copies before calling it done** — the discipline picked up from the
-  Phase 1 mistake earlier this session.
-- **Commit:** `0d1099a` (App.css), `137c1ac` (App.jsx)
-- **Next:** Visual-verify on `sh.tayloraritchie.com` — see DO NEXT. Nothing
-  in this session has actually been seen live; everything is verified by
-  static analysis (brace/selector counts, babel parse, byte diffs) only.
-- **Watch out:** the `.mirrors-summary` and `.travel-soonest` treatments
-  are new UI surface, not just recolors — worth a closer look than a
-  glance to confirm the copy and layout read the way they're supposed to
-  with real data, not just that they don't crash.
-
-> Older entries archived to `handoff-archive/2026-07.md`, `handoff-archive/2026-08.md` - everything before 2026-08-31 18:32 ET.
+> Older entries archived to `handoff-archive/2026-07.md`, `handoff-archive/2026-08.md` - everything before 2026-09-01 09:00 ET.

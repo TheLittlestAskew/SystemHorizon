@@ -1467,10 +1467,23 @@ function App() {
     })
   }
 
+  // The only thing that records project activity (Q14, answered 2026-09-27:
+  // task movement counts, bookkeeping does not). Home's Active Work ranking
+  // reads last_activity, so without this it stays permanently tied.
+  async function touchProjectActivity(projectId) {
+    if (!projectId) return
+    const stamp = new Date().toISOString()
+    const { error } = await supabase.from('horizon_projects').update({ last_activity: stamp }).eq('id', projectId)
+    if (error) { setDatabaseError(error.message || 'Could not record project activity.'); return }
+    setProjects((current) => current.map((project) => project.id === projectId ? { ...project, lastActivity: stamp } : project))
+  }
+
   async function addTask(task) {
     const { data, error } = await supabase.from('horizon_tasks').insert(taskToRow(task)).select().single()
     if (error) { setDatabaseError(error.message || 'Could not save the task.'); return }
-    setTasks((current) => [taskFromRow(data), ...current])
+    const saved = taskFromRow(data)
+    setTasks((current) => [saved, ...current])
+    await touchProjectActivity(saved.projectId)
   }
 
   async function updateTaskStatus(id, status) {
@@ -1479,6 +1492,7 @@ function App() {
     if (error) { setDatabaseError(error.message || 'Could not update the task.'); return }
     const saved = taskFromRow(data)
     setTasks((current) => current.map((task) => task.id === id ? saved : task))
+    await touchProjectActivity(saved.projectId)
   }
 
   async function deleteTask(id) {

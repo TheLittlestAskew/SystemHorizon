@@ -5,6 +5,7 @@ import { navGroups, navUtilityItems, defaultOpenNavGroups } from './navConfig'
 import { captureBodyError, captureFromRow, captureToRow, nowFromRow, nowToRow, pendingCaptures, resolveNow, routeCapturePatch } from './homeState'
 import { A_RATED_STATUS, SEVERITY, UNREPORTED_STATUS, buildNeedsAttention, gdolWeekEnding, gdolWeekWindow, inGdolWindow, repoStatusFlags, shiftDays } from './needsAttention'
 import { buildTimeline } from './timeline'
+import { rankActiveWork } from './activeWork'
 import WarRoomView from './WarRoomView'
 import './App.css'
 
@@ -74,7 +75,10 @@ function projectFromRow(row) {
 }
 
 function projectToRow(project) {
-  return { name: project.name, description: project.summary, area: project.area, parent_name: project.parentName ?? null, status: project.status, kind: project.kind, health: project.health, metric_value: project.metric, next_action: project.nextAction, notes: project.details, signal: project.signal, last_activity: new Date().toISOString() }
+  // last_activity is omitted on purpose. It defaults to now() on insert, and
+  // leaving it out of the payload means re-running the registry seed no longer
+  // overwrites every row with the same timestamp, which is what flattened it.
+  return { name: project.name, description: project.summary, area: project.area, parent_name: project.parentName ?? null, status: project.status, kind: project.kind, health: project.health, metric_value: project.metric, next_action: project.nextAction, notes: project.details, signal: project.signal }
 }
 
 function taskFromRow(row) {
@@ -565,12 +569,13 @@ function TodayAndNext({ events }) {
   </section>
 }
 
-function Horizon({ projects, tasks, now, captures, events, jobs, jobError, repoHealth, repoHealthError, onProjects, onChooseNow, onUpdateTaskStatus, onCaptureIntoTask, onDismissCapture }) {
+function Horizon({ projects, tasks, now, captures, events, jobs, jobError, repoHealth, repoHealthError, onProjects, onOpenProject, onChooseNow, onUpdateTaskStatus, onCaptureIntoTask, onDismissCapture }) {
   const [capacity, setCapacity] = useState('Steady')
   const [picking, setPicking] = useState(false)
   const [pickTaskId, setPickTaskId] = useState('')
   const [pickNote, setPickNote] = useState('')
 
+  const activeWork = useMemo(() => rankActiveWork({ projects, tasks }), [projects, tasks])
   const resolved = resolveNow(now, tasks)
   const inbox = pendingCaptures(captures)
   const choosable = tasks.filter((task) => task.status !== 'Done')
@@ -649,10 +654,20 @@ function Horizon({ projects, tasks, now, captures, events, jobs, jobError, repoH
       </article>
 
       <article className="instrument project-instrument">
-        <div className="instrument-heading"><span>Project radar</span><button type="button" onClick={onProjects}>Open registry</button></div>
-        <div className="project-radar-list">
-          {projects.map((project) => <button key={project.id} type="button" onClick={onProjects}><Signal tone={project.tone} /><span>{project.name}</span><small>{project.status}</small><i style={{ '--signal': `${project.signal}%` }} /></button>)}
-        </div>
+        <div className="instrument-heading"><span>Active work</span><button type="button" onClick={onProjects}>Open registry</button></div>
+        {activeWork.items.length === 0
+          ? <p className="active-work-note">No active projects in the registry.</p>
+          : <ol className="active-work-list">
+            {activeWork.items.map((item) => <li key={item.id}>
+              <button type="button" onClick={() => onOpenProject(item.id)}>
+                <span className="active-work-head"><Signal tone={item.tone} /><strong>{item.name}</strong><small>{item.health}</small></span>
+                <span className="active-work-return">{item.returnPoint}</span>
+              </button>
+            </li>)}
+          </ol>}
+        {activeWork.tiedOnActivity
+          ? <p className="active-work-note">Ordered by signal: no distinct activity is recorded yet, so recency cannot separate these {activeWork.candidateCount} active projects.</p>
+          : activeWork.hidden > 0 && <p className="active-work-note">{activeWork.hidden} more active in the registry.</p>}
       </article>
 
       <article className="instrument capture-instrument">
@@ -1624,7 +1639,7 @@ function App() {
           : activeView === 'Swift' ? <SwiftView watches={swiftWatch} collection={swiftCollection} events={swiftEvents} onAddCollectionItem={addSwiftCollectionItem} onUpdateCollectionStatus={updateSwiftCollectionStatus} onDeleteCollectionItem={deleteSwiftCollectionItem} onAddEvent={addSwiftEvent} onDeleteEvent={deleteSwiftEvent} />
           : activeView === 'Travel' ? <TravelView entries={travelWatch} onAdd={addTravelEntry} onDelete={deleteTravelEntry} />
           : activeView === 'War Room' ? <WarRoomView />
-          : <Horizon projects={projects} tasks={tasks} now={now} captures={captures} events={events} jobs={jobs} jobError={jobError} repoHealth={repoHealth} repoHealthError={repoHealthError} onProjects={() => setActiveView('Projects')} onChooseNow={chooseNow} onUpdateTaskStatus={updateTaskStatus} onCaptureIntoTask={captureIntoTask} onDismissCapture={dismissCapture} />}
+          : <Horizon projects={projects} tasks={tasks} now={now} captures={captures} events={events} jobs={jobs} jobError={jobError} repoHealth={repoHealth} repoHealthError={repoHealthError} onProjects={() => setActiveView('Projects')} onOpenProject={openProject} onChooseNow={chooseNow} onUpdateTaskStatus={updateTaskStatus} onCaptureIntoTask={captureIntoTask} onDismissCapture={dismissCapture} />}
       </main>
     </div>
   </div>

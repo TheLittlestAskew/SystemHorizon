@@ -163,3 +163,29 @@ test('addDays crosses month and year boundaries', () => {
   assert.equal(addDays('2026-12-31', 1), '2027-01-01')
   assert.equal(addDays('2026-01-01', -1), '2025-12-31')
 })
+
+// The Calendar Agenda list used `localeCompare` on the raw start_time text,
+// which sorts "10:00 AM" before "9:00 AM". These pin the bug closed now that
+// CalendarView sorts with compareEvents.
+test('compareEvents orders single-digit hours before double-digit ones', () => {
+  const nine = { id: 'a', date: '2026-09-29', startTime: '9:00 AM', title: 'Nine' }
+  const ten = { id: 'b', date: '2026-09-29', startTime: '10:00 AM', title: 'Ten' }
+  assert.equal(compareEvents(nine, ten) < 0, true, '9 AM comes before 10 AM')
+  assert.equal(compareEvents(ten, nine) > 0, true, 'and the reverse holds')
+  assert.equal('9:00 AM'.localeCompare('10:00 AM') > 0, true, 'the old comparator got this wrong')
+})
+
+test('compareEvents sorts a full day into real chronological order', () => {
+  const day = [
+    { id: '1', date: '2026-09-29', startTime: '10:00 AM', title: 'Ten' },
+    { id: '2', date: '2026-09-29', startTime: '9:00 AM', title: 'Nine' },
+    { id: '3', date: '2026-09-29', startTime: '', title: 'All day' },
+    { id: '4', date: '2026-09-29', startTime: '2:30 PM', title: 'Afternoon' },
+    { id: '5', date: '2026-09-29', startTime: 'whenever', title: 'Unreadable' },
+    { id: '6', date: '2026-09-28', startTime: '11:00 PM', title: 'Yesterday' },
+  ]
+  assert.deepEqual(
+    [...day].sort(compareEvents).map((event) => event.title),
+    ['Yesterday', 'All day', 'Nine', 'Ten', 'Afternoon', 'Unreadable'],
+  )
+})

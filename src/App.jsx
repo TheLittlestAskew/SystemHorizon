@@ -4,7 +4,7 @@ import { jobPipeline } from './jobPipeline'
 import { navGroups, navUtilityItems, defaultOpenNavGroups } from './navConfig'
 import { captureBodyError, captureFromRow, captureToRow, nowFromRow, nowToRow, pendingCaptures, resolveNow, routeCapturePatch } from './homeState'
 import { A_RATED_STATUS, SEVERITY, UNREPORTED_STATUS, buildNeedsAttention, gdolWeekEnding, gdolWeekWindow, inGdolWindow, repoStatusFlags, shiftDays } from './needsAttention'
-import { buildTimeline } from './timeline'
+import { buildTimeline, compareEvents } from './timeline'
 import { rankActiveWork } from './activeWork'
 import { buildFieldStatus } from './fieldStatus'
 import WarRoomView from './WarRoomView'
@@ -769,9 +769,12 @@ function CalendarView({ events, projects, tasks, onAddEvent, onDeleteEvent, onUp
   const projectName = (id) => projects.find((project) => project.id === id)?.name
   const todayKey = new Date().toISOString().slice(0, 10)
 
+  // compareEvents parses the free-text start_time into minutes. A raw
+  // localeCompare put "10:00 AM" before "9:00 AM", which is the wrong order in
+  // a list whose whole job is to be chronological.
   const upcomingEvents = [...events]
     .filter((event) => event.date >= todayKey)
-    .sort((a, b) => a.date === b.date ? (a.startTime || '').localeCompare(b.startTime || '') : (a.date < b.date ? -1 : 1))
+    .sort(compareEvents)
   const eventGroups = []
   for (const event of upcomingEvents) {
     const last = eventGroups[eventGroups.length - 1]

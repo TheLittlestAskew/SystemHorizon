@@ -5,6 +5,7 @@ import { navGroups, navUtilityItems, defaultOpenNavGroups } from './navConfig'
 import { captureBodyError, captureFromRow, captureToRow, nowFromRow, nowToRow, pendingCaptures, resolveNow, routeCapturePatch } from './homeState'
 import { A_RATED_STATUS, SEVERITY, UNREPORTED_STATUS, buildNeedsAttention, gdolWeekEnding, gdolWeekWindow, inGdolWindow, repoStatusFlags, shiftDays } from './needsAttention'
 import { buildTimeline, compareEvents } from './timeline'
+import { ARCHIVE_REPOS, groupArchiveByDate, parseHandoffEntries } from './archive'
 import { rankActiveWork } from './activeWork'
 import { buildFieldStatus } from './fieldStatus'
 import WarRoomView from './WarRoomView'
@@ -995,25 +996,11 @@ function CalendarView({ events, projects, tasks, onAddEvent, onDeleteEvent, onUp
   </section>
 }
 
-const ARCHIVE_REPOS = ['SystemHorizon', 'ashfall_vault', 'rectrixcaedere', 'taylorritchie', 'sitl_vault', 'pacts_power_vault']
-
-function parseHandoffEntries(markdown, repo) {
-  const blocks = markdown.split(/\n### /).slice(1)
-  return blocks.map((block) => {
-    const [headerLine, ...rest] = block.split('\n')
-    const body = rest.join('\n')
-    const headerMatch = headerLine.match(/^(\S+\s+\S+\s+\S+)\s*·\s*(.+)$/)
-    const timestamp = headerMatch ? headerMatch[1] : headerLine.trim()
-    const source = headerMatch ? headerMatch[2].trim() : ''
-    const changedMatch = body.match(/\*\*Changed:\*\*\s*([\s\S]*?)(?:\n- \*\*|\n\n|$)/)
-    const summary = (changedMatch ? changedMatch[1] : body).replace(/\s+/g, ' ').trim().slice(0, 240)
-    return { repo, timestamp, source, summary }
-  })
-}
-
 function ArchiveView() {
   const [entries, setEntries] = useState([])
+  const [failures, setFailures] = useState([])
   const [status, setStatus] = useState('loading')
+  const [repoFilter, setRepoFilter] = useState('All')
 
   useEffect(() => {
     let cancelled = false
@@ -1026,21 +1013,47 @@ function ArchiveView() {
       if (cancelled) return
       const merged = results.flatMap((result) => result.status === 'fulfilled' ? result.value : [])
       merged.sort((a, b) => (a.timestamp < b.timestamp ? 1 : -1))
+      // A repo that could not be read is named. Dropping the rejections made an
+      // unreachable repo indistinguishable from one with no entries.
+      setFailures(results.flatMap((result, index) =>
+        result.status === 'rejected' ? [{ repo: ARCHIVE_REPOS[index], message: result.reason?.message ?? 'fetch failed' }] : []))
       setEntries(merged.slice(0, 40))
       setStatus(merged.length ? 'ready' : 'empty')
     })
     return () => { cancelled = true }
   }, [])
 
+  const reposWithEntries = Array.from(new Set(entries.map((entry) => entry.repo))).sort()
+  const visible = repoFilter === 'All' ? entries : entries.filter((entry) => entry.repo === repoFilter)
+  const groups = groupArchiveByDate(visible)
+
   return <section className="archive-view" aria-labelledby="archive-heading">
-    <header className="view-header"><div><p className="eyebrow">System index / 07</p><h2 id="archive-heading">Archive field</h2><p>Live pull of the most recent HANDOFF.md entries from every repo with handoff enabled.</p></div></header>
+    <header className="view-header">
+      <div>
+        <p className="eyebrow">System index / 07</p>
+        <h2 id="archive-heading">Archive field</h2>
+        <p>Live pull of the most recent HANDOFF.md entries from every repo with handoff enabled.</p>
+      </div>
+    </header>
+
     {status === 'loading' && <p className="empty-state">Pulling repo handoffs…</p>}
     {status === 'empty' && <p className="database-error" role="alert">Could not read any HANDOFF.md files. Check network access to raw.githubusercontent.com.</p>}
+    {failures.map((failure) => <p className="database-error" role="alert" key={failure.repo}>{failure.repo} could not be read: {failure.message}</p>)}
+
+    {reposWithEntries.length > 1 && <div className="registry-controls archive-controls" role="group" aria-label="Filter handoffs by repo">
+      {['All', ...reposWithEntries].map((option) =>
+        <button className={repoFilter === option ? 'selected' : ''} key={option} type="button" onClick={() => setRepoFilter(option)}>{option}</button>)}
+    </div>}
+
     <div className="archive-feed">
-      {entries.map((entry, index) => <article className="archive-entry" key={`${entry.repo}-${index}`}>
-        <div className="archive-entry-meta"><b>{entry.repo}</b><span>{entry.timestamp}</span>{entry.source ? <span>{entry.source}</span> : null}</div>
-        <p>{entry.summary}</p>
-      </article>)}
+      {groups.map((group) => <div className="archive-date-group" key={group.date}>
+        <div className="archive-date-heading">{group.date}</div>
+        {group.items.map((entry, index) => <article className="archive-entry" key={`${entry.repo}-${group.date}-${index}`}>
+          <div className="archive-entry-meta"><b>{entry.repo}</b><span>{entry.timestamp}</span>{entry.source ? <span>{entry.source}</span> : null}</div>
+          <p>{entry.summary}</p>
+        </article>)}
+      </div>)}
+      {status === 'ready' && visible.length === 0 && <p className="empty-state">No handoff entries from {repoFilter}.</p>}
     </div>
   </section>
 }

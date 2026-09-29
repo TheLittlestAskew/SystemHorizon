@@ -429,9 +429,12 @@ function ProjectDetailView({ project, tasks, onBack, onAddTask, onUpdateTaskStat
 
 // The pipeline can hold hundreds of rows and loadJobPipeline fetches all of
 // them, so an uncapped list turns Career into a wall under the two panels that
-// actually carry a decision. Whatever the cap cuts is stated in words: a silent
-// truncation reads as "that is all of them", which is the same failure as a
-// silent fallback.
+// actually carry a decision.
+//
+// 25 is the calm default, not a ceiling: the remainder is stated in words and
+// reachable in one click. A hard cap would have been lossy here — the tracker
+// has hundreds of rows and a single status ("Applied") already runs past 25, so
+// even a filtered view would have hidden real work behind nothing.
 const PIPELINE_LIMIT = 25
 
 function safeJobUrl(url) {
@@ -462,6 +465,7 @@ function JobRow({ job }) {
 
 function CareerView({ jobs, jobError }) {
   const [statusFilter, setStatusFilter] = useState('All')
+  const [showAll, setShowAll] = useState(false)
   const now = new Date()
   const weekEnding = gdolWeekEnding(now)
   const thisWeek = gdolWeekWindow(weekEnding)
@@ -480,8 +484,15 @@ function CareerView({ jobs, jobError }) {
   // pipeline starts using cannot become unreachable here.
   const statusOptions = ['All', ...Array.from(new Set(jobs.map((job) => job.status).filter(Boolean))).sort()]
   const filtered = statusFilter === 'All' ? jobs : jobs.filter((job) => job.status === statusFilter)
-  const shown = filtered.slice(0, PIPELINE_LIMIT)
+  const shown = showAll ? filtered : filtered.slice(0, PIPELINE_LIMIT)
   const hidden = filtered.length - shown.length
+
+  // Each filter starts collapsed. Without this, expanding "Applied" and then
+  // clicking back to "All" would dump every row in the tracker on screen.
+  function chooseStatus(option) {
+    setStatusFilter(option)
+    setShowAll(false)
+  }
 
   return <section className="career-view" aria-labelledby="career-heading">
     <header className="view-header">
@@ -530,11 +541,16 @@ function CareerView({ jobs, jobError }) {
           </div>
           {jobs.length > 0 && <div className="registry-controls career-pipeline-controls" role="group" aria-label="Filter pipeline by status">
             {statusOptions.map((option) =>
-              <button className={statusFilter === option ? 'selected' : ''} key={option} type="button" onClick={() => setStatusFilter(option)}>{option}</button>)}
+              <button className={statusFilter === option ? 'selected' : ''} key={option} type="button" onClick={() => chooseStatus(option)}>{option}</button>)}
           </div>}
           {shown.map((job) => <JobRow job={job} key={job.id} />)}
-          {hidden > 0 && <p className="empty-state">
-            {hidden} more {statusFilter === 'All' ? 'in the pipeline' : `with status ${statusFilter}`} not shown. Narrow the filter to see them.
+          {hidden > 0 && <p className="pipeline-more">
+            <button type="button" onClick={() => setShowAll(true)}>Show all {filtered.length}</button>
+            <span>{hidden} more {statusFilter === 'All' ? 'in the pipeline' : `with status ${statusFilter}`} not shown.</span>
+          </p>}
+          {showAll && filtered.length > PIPELINE_LIMIT && <p className="pipeline-more">
+            <button type="button" onClick={() => setShowAll(false)}>Show first {PIPELINE_LIMIT}</button>
+            <span>Showing all {filtered.length}.</span>
           </p>}
           {jobs.length === 0 && <p className="empty-state">No jobs are currently visible in the pipeline.</p>}
           {jobs.length > 0 && filtered.length === 0 && <p className="empty-state">No jobs with status {statusFilter}.</p>}

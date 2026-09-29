@@ -528,6 +528,12 @@ The repo's own history is unanimous the other way: `ac3ccf7`, `d93270f`, `8f4b1e
 
 Not blocking M5.
 
+**Answered 2026-09-29: keep it where it is, and the right-hand column is superseded.** Taylor is adding an **expandable right-side panel** to the app shell, and notifications are one of the things intended to live in it. So the IA's "right alert stack" is not a hero-grid problem to solve; it is a shell-level surface that does not exist yet.
+
+▶ **Consequence for whoever builds that panel:** do **not** move `NeedsAttention` into it by reflex. The aggregator in `src/needsAttention.js` is a pure function returning at most 5 alerts with a reason and a date, and the component only renders its output — so the same data can feed a panel without the Home section moving. Whether Home *keeps* its stacked section once the panel exists is a separate call, and a RED one, because removing a pre-existing section is a deletion under section 6.
+
+⚠️ The panel itself is **not specified anywhere yet** — no milestone, no acceptance criteria, no decision on what else it holds. It is not in the section 10 queue and must not be started as a side effect of another milestone. Q12 is closed; the panel is a new conversation.
+
 ### Q13 · Process · 2026-09-26
 **M4 shipped without `evidence-audited-analysis`, which section 8 mandates for "any ranking, aggregation, or 'the data shows' logic".** Q7 established that the skill does not exist on this machine; section 8 names it specifically for Needs Attention and the M6 ranking. M4 is aggregation, so it fell squarely in scope.
 

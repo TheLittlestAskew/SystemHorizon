@@ -5,7 +5,7 @@ import { navGroups, navUtilityItems, defaultOpenNavGroups } from './navConfig'
 import { captureBodyError, captureFromRow, captureToRow, nowFromRow, nowToRow, pendingCaptures, resolveNow, routeCapturePatch } from './homeState'
 import { A_RATED_STATUS, SEVERITY, UNREPORTED_STATUS, buildNeedsAttention, gdolWeekEnding, gdolWeekWindow, inGdolWindow, repoStatusFlags, shiftDays } from './needsAttention'
 import { buildTimeline, compareEvents } from './timeline'
-import { ARCHIVE_REPOS, groupArchiveByDate, parseHandoffEntries } from './archive'
+import { ARCHIVE_REPOS, filterArchive, parseHandoffEntries, sortArchive } from './archive'
 import { rankActiveWork } from './activeWork'
 import { buildFieldStatus } from './fieldStatus'
 import WarRoomView from './WarRoomView'
@@ -463,6 +463,18 @@ function JobRow({ job }) {
   </article>
 }
 
+// A raw "permission denied for view dashboard_jobs" tells Taylor nothing about
+// what to do, and the obvious fix is the wrong one. Diagnosed 2026-09-29:
+// dashboard_jobs grants SELECT to authenticated / postgres / service_role but
+// NOT anon, and src/jobPipeline.js connects as anon with persistSession false,
+// so SH never authenticates against that project. Granting anon is NOT the fix:
+// the view has security_invoker unset, so it runs as its owner and bypasses
+// job_applications' RLS, and the anon key is checked into this public repo.
+function jobPipelineHelp(message) {
+  if (!/permission denied/i.test(message ?? '')) return null
+  return 'System Horizon reads this pipeline as `anon`, and `dashboard_jobs` only grants access to signed-in roles. Granting `anon` is not the fix: that view bypasses row security and this repo is public, so it would publish the whole job search. Career stays read-only until SH can authenticate against that project.'
+}
+
 function CareerView({ jobs, jobError }) {
   const [statusFilter, setStatusFilter] = useState('All')
   const [showAll, setShowAll] = useState(false)
@@ -503,7 +515,10 @@ function CareerView({ jobs, jobError }) {
       </div>
     </header>
 
-    {jobError ? <p className="database-error" role="alert">Job pipeline error: {jobError}</p> : <>
+    {jobError ? <div className="database-error" role="alert">
+      <p>Job pipeline error: {jobError}</p>
+      {jobPipelineHelp(jobError) ? <p className="database-error-help">{jobPipelineHelp(jobError)}</p> : null}
+    </div> : <>
       {unreportedLastWeek > 0 && <p className="database-error" role="alert">
         {unreportedLastWeek} work-search contact{unreportedLastWeek === 1 ? '' : 's'} from last week still {unreportedLastWeek === 1 ? 'needs' : 'need'} to be reported to GA DOL.
       </p>}
@@ -1017,31 +1032,54 @@ function ArchiveView() {
   const [failures, setFailures] = useState([])
   const [status, setStatus] = useState('loading')
   const [repoFilter, setRepoFilter] = useState('All')
+  const [toolFilter, setToolFilter] = useState('All')
+  const [query, setQuery] = useState('')
+  const [sortKey, setSortKey] = useState('timestamp')
+  const [sortDir, setSortDir] = useState('desc')
+  const [expandedId, setExpandedId] = useState(null)
 
   useEffect(() => {
     let cancelled = false
     Promise.allSettled(ARCHIVE_REPOS.map((repo) =>
       fetch(`https://raw.githubusercontent.com/TheLittlestAskew/${repo}/main/HANDOFF.md`).then((response) => {
-        if (!response.ok) throw new Error(`${repo}: HTTP ${response.status}`)
+        if (!response.ok) throw new Error(`HTTP ${response.status}`)
         return response.text()
       }).then((text) => parseHandoffEntries(text, repo))
     )).then((results) => {
       if (cancelled) return
       const merged = results.flatMap((result) => result.status === 'fulfilled' ? result.value : [])
-      merged.sort((a, b) => (a.timestamp < b.timestamp ? 1 : -1))
       // A repo that could not be read is named. Dropping the rejections made an
       // unreachable repo indistinguishable from one with no entries.
       setFailures(results.flatMap((result, index) =>
         result.status === 'rejected' ? [{ repo: ARCHIVE_REPOS[index], message: result.reason?.message ?? 'fetch failed' }] : []))
-      setEntries(merged.slice(0, 40))
+      // No cap. The old 40 predated search and made history unreachable; the real
+      // bound is each repo's live log, which AGENTS.md holds at 15 entries, so
+      // this tops out near 6 x 15. Sorting is the table's job, not this effect's.
+      setEntries(merged)
       setStatus(merged.length ? 'ready' : 'empty')
     })
     return () => { cancelled = true }
   }, [])
 
   const reposWithEntries = Array.from(new Set(entries.map((entry) => entry.repo))).sort()
-  const visible = repoFilter === 'All' ? entries : entries.filter((entry) => entry.repo === repoFilter)
-  const groups = groupArchiveByDate(visible)
+  const toolsWithEntries = Array.from(new Set(entries.map((entry) => entry.source || 'Unlabelled'))).sort()
+  const visible = sortArchive(filterArchive(entries, { repo: repoFilter, source: toolFilter, query }), sortKey, sortDir)
+
+  function toggleSort(key) {
+    // Same column flips direction; a new column starts newest/A-Z first, which
+    // is descending for dates and ascending for names.
+    if (key === sortKey) setSortDir((current) => current === 'asc' ? 'desc' : 'asc')
+    else { setSortKey(key); setSortDir(key === 'timestamp' ? 'desc' : 'asc') }
+  }
+
+  function sortHeader(key, label) {
+    const active = sortKey === key
+    return <th scope="col" aria-sort={active ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+      <button type="button" onClick={() => toggleSort(key)} className={active ? 'is-sorted' : ''}>
+        {label}<i aria-hidden="true">{active ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}</i>
+      </button>
+    </th>
+  }
 
   return <section className="archive-view" aria-labelledby="archive-heading">
     <header className="view-header">
@@ -1056,21 +1094,60 @@ function ArchiveView() {
     {status === 'empty' && <p className="database-error" role="alert">Could not read any HANDOFF.md files. Check network access to raw.githubusercontent.com.</p>}
     {failures.map((failure) => <p className="database-error" role="alert" key={failure.repo}>{failure.repo} could not be read: {failure.message}</p>)}
 
-    {reposWithEntries.length > 1 && <div className="registry-controls archive-controls" role="group" aria-label="Filter handoffs by repo">
-      {['All', ...reposWithEntries].map((option) =>
-        <button className={repoFilter === option ? 'selected' : ''} key={option} type="button" onClick={() => setRepoFilter(option)}>{option}</button>)}
-    </div>}
+    {status === 'ready' && <>
+      <div className="archive-toolbar">
+        <label className="archive-search">
+          <span>Search</span>
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Filter by repo, tool, date, or text" />
+        </label>
+        <p className="archive-count">{visible.length} of {entries.length}</p>
+      </div>
 
-    <div className="archive-feed">
-      {groups.map((group) => <div className="archive-date-group" key={group.date}>
-        <div className="archive-date-heading">{group.date}</div>
-        {group.items.map((entry, index) => <article className="archive-entry" key={`${entry.repo}-${group.date}-${index}`}>
-          <div className="archive-entry-meta"><b>{entry.repo}</b><span>{entry.timestamp}</span>{entry.source ? <span>{entry.source}</span> : null}</div>
-          <p>{entry.summary}</p>
-        </article>)}
-      </div>)}
-      {status === 'ready' && visible.length === 0 && <p className="empty-state">No handoff entries from {repoFilter}.</p>}
-    </div>
+      {reposWithEntries.length > 1 && <div className="registry-controls archive-controls" role="group" aria-label="Filter handoffs by repo">
+        {['All', ...reposWithEntries].map((option) =>
+          <button className={repoFilter === option ? 'selected' : ''} key={option} type="button" onClick={() => setRepoFilter(option)}>{option}</button>)}
+      </div>}
+
+      {toolsWithEntries.length > 1 && <div className="registry-controls archive-controls" role="group" aria-label="Filter handoffs by tool">
+        {['All', ...toolsWithEntries].map((option) =>
+          <button className={toolFilter === option ? 'selected' : ''} key={option} type="button" onClick={() => setToolFilter(option)}>{option}</button>)}
+      </div>}
+
+      <div className="archive-table-scroll">
+        <table className="archive-table">
+          <thead>
+            <tr>
+              {sortHeader('timestamp', 'When')}
+              {sortHeader('repo', 'Repo')}
+              {sortHeader('source', 'Tool')}
+              <th scope="col">Changed</th>
+            </tr>
+          </thead>
+          <tbody>
+            {visible.map((entry) => {
+              const open = expandedId === entry.id
+              // Summaries run to 240 characters, which defeats the density a
+              // table is for. Truncate, and let a click open the full text.
+              const clipped = entry.summary.length > 110
+              return <tr key={entry.id} className={open ? 'is-open' : ''}>
+                <td className="archive-when">{entry.timestamp || '—'}</td>
+                <td className="archive-repo">{entry.repo}</td>
+                <td className="archive-tool">{entry.source || 'Unlabelled'}</td>
+                <td className="archive-summary">
+                  {clipped
+                    ? <button type="button" aria-expanded={open} onClick={() => setExpandedId(open ? null : entry.id)}>
+                      {open ? entry.summary : `${entry.summary.slice(0, 110).trimEnd()}…`}
+                    </button>
+                    : entry.summary || <em>no Changed line</em>}
+                  {entry.detail && <small className="archive-detail">{entry.detail}</small>}
+                </td>
+              </tr>
+            })}
+          </tbody>
+        </table>
+        {visible.length === 0 && <p className="empty-state">Nothing matches that filter.</p>}
+      </div>
+    </>}
   </section>
 }
 

@@ -189,3 +189,14 @@ test('compareEvents sorts a full day into real chronological order', () => {
     ['Yesterday', 'All day', 'Nine', 'Ten', 'Afternoon', 'Unreadable'],
   )
 })
+
+// "12:30pm" is the spelling Taylor actually typed into the Calendar box on
+// 2026-09-29 (horizon_events 19fd30f0). No space, lowercase, no periods, and
+// it lands on the noon boundary where a naive 12-hour conversion goes wrong.
+test('parseEventTime reads the real-world "12:30pm" spelling', () => {
+  assert.equal(parseEventTime('12:30pm').minutes, 12 * 60 + 30)
+  assert.equal(parseEventTime('12:30pm').display, '12:30 PM')
+  assert.equal(parseEventTime('12:30pm').unparsed, false)
+  assert.equal(parseEventTime('12:30am').minutes, 30, 'the same spelling at midnight')
+  assert.equal(parseEventTime('12:30am').display, '12:30 AM')
+})

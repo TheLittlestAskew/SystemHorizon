@@ -68,6 +68,13 @@ Standing repo notes:
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
 
+### 2026-09-29 19:15 ET · Claude Code
+- **Changed:** Taylor confirmed the Archive table renders live (61 of 61 rows, 5 tool buckets, the `sitl_vault` 404 showing as a named error row). Fixed the half of her complaint the table had not answered: the rows now scroll **inside** `calc(100dvh - 300px)` so search and filters stay on screen, the **When / Repo / Tool headers are sticky** with an opaque background, and the two pill rows are labelled **Repo** and **Tool** — both begin with an "All" pill and read as one duplicated control without labels. 153 tests.
+- **Commit:** `c25cd97`
+- **Next:** Unchanged. See the block above this log.
+- **Watch out:** ✓ **The descending sort was verified against all 61 live rows, not eyeballed** — a scan for any row whose date exceeds the row above it returned **zero violations**. A screenshot reading suggested an out-of-order row; re-running the real comparator showed the row was `2026-09-20`, not `2026-09-28`. ▶ Do not "fix" a sort from a low-resolution screenshot; re-run the comparator over the real data first.
+- **Watch out:** ⚠️ **Two dev servers were live on this repo at once** (Taylor's on 5173, a leftover of mine on 5178), and a `pkill -f` that reported success had not actually stopped 5178. The stray was confirmed stopped by PID. When "the page has not updated", check **which** server the browser is on and whether the deployed site is being looked at instead — `main` is still `3b8e0a0` and carries none of this.
+
 ### 2026-09-29 18:40 ET · Claude Code
 - **Changed:** Taylor rejected the Archive card feed ("too much, too much scrolling"), so it is now a **sortable, filterable table**: When / Repo / Tool sort headers, repo + tool filter pills, a text search over every visible field, click-to-expand summaries, and no 40-entry cap. Career's raw permission error is now explained in the UI. Removed with what replaced them: `groupArchiveByDate`, `archiveDateOf`, and the `.archive-feed` / `.archive-entry` CSS. **153 tests**, up from 135.
 - **Commit:** `35dc298`
@@ -218,17 +225,5 @@ Standing repo notes:
 - **Commit:** `844f75f`
 - **Next:** Build the Google Calendar → SH sync — see DO NEXT above.
 - **Watch out:** ⚠️ Two `execute_sql`/`push_files` calls silently timed out mid-session ("No approval received" / no response from the local MCP server) before working on retry — if a Supabase or GitHub write call hangs, don't assume it partially landed; re-read the actual state before retrying. ⚠️ Left alone, on purpose: the `showcase`/`campaigns`/`moments` schema (not part of this audit's scope) and the missing `CHECK` constraints on the Swift tables' `status`/`category`/`kind` columns (enum values are client-side only in `App.jsx`) — flagged, not fixed, needs its own sign-off.
-
-### 2026-09-10 02:34 ET · Codex (System Horizon and Septentrion task/handoff architecture audit)
-- **Changed:** No application code, live Supabase data, or scheduled automation changed. Banked a read-only audit of the current System Horizon repo and replaced the return point with the agreed implementation order.
-  - **Reuse, do not rebuild:** `src/App.jsx` already has project registration, `horizon_tasks` CRUD, Flow statuses (`Active`, `Waiting`, `Parked`, `Done`), events, and a Mirrors signal for repositories with an unbanked handoff. The Archive view is an existing read-only `HANDOFF.md` reader. The Septentrion vault already owns the local collector pattern for mirror freshness, Swiftwatch, and travel watch. SH should display and own task state, not duplicate those collectors or create another persistence layer.
-  - **Confirmed foundation gap:** Checked-in migrations define `horizon_projects` and legacy career tracking, but not the live tables the modern app expects for tasks, events, repository health, Swiftwatch, or travel. Those tables may be present in Supabase, but their schema and owner-scoped RLS are not reproducible from this repository. This is now the first implementation gate: audit the live contract read-only, reconcile it into source control, then make any task changes.
-  - **Handoff boundary:** Routine SH task changes must not write repository `HANDOFF.md` files. SH can label a task as a handoff candidate; a real implementation session promotes it only when work has actually been committed and pushed. Septentrion should receive a separate generated, read-only Horizon Task Digest, never an overwrite of Handoff, Return Point, or Ephemeris.
-  - **Integration boundary:** An Obsidian embed is optional convenience, not integration. Cloudflare Access and framing restrictions may make it fragile, and a hosted SH app should not write to a local Obsidian API. Prefer an ordinary link plus the generated digest. Obsidian Bases over existing Ephemeris can proceed independently; wait for a stable digest schema before making a SH-connected Base.
-  - **Legacy warning:** `meridian-keystone.html` and the `push-status-to-systemhorizon.ps1` heartbeat point at a different Supabase project/table from the modern Vite app. Do not retarget or merge those paths based on naming alone.
-- **Verification:** ✓ Working tree was clean before this documentation change. ✓ Reviewed `AGENTS.md`, current `HANDOFF.md`, `TOOLS.md`, `package.json`, current `src/App.jsx` data mappers/loaders, checked-in migrations, mirror-freshness pointers, and deployment workflow. ✓ No live database call, UI action, scheduler change, or production deployment was performed, so the handoff distinguishes repository evidence from unverified live state.
-- **Commit:** Pending
-- **Next:** Read-only live data-contract and RLS audit first. Then reconcile the schema into the repo before any task-state, digest, Base, or embed work. The Projects visual verification remains next after that audit; see the DO NEXT block above.
-- **Watch out:** ⚠️ Quick Capture is currently browser-memory state and vanishes on reload. It is not a durable intake path yet. ⚠️ The Archive view has a hard-coded repo list and assumes `main`; treat it as a reader to extend later, not an authoritative registry. ⚠️ Prior handoff reports `horizon_projects` as 0 rows, but that is not freshly live-verified in this session.
 
 > Older entries archived to `handoff-archive/2026-09.md`.

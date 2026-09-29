@@ -5,7 +5,9 @@
 
 ## ▶ DO NEXT
 
-> 🆕 **2026-09-27 (latest): the whole Home page is built. M0 through M7 are `Done`, and every IA step 1 to 6 now exists.** Home reads, top to bottom: Now + Capture (M3), Needs Attention and Today & Next side by side (M4, M5), Active Work + capacity + capture inbox (M6), and the field-status strip (M7). **121/121 tests.** ✅ **Q14 answered and done** (`2452bc3`): task movement stamps the parent project's `last_activity`, which is the writer M6's recency ranking was missing; verified with a reversible probe that moved the lowest-signal project to rank 1 on recency alone. **Next is M9, handoff-aware task fields** — M8 stays **Blocked** until Taylor creates the Google OAuth client, though its GREEN prep (Phase 0 research plus the exact console steps for her) is available and would unblock her half. 🛑 **Nothing on Home has had a visual check since M3.** M4, M5, M6 and M7 are all `Done (pending Taylor visual)`. ⚠️ **And most of it still has no real data**: `horizon_tasks`, `horizon_events` and `horizon_capture` are all empty, so **add one task, one event and one capture** and the page will finally show its real behaviour instead of four honest empty states.
+> 🆕 **2026-09-29 (latest): a v1 layout pass is sitting unmerged on `sh-layout-v1`. It is NOT on `main` and NOT deployed.** Taylor asked for a preliminary usable layout on every section that exists today. The audit's answer was that **8 of 11 views already had one** — Horizon, Projects, Project detail, Flow, Mirrors, Swift, Travel and War Room each already have a clear header, one primary region and a deliberate secondary grid — so only **3** were changed: **Calendar** (`3192cc9`, Agenda sorted `"10:00 AM"` before `"9:00 AM"`; now uses `compareEvents`), **Career** (`3af5404`, the pipeline rendered every row with no cap — now 25 with a status filter and a spoken remainder), and **Archive** (`7aafe57`, a flat wall of 40 cards that silently swallowed failed repo fetches — now grouped by date, filterable by repo, and failures are named). **134/134 tests**, lint clean, build green. New: `SH_LAYOUT_PLAN.md` (inventory + report), `PARKING_LOT.md` (47 parked ideas), `src/archive.js` + tests. 🛑 **Nothing has been seen rendered** — `chrome-devtools-mcp` failed to attach for the third session running, so **the next step is Taylor opening Career and Archive on `npm run dev`**. Five decisions are batched at the end of `SH_LAYOUT_PLAN.md`; the two that shape the code are the **25-row cap** and **date-vs-repo grouping in Archive**, both one-line switches. ⚠️ **This branch does not touch the milestone queue.** M8 is still Blocked on the Google OAuth client and **M9, handoff-aware task fields, is still the next main-quest milestone** — start it from `main`, not from this branch.
+>
+> 🆕 **2026-09-27: the whole Home page is built. M0 through M7 are `Done`, and every IA step 1 to 6 now exists.** Home reads, top to bottom: Now + Capture (M3), Needs Attention and Today & Next side by side (M4, M5), Active Work + capacity + capture inbox (M6), and the field-status strip (M7). **121/121 tests.** ✅ **Q14 answered and done** (`2452bc3`): task movement stamps the parent project's `last_activity`, which is the writer M6's recency ranking was missing; verified with a reversible probe that moved the lowest-signal project to rank 1 on recency alone. **Next is M9, handoff-aware task fields** — M8 stays **Blocked** until Taylor creates the Google OAuth client, though its GREEN prep (Phase 0 research plus the exact console steps for her) is available and would unblock her half. 🛑 **Nothing on Home has had a visual check since M3.** M4, M5, M6 and M7 are all `Done (pending Taylor visual)`. ⚠️ **And most of it still has no real data**: `horizon_tasks`, `horizon_events` and `horizon_capture` are all empty, so **add one task, one event and one capture** and the page will finally show its real behaviour instead of four honest empty states.
 >
 > 🆕 **2026-09-27: M0 through M6 are `Done`. Next is M7, the Home field-status strip.** **M6 shipped** (`3aa4099`) after Taylor chose **recency of activity** as the ranking input: `src/activeWork.js` returns exactly three Active projects with name, return point and health signal, and the all-project "Project radar" is gone. 105/105 tests. 🛑 **The ranking input was broken before it was used** — the re-seed had stamped all 16 rows with one `last_activity` (`distinct = 1`, spread `00:00:00`), because the client wrote that column on every upsert. Semantics fixed (DB `now()` default, client no longer sends it), and because the existing rows are still tied the card honestly reads "Ordered by signal: no distinct activity is recorded yet". Ranking was reproduced two independent ways (SQL `row_number()` and the JS ranker agree): **Sky Is The Limit, Swiftwatch, System Horizon**. ⚠️ **Q14 is the open one**: nothing ever writes `last_activity`, so recency stays tied until something does, and what counts as "activity" is Taylor's call (recommendation: stamp the parent project on task add / status change). ⚠️ Still true: `horizon_events` and `horizon_tasks` are empty and `dashboard_jobs` is unreachable here, so **most of Home has never met real data** — add one event and one task before judging it.
 >
@@ -65,6 +67,45 @@ Standing repo notes:
 
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
+
+### 2026-09-29 19:15 ET · Claude Code
+- **Changed:** Taylor confirmed the Archive table renders live (61 of 61 rows, 5 tool buckets, the `sitl_vault` 404 showing as a named error row). Fixed the half of her complaint the table had not answered: the rows now scroll **inside** `calc(100dvh - 300px)` so search and filters stay on screen, the **When / Repo / Tool headers are sticky** with an opaque background, and the two pill rows are labelled **Repo** and **Tool** — both begin with an "All" pill and read as one duplicated control without labels. 153 tests.
+- **Commit:** `c25cd97`
+- **Next:** Unchanged. See the block above this log.
+- **Watch out:** ✓ **The descending sort was verified against all 61 live rows, not eyeballed** — a scan for any row whose date exceeds the row above it returned **zero violations**. A screenshot reading suggested an out-of-order row; re-running the real comparator showed the row was `2026-09-20`, not `2026-09-28`. ▶ Do not "fix" a sort from a low-resolution screenshot; re-run the comparator over the real data first.
+- **Watch out:** ⚠️ **Two dev servers were live on this repo at once** (Taylor's on 5173, a leftover of mine on 5178), and a `pkill -f` that reported success had not actually stopped 5178. The stray was confirmed stopped by PID. When "the page has not updated", check **which** server the browser is on and whether the deployed site is being looked at instead — `main` is still `3b8e0a0` and carries none of this.
+
+### 2026-09-29 18:40 ET · Claude Code
+- **Changed:** Taylor rejected the Archive card feed ("too much, too much scrolling"), so it is now a **sortable, filterable table**: When / Repo / Tool sort headers, repo + tool filter pills, a text search over every visible field, click-to-expand summaries, and no 40-entry cap. Career's raw permission error is now explained in the UI. Removed with what replaced them: `groupArchiveByDate`, `archiveDateOf`, and the `.archive-feed` / `.archive-entry` CSS. **153 tests**, up from 135.
+- **Commit:** `35dc298`
+- **Next:** Unchanged. See the block above this log.
+- **Watch out:** 🛑 **Career has almost certainly never worked live, and the obvious fix is the wrong one.** Diagnosed against `vtrtyagltwdrbastpppl` on 2026-09-29: `dashboard_jobs` grants SELECT to `authenticated` / `postgres` / `service_role` but **not `anon`**, while `src/jobPipeline.js` connects as `anon` with `persistSession: false` and never signs in to that project. ⚠️ **Do not `grant select ... to anon`.** The view has `security_invoker` **unset**, so it runs as its owner and **bypasses `job_applications`' RLS**, and the anon key is checked into this **public** repo — the grant would publish the entire job search. The real fix is SH authenticating against that project, which is a new milestone, not a permission change.
+- **Watch out:** 🛑 **The claim that "`dashboard_jobs` is in a Supabase project neither MCP server can reach" is WRONG** and has been repeated since the 2026-09-26 entry. **`supabase-cutter` reaches `vtrtyagltwdrbastpppl` fine** — it is the same project as `Rectrix_Caedere`, which that server has always owned. Four sessions treated Career as undiagnosable because of a label assumption. ▶ Resolve Supabase servers by **project id**, never by what the server is called.
+- **Watch out:** ⚠️ **`sitl_vault` returns 404 from the GitHub API at the repo level**, not just for `HANDOFF.md`, which for an unauthenticated request means private or renamed. **Inference, not confirmed:** the 2026-09-28 privacy incident (S25 medical details) is the likely cause. Archive now names the failure instead of silently dropping it, so it shows as a visible error row. Removing it from `ARCHIVE_REPOS` is Taylor's call, not a cleanup.
+- **Watch out:** ▶ **Running the parser against the real `HANDOFF.md` files found three defects that reading the code did not**: 31 distinct "tools" instead of 5, non-log h3 headings parsed as entries (ashfall_vault's "Standing work order" outsorted every real entry because "S" beats "2"), and undated headers keeping raw text as the timestamp so they sorted first. All three are fixed and pinned by tests built from the real strings. **Exercise the parser against production text before trusting a table built on it.**
+
+### 2026-09-29 17:50 ET · Claude Code
+- **Changed:** Taylor added the first two rows to `horizon_events`, so the Calendar and Home's Today-and-Next met real data for the first time. Ran `src/timeline.js` against both rows through `eventFromRow`'s exact mapping: `"12:30pm"` parses to 750 minutes / "12:30 PM", the null-time row reads All day and sorts first, and `buildTimeline` groups both under **Today [is-today]** with 0 unparsed. Added a test pinning the `"12:30pm"` spelling and its `12:30am` counterpart. 135 tests.
+- **Commit:** `a1fc157`
+- **Next:** Unchanged. See the block above this log.
+- **Watch out:** 🛑 **These two events do NOT demonstrate the M5/Calendar sort fix.** Run against the old `localeCompare` comparator they produce the **identical** order, because one is all-day and the other is the only timed event. The fix is proven by unit tests (`compareEvents orders single-digit hours before double-digit ones`), not by this data. Demonstrating it live needs **two timed events on the same day where one is a single-digit hour and one is double-digit** — e.g. 9:00 AM and 10:00 AM. Do not cite these two rows as evidence the bug is gone.
+- **Watch out:** ⚠️ The free-text box accepts `"12:30pm"`, `"12:30 PM"`, `"7:05 p.m."` and `"14:30"` as the same instant, so `horizon_events` is already accumulating several spellings of one time. `parseEventTime` normalizes all of them for display, but the stored text stays as typed — which is the cost `NORTH_STAR.md` Q2 is about.
+
+### 2026-09-29 17:25 ET · Claude Code
+- **Changed:** Answered Taylor's five decisions from `SH_LAYOUT_PLAN.md`. **Career's 25-row cap is no longer a ceiling** — "Show all N" reveals the rest and "Show first 25" collapses it, with the status filter resetting to collapsed so clicking back to All cannot dump the whole tracker on screen. A hard cap was lossy: the tracker holds hundreds of rows and "Applied" alone already runs past 25. **`NORTH_STAR.md` Q12 answered and closed.** Archive needed no change: the repo is still named in bold as the first element of every entry (`App.jsx:1052`), so the date spine added grouping without costing identification. 134/134 tests, lint clean, build green.
+- **Commit:** `bc80700`
+- **Next:** Unchanged. See the block above this log.
+- **Watch out:** 🛑 **Q12 closed in a direction that creates a trap.** Taylor is adding an **expandable right-side panel** to the shell, with notifications as one tenant, which supersedes the IA's right-hand alert column. Whoever builds it must not reflexively move `NeedsAttention` into it: `src/needsAttention.js` is a pure function, so the panel can consume the same data without the Home section moving, and **removing the Home section is a deletion under section 6, so it is RED.** ⚠️ The panel has **no milestone, no acceptance criteria, and no spec** — it is not in the section 10 queue and must not be started as a side effect of another milestone.
+- **Watch out:** ⚠️ **M8 is still blocked and Google Calendar is still not connected.** Confirmed with Taylor 2026-09-29: "add an event" means the **SH Calendar** view writing to `horizon_events`, not her Gmail calendar. Nothing in the app reads Google yet.
+
+### 2026-09-29 16:40 ET · Claude Code
+- **Changed:** v1 layout pass on branch `sh-layout-v1` (**not merged, not on `main`**). Audited all 11 views; found **8 already have a usable layout** and changed only the 3 that did not. Calendar Agenda now sorts with `compareEvents` instead of `localeCompare` on raw text (`"10:00 AM"` no longer beats `"9:00 AM"`). Career's pipeline list is bounded at 25 with a status filter and a spoken remainder count, and `JobRow` is extracted. Archive groups by date, filters by repo, and **names the repos whose fetch failed** instead of dropping them; its logic moved to `src/archive.js`. Added `SH_LAYOUT_PLAN.md` and `PARKING_LOT.md` (47 parked ideas, 5 of which would need a schema change). **134/134 tests**, up from 121.
+- **Commit:** `3b2070d` (branch tip; section commits `3192cc9`, `3af5404`, `7aafe57`)
+- **Friction:** gen-fail — `chrome-devtools-mcp` failed to attach for the **third** consecutive session, identically: *"The browser is already running for `~/.cache/chrome-devtools-mcp/chrome-profile`"*, on both `navigate_page` and `new_page` with `isolatedContext`. Fell back to curling the Vite dev server for every changed module (all HTTP 200, zero transform errors, `App.jsx` resolves `from "/src/archive.js"`), which proves the module graph but **not** that anything renders correctly. `TOOLS.md` now says to reach for the CLI row first rather than second.
+- **Next:** Taylor runs `npm run dev`, signs in, and looks at Career and Archive — they are the two sections that changed shape.
+- **Watch out:** 🛑 **The task brief for this session instructed following the `systemhorizon-build` skill's hard rules.** That skill was retired 2026-09-25 (Q5) and two of its four rules are now actively wrong here — "pre-compile Babel" is moot under Vite, and "no import/export in the JSX" contradicts `App.jsx`'s own `export default`. `NORTH_STAR.md` section 4 was followed instead. The retired skill's rules are still circulating in prompts even though the skill itself no longer loads; section 0's "ignore this source" line only helps someone who already opened this repo.
+- **Watch out:** ⚠️ **Commit `3af5404`'s body overstates one thing.** It claims the old A-rated markup showed `"null% match"` because it lacked a `typeof` guard. The guard was genuinely missing, but `aRated`'s own filter (`App.jsx:475`) already required `typeof job.match_percent === 'number'`, so the path was unreachable. The extraction is still right; the justification was not. Not amended — the commit stands, corrected here per `AGENTS.md`.
+- **Watch out:** ⚠️ **Nothing in this pass has been seen rendered.** All three changed sections are `Done (pending Taylor visual)`. `horizon_events` is still **0 rows**, so the Calendar sort fix has no real data to prove itself against, and `dashboard_jobs` is unreachable from this machine, so Career's cap and filter have never met real job rows.
 
 ### 2026-09-27 15:05 ET · Claude Code
 - **Changed:** Settled **Q14** then ran **M7, the Home field-status strip**. Q14 (`2452bc3`): `touchProjectActivity` stamps the parent project's `last_activity` after a task is added or its status changes, updating only that one row plus local state, which is the writer M6's recency ranking was missing. M7 (`1ac7d17`): new `src/fieldStatus.js` builds exactly four slots, **Horizon | Projects | Career | System**, each carrying a decision and linking into its area; rendered as a thin strip at the foot of Home that collapses to 2 columns at 680px. `src/fieldStatus.test.mjs` adds 16 tests.
@@ -185,120 +226,4 @@ Standing repo notes:
 - **Next:** Build the Google Calendar → SH sync — see DO NEXT above.
 - **Watch out:** ⚠️ Two `execute_sql`/`push_files` calls silently timed out mid-session ("No approval received" / no response from the local MCP server) before working on retry — if a Supabase or GitHub write call hangs, don't assume it partially landed; re-read the actual state before retrying. ⚠️ Left alone, on purpose: the `showcase`/`campaigns`/`moments` schema (not part of this audit's scope) and the missing `CHECK` constraints on the Swift tables' `status`/`category`/`kind` columns (enum values are client-side only in `App.jsx`) — flagged, not fixed, needs its own sign-off.
 
-### 2026-09-10 02:34 ET · Codex (System Horizon and Septentrion task/handoff architecture audit)
-- **Changed:** No application code, live Supabase data, or scheduled automation changed. Banked a read-only audit of the current System Horizon repo and replaced the return point with the agreed implementation order.
-  - **Reuse, do not rebuild:** `src/App.jsx` already has project registration, `horizon_tasks` CRUD, Flow statuses (`Active`, `Waiting`, `Parked`, `Done`), events, and a Mirrors signal for repositories with an unbanked handoff. The Archive view is an existing read-only `HANDOFF.md` reader. The Septentrion vault already owns the local collector pattern for mirror freshness, Swiftwatch, and travel watch. SH should display and own task state, not duplicate those collectors or create another persistence layer.
-  - **Confirmed foundation gap:** Checked-in migrations define `horizon_projects` and legacy career tracking, but not the live tables the modern app expects for tasks, events, repository health, Swiftwatch, or travel. Those tables may be present in Supabase, but their schema and owner-scoped RLS are not reproducible from this repository. This is now the first implementation gate: audit the live contract read-only, reconcile it into source control, then make any task changes.
-  - **Handoff boundary:** Routine SH task changes must not write repository `HANDOFF.md` files. SH can label a task as a handoff candidate; a real implementation session promotes it only when work has actually been committed and pushed. Septentrion should receive a separate generated, read-only Horizon Task Digest, never an overwrite of Handoff, Return Point, or Ephemeris.
-  - **Integration boundary:** An Obsidian embed is optional convenience, not integration. Cloudflare Access and framing restrictions may make it fragile, and a hosted SH app should not write to a local Obsidian API. Prefer an ordinary link plus the generated digest. Obsidian Bases over existing Ephemeris can proceed independently; wait for a stable digest schema before making a SH-connected Base.
-  - **Legacy warning:** `meridian-keystone.html` and the `push-status-to-systemhorizon.ps1` heartbeat point at a different Supabase project/table from the modern Vite app. Do not retarget or merge those paths based on naming alone.
-- **Verification:** ✓ Working tree was clean before this documentation change. ✓ Reviewed `AGENTS.md`, current `HANDOFF.md`, `TOOLS.md`, `package.json`, current `src/App.jsx` data mappers/loaders, checked-in migrations, mirror-freshness pointers, and deployment workflow. ✓ No live database call, UI action, scheduler change, or production deployment was performed, so the handoff distinguishes repository evidence from unverified live state.
-- **Commit:** Pending
-- **Next:** Read-only live data-contract and RLS audit first. Then reconcile the schema into the repo before any task-state, digest, Base, or embed work. The Projects visual verification remains next after that audit; see the DO NEXT block above.
-- **Watch out:** ⚠️ Quick Capture is currently browser-memory state and vanishes on reload. It is not a durable intake path yet. ⚠️ The Archive view has a hard-coded repo list and assumes `main`; treat it as a reader to extend later, not an authoritative registry. ⚠️ Prior handoff reports `horizon_projects` as 0 rows, but that is not freshly live-verified in this session.
-
-### 2026-09-03 19:57 ET · Claude Code (26-commit divergence reconciled; TOOLS.md re-verified against the real tree)
-- **Changed:** This clone had been sitting **ahead 2, behind 26** — the whole Projects redesign, Calendar, full-dark rollout, nav icons and ESPN cookie work were on the remote and had never been pulled. Rebased the two local commits onto `origin/main`; one conflict, in `HANDOFF.md`, where both sides had prepended log entries. Resolved by **date order** (mine 22:20 sits above the 05:24 `Claude chat` entry) using a script rather than by hand, and verified by line arithmetic: 322 lines with markers → 320 after, exactly the 3 marker lines removed plus 1 blank added, so nothing was dropped. Tagged `pre-rebase-2026-09-03` at the old HEAD first. Then **re-verified `TOOLS.md` against the reconciled tree**, which was the whole point of doing this before trusting the table.
-- **Commit:** `19577f1` (table re-verification) · `5c6675e` (Supabase row correction) · rebased `7e85141`, `74d128c`
-- **Verification:** ✓ `package.json` and `package-lock.json` are **byte-unchanged** across all 26 commits, so every dependency row (Vite 8.1.1, React 19.2.7, oxlint 1.71.0) was still accurate despite being seeded from the stale tree. ✓ Only `src/App.jsx` and `src/App.css` changed. ✓ Rebase left a clean tree.
-- **Friction:** misread — my seeded table said `@supabase/supabase-js` performs "client reads of the `projects` heartbeat table". **It does not.** Grepping the actual `from(...)` calls shows the app reads `horizon_projects`, `horizon_tasks`, `horizon_events`, `horizon_swift_*`, `horizon_travel_watch` and `horizon_repo_health` in `drtvlcgyjlofaffbwael`, plus `dashboard_jobs` in `vtrtyagltwdrbastpppl` — and **never** touches `projects` in `qzliydcrlhioradwacmd`. I had assumed one Supabase per repo and written the row from that assumption. **Count the `from()` calls before naming a repo's database; "the app's Supabase" is not a single thing here, it is three.**
-- **Next:** Visual-verify the Projects page on `sh.tayloraritchie.com` — third pass, per the DO NEXT block above, which is unchanged and still owns the next action.
-- **Watch out:** ⚠️ **The 2026-09-02 22:20 entry below cites commit `e495121`, which no longer exists** — the rebase rewrote it to `7e85141`. Left as written rather than edited, per the never-amend rule; this line is the correction. ⚠️ **Three tools the 26 commits introduced were missing from the table entirely** and are now added: Cloudflare Access (gates the live site), ESPN Fantasy (War Room data, cookie auth needing rotation), and `localStorage` for War Room draft state — the last being a deliberate, documented exception to this repo's Supabase-everything rule. 🛑 **The heartbeat feeds a table nothing in `src/` reads.** `push-status-to-systemhorizon.ps1` upserts into `projects` (`qzliy`), which is consumed only by `meridian-keystone.html` and `taylorritchie/systemhorizon/index.html`. The Vite app's own registry is `horizon_projects` in a different project — and its DO NEXT notes that table is still **0 rows**. Worth deciding whether the heartbeat should target `horizon_projects` instead, or whether it is correctly feeding pages you are retiring.
-
-### 2026-09-02 22:20 ET · Claude Code (TOOLS.md tool inventory added)
-- **Changed:** Added `TOOLS.md` (14 active rows) — Vite, React 19, oxlint, Supabase, the heartbeat push script, and the rest, with what each is used for and when last used. `AGENTS.md` gained a `### TOOLS.md` subsection so Codex maintains it too. One of 13 project tables that `septentrion-sync` v4 rolls into the vault's new `The Toolbox.md`.
-- **Commit:** `e495121`
-- **Next:** Unchanged. See the block above this log.
-- **Watch out:** ⚠️ The sync now keeps **two separate lists**. `REPOS` (7 entries) still drives Return Point, the Ephemeris notes, and this repo's `projects` heartbeat. The new `TOOLS_REPOS` (13 entries) drives only the master tool table. This repo is in `TOOLS_REPOS` but **not** `REPOS`, so its handoff state still isn't on the dashboard. Do not merge the lists to "fix" that — widening `REPOS` silently adds six rows to the live table.
-
-### 2026-09-02 05:24 ET · Claude chat
-- **Changed:** Two follow-up fixes to the Projects redesign, from Taylor's
-  live review of the previous pass in this same session.
-  - Cards changed from one-per-project to one-per-area (commit `e0d935e`):
-    "cards should only be the major projects (Ops & Infra, Aftermath,
-    Undercroft, etc.) — subprojects like a specific campaign, System
-    Horizon, Storybook Resume" belong in the accordion, not as cards.
-    `ProjectCard` → `AreaCard`, rolling up each area's member projects
-    into a project count, active count, and a signal-meter average.
-    Card focus state changed from `focusedProjectId` to `focusedArea`
-    (a plain string). Since a rollup card has no single project to
-    open, the "Open project page" entry point moved onto each
-    project's own row inside the accordion — `AccordionProject`'s
-    heading is now a button wired to `onOpenProject`.
-  - Accordion restructured into one self-contained scrolling panel
-    (commit `4ccb506` for the CSS half): "right panel should scroll
-    independently, make it look more like a component." Was a stack
-    of individually-bordered section cards with `max-height` (which
-    only engages if content actually overflows); now one panel with a
-    fixed header ("Areas" + count, reusing `.instrument-heading` for
-    consistency with the rest of the app) and a body that scrolls on
-    its own, using a real `height` instead of `max-height` so it
-    always reads as a stable widget rather than shrinking to fit.
-- **Verified before push (both commits):** `@babel/parser` parses
-  clean, `@babel/core` + `preset-react` compile succeeds, brace counts
-  balanced on both files, grepped for zero dangling
-  `ProjectCard`/`focusedProjectId`/`.project-card*` references,
-  confirmed `AreaCard`/`focusedArea`/`.area-card`/
-  `.accordion-project-heading` all present. SHA re-checked immediately
-  before each push.
-- **Commit:** `e0d935e` (App.jsx), `4ccb506` (App.css)
-- **Next:** see DO NEXT — third straight pass this session that hasn't
-  been seen live. `horizon_projects` is still empty (0 rows), so the
-  full area/parentName/signal-rollup path is still genuinely untested
-  against real Supabase data.
-- **Watch out:** the accordion's fixed height
-  (`calc(100dvh - 40px)`) is a guess at what looks balanced next to
-  the shorter cards+table column — this is exactly the kind of thing
-  that reads fine in source but wrong on screen, worth an actual look
-  before treating it as settled.
-
-### 2026-09-02 03:03 ET · Claude chat
-- **Changed:** Full rebuild of the Projects page, in two parts across this
-  session.
-  - **Part 1 — registry reorg (commit `fb187d9`):** grouped the flat 16-row
-    project list into fixed area sections and moved four campaign-vault
-    projects (Sky Is The Limit, Where The Flowers Forget, Ashfall Britannia,
-    Pacts & Power) out of Aftermath into a new **Undercroft** area; moved
-    Invisible String Theory, Swiftwatch, and Fantasy Football into a new
-    **Sidequests** area. Added a `parentName` field (name-based linking, not
-    id-based — `horizon_projects` assigns real UUIDs on insert, so a seed
-    array can't know a sibling's future id) so Swiftwatch nests under
-    Invisible String Theory and Aftermath Meridian nests under Rectrix
-    Caedere. Corrected two stale entries found during the audit: System
-    Horizon (was still describing the retired single-file Babel/
-    control-panel.html era) and Fantasy Football (was still pre-draft).
-  - **Part 2 — layout redesign (commits `cc952ea` + `905e510`), per a
-    reference screenshot Taylor shared (a GO2DEN esports dashboard):**
-    replaced the flat list + inspector-panel layout entirely with an
-    auto-scrolling "recently updated" ticker, a project-card grid,
-    a repo-activity table below the cards (repurposes `horizon_repo_health`
-    — uncommitted/ahead/behind counts — rather than building new commit/
-    issue plumbing), and a collapsible area accordion on the right that
-    shows each project's open tasks inline. Selecting a card narrows the
-    accordion to that project's area; a "Show all areas" banner clears it.
-    All old `.registry-row`/`.registry-section`/`.project-inspector` CSS
-    removed as dead code in the same pass.
-  - **Migration:** added `parent_name text` to `horizon_projects` via
-    `apply_migration` (confirmed present via `list_tables` after) —
-    without this the seed insert would have failed outright, since
-    `projectToRow` now sends a field the table didn't have a column for.
-- **Verified before push (both commits):** `@babel/parser` (module, jsx)
-  parses clean, full `@babel/core` + `preset-react` compile succeeds each
-  time, brace counts balanced on both App.jsx (964/964 final) and App.css
-  (471/471 pre-final-push), all 16 project ids present exactly once,
-  single definition each for every new component, grepped for dangling
-  references to removed props/selectors. SHA re-checked immediately
-  before each push. Re-fetched both files via the Contents API after the
-  final push and confirmed the committed content matches byte-for-byte.
-- **Commit:** `fb187d9` (App.jsx, area reorg), `cc952ea` (App.jsx, layout
-  redesign), `905e510` (App.css, layout redesign)
-- **Next:** see DO NEXT — none of this has been seen live yet, and
-  `horizon_projects` is still empty (0 rows) going into the next load,
-  so the re-seed with the new schema is genuinely untested.
-- **Watch out:** `horizon_projects` had 0 rows for this entire session,
-  meaning `loadProjects()`'s auto-seed path (`initializePortfolioRegistry`)
-  ran every time — the parent_name/area changes have never actually
-  round-tripped through Supabase yet. First real load is the first real
-  test.
-
-> Older entries archived to `handoff-archive/2026-07.md`, `handoff-archive/2026-08.md`, `handoff-archive/2026-09.md` - everything before 2026-09-02 03:03 ET.
+> Older entries archived to `handoff-archive/2026-09.md`.

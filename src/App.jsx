@@ -4,7 +4,8 @@ import { jobPipeline } from './jobPipeline'
 import { navGroups, navUtilityItems, defaultOpenNavGroups } from './navConfig'
 import { captureBodyError, captureFromRow, captureToRow, nowFromRow, nowToRow, pendingCaptures, resolveNow, routeCapturePatch } from './homeState'
 import { A_RATED_STATUS, SEVERITY, UNREPORTED_STATUS, buildNeedsAttention, gdolWeekEnding, gdolWeekWindow, inGdolWindow, repoStatusFlags, shiftDays } from './needsAttention'
-import { buildTimeline } from './timeline'
+import { buildTimeline, compareEvents } from './timeline'
+import { ARCHIVE_REPOS, filterArchive, parseHandoffEntries, sortArchive } from './archive'
 import { rankActiveWork } from './activeWork'
 import { buildFieldStatus } from './fieldStatus'
 import WarRoomView from './WarRoomView'
@@ -426,7 +427,57 @@ function ProjectDetailView({ project, tasks, onBack, onAddTask, onUpdateTaskStat
 // GDOL weeks end on Saturday. Mirrors Septentrion's dashboard/collectors/jobs.js
 // so the two panels agree on what "this week" and "last week" mean.
 
+// The pipeline can hold hundreds of rows and loadJobPipeline fetches all of
+// them, so an uncapped list turns Career into a wall under the two panels that
+// actually carry a decision.
+//
+// 25 is the calm default, not a ceiling: the remainder is stated in words and
+// reachable in one click. A hard cap would have been lossy here — the tracker
+// has hundreds of rows and a single status ("Applied") already runs past 25, so
+// even a filtered view would have hidden real work behind nothing.
+const PIPELINE_LIMIT = 25
+
+function safeJobUrl(url) {
+  try {
+    const parsed = new URL(url)
+    return ['http:', 'https:'].includes(parsed.protocol) ? url : ''
+  } catch { return '' }
+}
+
+// One row shape for both A-rated leads and the full pipeline, so the two lists
+// can never drift apart.
+function JobRow({ job }) {
+  const postUrl = safeJobUrl(job.post_url)
+
+  return <article>
+    <div>
+      <strong>{job.title || 'Untitled role'}</strong>
+      <span>{job.organization || 'Organization unknown'}{job.location ? ` · ${job.location}` : ''}</span>
+      <small>{job.recommendation ? `${job.recommendation} recommendation` : 'No recommendation yet'}{job.deadline ? ` · Due ${job.deadline}` : ''}</small>
+    </div>
+    <div className="application-status">
+      <b>{job.status || 'Unknown'}</b>
+      {typeof job.match_percent === 'number' ? <small>{job.match_percent}% match</small> : null}
+      {postUrl ? <a href={postUrl} target="_blank" rel="noreferrer">Open posting</a> : null}
+    </div>
+  </article>
+}
+
+// A raw "permission denied for view dashboard_jobs" tells Taylor nothing about
+// what to do, and the obvious fix is the wrong one. Diagnosed 2026-09-29:
+// dashboard_jobs grants SELECT to authenticated / postgres / service_role but
+// NOT anon, and src/jobPipeline.js connects as anon with persistSession false,
+// so SH never authenticates against that project. Granting anon is NOT the fix:
+// the view has security_invoker unset, so it runs as its owner and bypasses
+// job_applications' RLS, and the anon key is checked into this public repo.
+function jobPipelineHelp(message) {
+  if (!/permission denied/i.test(message ?? '')) return null
+  return 'System Horizon reads this pipeline as `anon`, and `dashboard_jobs` only grants access to signed-in roles. Granting `anon` is not the fix: that view bypasses row security and this repo is public, so it would publish the whole job search. Career stays read-only until SH can authenticate against that project.'
+}
+
 function CareerView({ jobs, jobError }) {
+  const [statusFilter, setStatusFilter] = useState('All')
+  const [showAll, setShowAll] = useState(false)
   const now = new Date()
   const weekEnding = gdolWeekEnding(now)
   const thisWeek = gdolWeekWindow(weekEnding)
@@ -440,9 +491,88 @@ function CareerView({ jobs, jobError }) {
     .filter((job) => typeof job.match_percent === 'number' && job.match_percent >= 85 && A_RATED_STATUS.has(job.status) && (!job.deadline || job.deadline >= today))
     .sort((a, b) => b.match_percent - a.match_percent)
   const activeJobs = jobs.filter((job) => !['Rejected', 'Archived', 'Withdrawn'].includes(job.status))
-  const safeUrl = (url) => { try { const parsed = new URL(url); return ['http:', 'https:'].includes(parsed.protocol) ? url : '' } catch { return '' } }
 
-  return <section className="career-view" aria-labelledby="career-heading"><header className="view-header"><div><p className="eyebrow">Career operations / 05</p><h2 id="career-heading">Job search field</h2><p>Live readout from the Claude Code job pipeline. Update jobs through that workflow, not this dashboard.</p></div></header>{jobError ? <p className="database-error" role="alert">Job pipeline error: {jobError}</p> : <>{unreportedLastWeek > 0 && <p className="database-error" role="alert">{unreportedLastWeek} work-search contact{unreportedLastWeek === 1 ? '' : 's'} from last week still {unreportedLastWeek === 1 ? 'needs' : 'need'} to be reported to GA DOL.</p>}<div className="career-grid"><article className="career-panel compliance-panel"><span>This week’s work search</span><strong>{weeklyContacts}<small>/3 contacts</small></strong><p>{weeklyContacts >= 3 ? 'GA DOL contact requirement met for this week.' : `${3 - weeklyContacts} more contact${3 - weeklyContacts === 1 ? '' : 's'} needed this week.`}</p><p className="career-source">{appliedThisWeek} application{appliedThisWeek === 1 ? '' : 's'} logged this week · Source: Claude Code → dashboard_jobs</p></article><article className="career-panel"><span>Active applications</span><strong>{activeJobs.length}</strong><p>Live pipeline data, without a second System Horizon tracker.</p><div className="career-statuses">{['Discovered', 'Docs Created', 'Applied', 'Interview'].map((status) => <div key={status}><small>{status}</small><b>{jobs.filter((job) => job.status === status).length}</b></div>)}</div></article></div><div className="career-workbench">{aRated.length > 0 && <section className="application-list" aria-label="A-rated leads"><div className="instrument-heading"><span>A-rated leads (≥85% match, still open)</span><b>{aRated.length}</b></div>{aRated.map((job) => { const postUrl = safeUrl(job.post_url); return <article key={job.id}><div><strong>{job.title || 'Untitled role'}</strong><span>{job.organization || 'Organization unknown'}{job.location ? ` · ${job.location}` : ''}</span><small>{job.recommendation ? `${job.recommendation} recommendation` : 'No recommendation yet'}{job.deadline ? ` · Due ${job.deadline}` : ''}</small></div><div className="application-status"><b>{job.status || 'Unknown'}</b><small>{job.match_percent}% match</small>{postUrl ? <a href={postUrl} target="_blank" rel="noreferrer">Open posting</a> : null}</div></article> })}</section>}<section className="application-list" aria-label="Applications"><div className="instrument-heading"><span>Automated application pipeline</span><b>{jobs.length}</b></div>{jobs.length ? jobs.map((job) => { const postUrl = safeUrl(job.post_url); return <article key={job.id}><div><strong>{job.title || 'Untitled role'}</strong><span>{job.organization || 'Organization unknown'}{job.location ? ` · ${job.location}` : ''}</span><small>{job.recommendation ? `${job.recommendation} recommendation` : 'No recommendation yet'}{job.deadline ? ` · Due ${job.deadline}` : ''}</small></div><div className="application-status"><b>{job.status || 'Unknown'}</b>{typeof job.match_percent === 'number' ? <small>{job.match_percent}% match</small> : null}{postUrl ? <a href={postUrl} target="_blank" rel="noreferrer">Open posting</a> : null}</div></article> }) : <p className="empty-state">No jobs are currently visible in the pipeline.</p>}</section></div></>}</section>
+  // Filter pills come from the data, not a hardcoded list, so a status the
+  // pipeline starts using cannot become unreachable here.
+  const statusOptions = ['All', ...Array.from(new Set(jobs.map((job) => job.status).filter(Boolean))).sort()]
+  const filtered = statusFilter === 'All' ? jobs : jobs.filter((job) => job.status === statusFilter)
+  const shown = showAll ? filtered : filtered.slice(0, PIPELINE_LIMIT)
+  const hidden = filtered.length - shown.length
+
+  // Each filter starts collapsed. Without this, expanding "Applied" and then
+  // clicking back to "All" would dump every row in the tracker on screen.
+  function chooseStatus(option) {
+    setStatusFilter(option)
+    setShowAll(false)
+  }
+
+  return <section className="career-view" aria-labelledby="career-heading">
+    <header className="view-header">
+      <div>
+        <p className="eyebrow">Career operations / 05</p>
+        <h2 id="career-heading">Job search field</h2>
+        <p>Live readout from the Claude Code job pipeline. Update jobs through that workflow, not this dashboard.</p>
+      </div>
+    </header>
+
+    {jobError ? <div className="database-error" role="alert">
+      <p>Job pipeline error: {jobError}</p>
+      {jobPipelineHelp(jobError) ? <p className="database-error-help">{jobPipelineHelp(jobError)}</p> : null}
+    </div> : <>
+      {unreportedLastWeek > 0 && <p className="database-error" role="alert">
+        {unreportedLastWeek} work-search contact{unreportedLastWeek === 1 ? '' : 's'} from last week still {unreportedLastWeek === 1 ? 'needs' : 'need'} to be reported to GA DOL.
+      </p>}
+
+      <div className="career-grid">
+        <article className="career-panel compliance-panel">
+          <span>This week’s work search</span>
+          <strong>{weeklyContacts}<small>/3 contacts</small></strong>
+          <p>{weeklyContacts >= 3 ? 'GA DOL contact requirement met for this week.' : `${3 - weeklyContacts} more contact${3 - weeklyContacts === 1 ? '' : 's'} needed this week.`}</p>
+          <p className="career-source">{appliedThisWeek} application{appliedThisWeek === 1 ? '' : 's'} logged this week · Source: Claude Code → dashboard_jobs</p>
+        </article>
+        <article className="career-panel">
+          <span>Active applications</span>
+          <strong>{activeJobs.length}</strong>
+          <p>Live pipeline data, without a second System Horizon tracker.</p>
+          <div className="career-statuses">
+            {['Discovered', 'Docs Created', 'Applied', 'Interview'].map((status) =>
+              <div key={status}><small>{status}</small><b>{jobs.filter((job) => job.status === status).length}</b></div>)}
+          </div>
+        </article>
+      </div>
+
+      <div className="career-workbench">
+        {/* Primary: the short list that changes what she does next. */}
+        {aRated.length > 0 && <section className="application-list" aria-label="A-rated leads">
+          <div className="instrument-heading"><span>A-rated leads (≥85% match, still open)</span><b>{aRated.length}</b></div>
+          {aRated.map((job) => <JobRow job={job} key={job.id} />)}
+        </section>}
+
+        {/* Secondary: the whole pipeline, bounded and filterable. */}
+        <section className="application-list" aria-label="Applications">
+          <div className="instrument-heading">
+            <span>Automated application pipeline</span>
+            <b>{statusFilter === 'All' ? jobs.length : `${filtered.length} / ${jobs.length}`}</b>
+          </div>
+          {jobs.length > 0 && <div className="registry-controls career-pipeline-controls" role="group" aria-label="Filter pipeline by status">
+            {statusOptions.map((option) =>
+              <button className={statusFilter === option ? 'selected' : ''} key={option} type="button" onClick={() => chooseStatus(option)}>{option}</button>)}
+          </div>}
+          {shown.map((job) => <JobRow job={job} key={job.id} />)}
+          {hidden > 0 && <p className="pipeline-more">
+            <button type="button" onClick={() => setShowAll(true)}>Show all {filtered.length}</button>
+            <span>{hidden} more {statusFilter === 'All' ? 'in the pipeline' : `with status ${statusFilter}`} not shown.</span>
+          </p>}
+          {showAll && filtered.length > PIPELINE_LIMIT && <p className="pipeline-more">
+            <button type="button" onClick={() => setShowAll(false)}>Show first {PIPELINE_LIMIT}</button>
+            <span>Showing all {filtered.length}.</span>
+          </p>}
+          {jobs.length === 0 && <p className="empty-state">No jobs are currently visible in the pipeline.</p>}
+          {jobs.length > 0 && filtered.length === 0 && <p className="empty-state">No jobs with status {statusFilter}.</p>}
+        </section>
+      </div>
+    </>}
+  </section>
 }
 
 function AccessGate() {
@@ -769,9 +899,12 @@ function CalendarView({ events, projects, tasks, onAddEvent, onDeleteEvent, onUp
   const projectName = (id) => projects.find((project) => project.id === id)?.name
   const todayKey = new Date().toISOString().slice(0, 10)
 
+  // compareEvents parses the free-text start_time into minutes. A raw
+  // localeCompare put "10:00 AM" before "9:00 AM", which is the wrong order in
+  // a list whose whole job is to be chronological.
   const upcomingEvents = [...events]
     .filter((event) => event.date >= todayKey)
-    .sort((a, b) => a.date === b.date ? (a.startTime || '').localeCompare(b.startTime || '') : (a.date < b.date ? -1 : 1))
+    .sort(compareEvents)
   const eventGroups = []
   for (const event of upcomingEvents) {
     const last = eventGroups[eventGroups.length - 1]
@@ -894,53 +1027,134 @@ function CalendarView({ events, projects, tasks, onAddEvent, onDeleteEvent, onUp
   </section>
 }
 
-const ARCHIVE_REPOS = ['SystemHorizon', 'ashfall_vault', 'rectrixcaedere', 'taylorritchie', 'sitl_vault', 'pacts_power_vault']
-
-function parseHandoffEntries(markdown, repo) {
-  const blocks = markdown.split(/\n### /).slice(1)
-  return blocks.map((block) => {
-    const [headerLine, ...rest] = block.split('\n')
-    const body = rest.join('\n')
-    const headerMatch = headerLine.match(/^(\S+\s+\S+\s+\S+)\s*·\s*(.+)$/)
-    const timestamp = headerMatch ? headerMatch[1] : headerLine.trim()
-    const source = headerMatch ? headerMatch[2].trim() : ''
-    const changedMatch = body.match(/\*\*Changed:\*\*\s*([\s\S]*?)(?:\n- \*\*|\n\n|$)/)
-    const summary = (changedMatch ? changedMatch[1] : body).replace(/\s+/g, ' ').trim().slice(0, 240)
-    return { repo, timestamp, source, summary }
-  })
-}
-
 function ArchiveView() {
   const [entries, setEntries] = useState([])
+  const [failures, setFailures] = useState([])
   const [status, setStatus] = useState('loading')
+  const [repoFilter, setRepoFilter] = useState('All')
+  const [toolFilter, setToolFilter] = useState('All')
+  const [query, setQuery] = useState('')
+  const [sortKey, setSortKey] = useState('timestamp')
+  const [sortDir, setSortDir] = useState('desc')
+  const [expandedId, setExpandedId] = useState(null)
 
   useEffect(() => {
     let cancelled = false
     Promise.allSettled(ARCHIVE_REPOS.map((repo) =>
       fetch(`https://raw.githubusercontent.com/TheLittlestAskew/${repo}/main/HANDOFF.md`).then((response) => {
-        if (!response.ok) throw new Error(`${repo}: HTTP ${response.status}`)
+        if (!response.ok) throw new Error(`HTTP ${response.status}`)
         return response.text()
       }).then((text) => parseHandoffEntries(text, repo))
     )).then((results) => {
       if (cancelled) return
       const merged = results.flatMap((result) => result.status === 'fulfilled' ? result.value : [])
-      merged.sort((a, b) => (a.timestamp < b.timestamp ? 1 : -1))
-      setEntries(merged.slice(0, 40))
+      // A repo that could not be read is named. Dropping the rejections made an
+      // unreachable repo indistinguishable from one with no entries.
+      setFailures(results.flatMap((result, index) =>
+        result.status === 'rejected' ? [{ repo: ARCHIVE_REPOS[index], message: result.reason?.message ?? 'fetch failed' }] : []))
+      // No cap. The old 40 predated search and made history unreachable; the real
+      // bound is each repo's live log, which AGENTS.md holds at 15 entries, so
+      // this tops out near 6 x 15. Sorting is the table's job, not this effect's.
+      setEntries(merged)
       setStatus(merged.length ? 'ready' : 'empty')
     })
     return () => { cancelled = true }
   }, [])
 
+  const reposWithEntries = Array.from(new Set(entries.map((entry) => entry.repo))).sort()
+  const toolsWithEntries = Array.from(new Set(entries.map((entry) => entry.source || 'Unlabelled'))).sort()
+  const visible = sortArchive(filterArchive(entries, { repo: repoFilter, source: toolFilter, query }), sortKey, sortDir)
+
+  function toggleSort(key) {
+    // Same column flips direction; a new column starts newest/A-Z first, which
+    // is descending for dates and ascending for names.
+    if (key === sortKey) setSortDir((current) => current === 'asc' ? 'desc' : 'asc')
+    else { setSortKey(key); setSortDir(key === 'timestamp' ? 'desc' : 'asc') }
+  }
+
+  function sortHeader(key, label) {
+    const active = sortKey === key
+    return <th scope="col" aria-sort={active ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+      <button type="button" onClick={() => toggleSort(key)} className={active ? 'is-sorted' : ''}>
+        {label}<i aria-hidden="true">{active ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}</i>
+      </button>
+    </th>
+  }
+
   return <section className="archive-view" aria-labelledby="archive-heading">
-    <header className="view-header"><div><p className="eyebrow">System index / 07</p><h2 id="archive-heading">Archive field</h2><p>Live pull of the most recent HANDOFF.md entries from every repo with handoff enabled.</p></div></header>
+    <header className="view-header">
+      <div>
+        <p className="eyebrow">System index / 07</p>
+        <h2 id="archive-heading">Archive field</h2>
+        <p>Live pull of the most recent HANDOFF.md entries from every repo with handoff enabled.</p>
+      </div>
+    </header>
+
     {status === 'loading' && <p className="empty-state">Pulling repo handoffs…</p>}
     {status === 'empty' && <p className="database-error" role="alert">Could not read any HANDOFF.md files. Check network access to raw.githubusercontent.com.</p>}
-    <div className="archive-feed">
-      {entries.map((entry, index) => <article className="archive-entry" key={`${entry.repo}-${index}`}>
-        <div className="archive-entry-meta"><b>{entry.repo}</b><span>{entry.timestamp}</span>{entry.source ? <span>{entry.source}</span> : null}</div>
-        <p>{entry.summary}</p>
-      </article>)}
-    </div>
+    {failures.map((failure) => <p className="database-error" role="alert" key={failure.repo}>{failure.repo} could not be read: {failure.message}</p>)}
+
+    {status === 'ready' && <>
+      <div className="archive-toolbar">
+        <label className="archive-search">
+          <span>Search</span>
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Filter by repo, tool, date, or text" />
+        </label>
+        <p className="archive-count">{visible.length} of {entries.length}</p>
+      </div>
+
+      {/* Both rows start with an "All" pill, so they need labels to not read as duplicates. */}
+      {reposWithEntries.length > 1 && <div className="archive-filter-row">
+        <span id="archive-repo-label">Repo</span>
+        <div className="registry-controls archive-controls" role="group" aria-labelledby="archive-repo-label">
+          {['All', ...reposWithEntries].map((option) =>
+            <button className={repoFilter === option ? 'selected' : ''} key={option} type="button" onClick={() => setRepoFilter(option)}>{option}</button>)}
+        </div>
+      </div>}
+
+      {toolsWithEntries.length > 1 && <div className="archive-filter-row">
+        <span id="archive-tool-label">Tool</span>
+        <div className="registry-controls archive-controls" role="group" aria-labelledby="archive-tool-label">
+          {['All', ...toolsWithEntries].map((option) =>
+            <button className={toolFilter === option ? 'selected' : ''} key={option} type="button" onClick={() => setToolFilter(option)}>{option}</button>)}
+        </div>
+      </div>}
+
+      <div className="archive-table-scroll">
+        <table className="archive-table">
+          <thead>
+            <tr>
+              {sortHeader('timestamp', 'When')}
+              {sortHeader('repo', 'Repo')}
+              {sortHeader('source', 'Tool')}
+              <th scope="col">Changed</th>
+            </tr>
+          </thead>
+          <tbody>
+            {visible.map((entry) => {
+              const open = expandedId === entry.id
+              // Summaries run to 240 characters, which defeats the density a
+              // table is for. Truncate, and let a click open the full text.
+              const clipped = entry.summary.length > 110
+              return <tr key={entry.id} className={open ? 'is-open' : ''}>
+                <td className="archive-when">{entry.timestamp || '—'}</td>
+                <td className="archive-repo">{entry.repo}</td>
+                <td className="archive-tool">{entry.source || 'Unlabelled'}</td>
+                <td className="archive-summary">
+                  {clipped
+                    ? <button type="button" aria-expanded={open} onClick={() => setExpandedId(open ? null : entry.id)}>
+                      {open ? entry.summary : `${entry.summary.slice(0, 110).trimEnd()}…`}
+                    </button>
+                    : entry.summary || <em>no Changed line</em>}
+                  {entry.detail && <small className="archive-detail">{entry.detail}</small>}
+                </td>
+              </tr>
+            })}
+          </tbody>
+        </table>
+        {visible.length === 0 && <p className="empty-state">Nothing matches that filter.</p>}
+      </div>
+    </>}
   </section>
 }
 

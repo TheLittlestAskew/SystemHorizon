@@ -1103,14 +1103,21 @@ function ArchiveView() {
         <p className="archive-count">{visible.length} of {entries.length}</p>
       </div>
 
-      {reposWithEntries.length > 1 && <div className="registry-controls archive-controls" role="group" aria-label="Filter handoffs by repo">
-        {['All', ...reposWithEntries].map((option) =>
-          <button className={repoFilter === option ? 'selected' : ''} key={option} type="button" onClick={() => setRepoFilter(option)}>{option}</button>)}
+      {/* Both rows start with an "All" pill, so they need labels to not read as duplicates. */}
+      {reposWithEntries.length > 1 && <div className="archive-filter-row">
+        <span id="archive-repo-label">Repo</span>
+        <div className="registry-controls archive-controls" role="group" aria-labelledby="archive-repo-label">
+          {['All', ...reposWithEntries].map((option) =>
+            <button className={repoFilter === option ? 'selected' : ''} key={option} type="button" onClick={() => setRepoFilter(option)}>{option}</button>)}
+        </div>
       </div>}
 
-      {toolsWithEntries.length > 1 && <div className="registry-controls archive-controls" role="group" aria-label="Filter handoffs by tool">
-        {['All', ...toolsWithEntries].map((option) =>
-          <button className={toolFilter === option ? 'selected' : ''} key={option} type="button" onClick={() => setToolFilter(option)}>{option}</button>)}
+      {toolsWithEntries.length > 1 && <div className="archive-filter-row">
+        <span id="archive-tool-label">Tool</span>
+        <div className="registry-controls archive-controls" role="group" aria-labelledby="archive-tool-label">
+          {['All', ...toolsWithEntries].map((option) =>
+            <button className={toolFilter === option ? 'selected' : ''} key={option} type="button" onClick={() => setToolFilter(option)}>{option}</button>)}
+        </div>
       </div>}
 
       <div className="archive-table-scroll">

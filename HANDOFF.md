@@ -68,6 +68,13 @@ Standing repo notes:
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
 
+### 2026-09-29 17:25 ET · Claude Code
+- **Changed:** Answered Taylor's five decisions from `SH_LAYOUT_PLAN.md`. **Career's 25-row cap is no longer a ceiling** — "Show all N" reveals the rest and "Show first 25" collapses it, with the status filter resetting to collapsed so clicking back to All cannot dump the whole tracker on screen. A hard cap was lossy: the tracker holds hundreds of rows and "Applied" alone already runs past 25. **`NORTH_STAR.md` Q12 answered and closed.** Archive needed no change: the repo is still named in bold as the first element of every entry (`App.jsx:1052`), so the date spine added grouping without costing identification. 134/134 tests, lint clean, build green.
+- **Commit:** `bc80700`
+- **Next:** Unchanged. See the block above this log.
+- **Watch out:** 🛑 **Q12 closed in a direction that creates a trap.** Taylor is adding an **expandable right-side panel** to the shell, with notifications as one tenant, which supersedes the IA's right-hand alert column. Whoever builds it must not reflexively move `NeedsAttention` into it: `src/needsAttention.js` is a pure function, so the panel can consume the same data without the Home section moving, and **removing the Home section is a deletion under section 6, so it is RED.** ⚠️ The panel has **no milestone, no acceptance criteria, and no spec** — it is not in the section 10 queue and must not be started as a side effect of another milestone.
+- **Watch out:** ⚠️ **M8 is still blocked and Google Calendar is still not connected.** Confirmed with Taylor 2026-09-29: "add an event" means the **SH Calendar** view writing to `horizon_events`, not her Gmail calendar. Nothing in the app reads Google yet.
+
 ### 2026-09-29 16:40 ET · Claude Code
 - **Changed:** v1 layout pass on branch `sh-layout-v1` (**not merged, not on `main`**). Audited all 11 views; found **8 already have a usable layout** and changed only the 3 that did not. Calendar Agenda now sorts with `compareEvents` instead of `localeCompare` on raw text (`"10:00 AM"` no longer beats `"9:00 AM"`). Career's pipeline list is bounded at 25 with a status filter and a spoken remainder count, and `JobRow` is extracted. Archive groups by date, filters by repo, and **names the repos whose fetch failed** instead of dropping them; its logic moved to `src/archive.js`. Added `SH_LAYOUT_PLAN.md` and `PARKING_LOT.md` (47 parked ideas, 5 of which would need a schema change). **134/134 tests**, up from 121.
 - **Commit:** `3b2070d` (branch tip; section commits `3192cc9`, `3af5404`, `7aafe57`)
@@ -221,46 +228,5 @@ Standing repo notes:
 - **Commit:** `e495121`
 - **Next:** Unchanged. See the block above this log.
 - **Watch out:** ⚠️ The sync now keeps **two separate lists**. `REPOS` (7 entries) still drives Return Point, the Ephemeris notes, and this repo's `projects` heartbeat. The new `TOOLS_REPOS` (13 entries) drives only the master tool table. This repo is in `TOOLS_REPOS` but **not** `REPOS`, so its handoff state still isn't on the dashboard. Do not merge the lists to "fix" that — widening `REPOS` silently adds six rows to the live table.
-
-### 2026-09-02 05:24 ET · Claude chat
-- **Changed:** Two follow-up fixes to the Projects redesign, from Taylor's
-  live review of the previous pass in this same session.
-  - Cards changed from one-per-project to one-per-area (commit `e0d935e`):
-    "cards should only be the major projects (Ops & Infra, Aftermath,
-    Undercroft, etc.) — subprojects like a specific campaign, System
-    Horizon, Storybook Resume" belong in the accordion, not as cards.
-    `ProjectCard` → `AreaCard`, rolling up each area's member projects
-    into a project count, active count, and a signal-meter average.
-    Card focus state changed from `focusedProjectId` to `focusedArea`
-    (a plain string). Since a rollup card has no single project to
-    open, the "Open project page" entry point moved onto each
-    project's own row inside the accordion — `AccordionProject`'s
-    heading is now a button wired to `onOpenProject`.
-  - Accordion restructured into one self-contained scrolling panel
-    (commit `4ccb506` for the CSS half): "right panel should scroll
-    independently, make it look more like a component." Was a stack
-    of individually-bordered section cards with `max-height` (which
-    only engages if content actually overflows); now one panel with a
-    fixed header ("Areas" + count, reusing `.instrument-heading` for
-    consistency with the rest of the app) and a body that scrolls on
-    its own, using a real `height` instead of `max-height` so it
-    always reads as a stable widget rather than shrinking to fit.
-- **Verified before push (both commits):** `@babel/parser` parses
-  clean, `@babel/core` + `preset-react` compile succeeds, brace counts
-  balanced on both files, grepped for zero dangling
-  `ProjectCard`/`focusedProjectId`/`.project-card*` references,
-  confirmed `AreaCard`/`focusedArea`/`.area-card`/
-  `.accordion-project-heading` all present. SHA re-checked immediately
-  before each push.
-- **Commit:** `e0d935e` (App.jsx), `4ccb506` (App.css)
-- **Next:** see DO NEXT — third straight pass this session that hasn't
-  been seen live. `horizon_projects` is still empty (0 rows), so the
-  full area/parentName/signal-rollup path is still genuinely untested
-  against real Supabase data.
-- **Watch out:** the accordion's fixed height
-  (`calc(100dvh - 40px)`) is a guess at what looks balanced next to
-  the shorter cards+table column — this is exactly the kind of thing
-  that reads fine in source but wrong on screen, worth an actual look
-  before treating it as settled.
 
 > Older entries archived to `handoff-archive/2026-09.md`.

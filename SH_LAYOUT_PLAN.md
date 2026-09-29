@@ -236,6 +236,12 @@ need a schema change** and were therefore not built.
    it is the cheapest thing that turns three "never seen with real data"
    caveats into verified behavior.
 
+### Shipped
+
+**Merged and deployed 2026-09-29.** `origin/main` is `8e143d4`; the Pages run for that sha reports `completed / success` (run 36627212047), checked via the REST API rather than assumed. Gate items 1-7 pass. Item 8 (Taylor sees it live) is closed for Archive and Career, which she reviewed on localhost before the merge.
+
+Two things changed after the report above was written, both from her review: the Career cap became a **Show all N** toggle rather than a hard 25, and Archive became a **sortable, filterable table** rather than a date-grouped card feed. Final test count **153**, not 134.
+
 ### The single next step
 
 **Run `npm run dev`, sign in, and look at Career and Archive.** They are the two

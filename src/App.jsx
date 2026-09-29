@@ -426,7 +426,41 @@ function ProjectDetailView({ project, tasks, onBack, onAddTask, onUpdateTaskStat
 // GDOL weeks end on Saturday. Mirrors Septentrion's dashboard/collectors/jobs.js
 // so the two panels agree on what "this week" and "last week" mean.
 
+// The pipeline can hold hundreds of rows and loadJobPipeline fetches all of
+// them, so an uncapped list turns Career into a wall under the two panels that
+// actually carry a decision. Whatever the cap cuts is stated in words: a silent
+// truncation reads as "that is all of them", which is the same failure as a
+// silent fallback.
+const PIPELINE_LIMIT = 25
+
+function safeJobUrl(url) {
+  try {
+    const parsed = new URL(url)
+    return ['http:', 'https:'].includes(parsed.protocol) ? url : ''
+  } catch { return '' }
+}
+
+// One row shape for both A-rated leads and the full pipeline, so the two lists
+// can never drift apart.
+function JobRow({ job }) {
+  const postUrl = safeJobUrl(job.post_url)
+
+  return <article>
+    <div>
+      <strong>{job.title || 'Untitled role'}</strong>
+      <span>{job.organization || 'Organization unknown'}{job.location ? ` · ${job.location}` : ''}</span>
+      <small>{job.recommendation ? `${job.recommendation} recommendation` : 'No recommendation yet'}{job.deadline ? ` · Due ${job.deadline}` : ''}</small>
+    </div>
+    <div className="application-status">
+      <b>{job.status || 'Unknown'}</b>
+      {typeof job.match_percent === 'number' ? <small>{job.match_percent}% match</small> : null}
+      {postUrl ? <a href={postUrl} target="_blank" rel="noreferrer">Open posting</a> : null}
+    </div>
+  </article>
+}
+
 function CareerView({ jobs, jobError }) {
+  const [statusFilter, setStatusFilter] = useState('All')
   const now = new Date()
   const weekEnding = gdolWeekEnding(now)
   const thisWeek = gdolWeekWindow(weekEnding)
@@ -440,9 +474,73 @@ function CareerView({ jobs, jobError }) {
     .filter((job) => typeof job.match_percent === 'number' && job.match_percent >= 85 && A_RATED_STATUS.has(job.status) && (!job.deadline || job.deadline >= today))
     .sort((a, b) => b.match_percent - a.match_percent)
   const activeJobs = jobs.filter((job) => !['Rejected', 'Archived', 'Withdrawn'].includes(job.status))
-  const safeUrl = (url) => { try { const parsed = new URL(url); return ['http:', 'https:'].includes(parsed.protocol) ? url : '' } catch { return '' } }
 
-  return <section className="career-view" aria-labelledby="career-heading"><header className="view-header"><div><p className="eyebrow">Career operations / 05</p><h2 id="career-heading">Job search field</h2><p>Live readout from the Claude Code job pipeline. Update jobs through that workflow, not this dashboard.</p></div></header>{jobError ? <p className="database-error" role="alert">Job pipeline error: {jobError}</p> : <>{unreportedLastWeek > 0 && <p className="database-error" role="alert">{unreportedLastWeek} work-search contact{unreportedLastWeek === 1 ? '' : 's'} from last week still {unreportedLastWeek === 1 ? 'needs' : 'need'} to be reported to GA DOL.</p>}<div className="career-grid"><article className="career-panel compliance-panel"><span>This week’s work search</span><strong>{weeklyContacts}<small>/3 contacts</small></strong><p>{weeklyContacts >= 3 ? 'GA DOL contact requirement met for this week.' : `${3 - weeklyContacts} more contact${3 - weeklyContacts === 1 ? '' : 's'} needed this week.`}</p><p className="career-source">{appliedThisWeek} application{appliedThisWeek === 1 ? '' : 's'} logged this week · Source: Claude Code → dashboard_jobs</p></article><article className="career-panel"><span>Active applications</span><strong>{activeJobs.length}</strong><p>Live pipeline data, without a second System Horizon tracker.</p><div className="career-statuses">{['Discovered', 'Docs Created', 'Applied', 'Interview'].map((status) => <div key={status}><small>{status}</small><b>{jobs.filter((job) => job.status === status).length}</b></div>)}</div></article></div><div className="career-workbench">{aRated.length > 0 && <section className="application-list" aria-label="A-rated leads"><div className="instrument-heading"><span>A-rated leads (≥85% match, still open)</span><b>{aRated.length}</b></div>{aRated.map((job) => { const postUrl = safeUrl(job.post_url); return <article key={job.id}><div><strong>{job.title || 'Untitled role'}</strong><span>{job.organization || 'Organization unknown'}{job.location ? ` · ${job.location}` : ''}</span><small>{job.recommendation ? `${job.recommendation} recommendation` : 'No recommendation yet'}{job.deadline ? ` · Due ${job.deadline}` : ''}</small></div><div className="application-status"><b>{job.status || 'Unknown'}</b><small>{job.match_percent}% match</small>{postUrl ? <a href={postUrl} target="_blank" rel="noreferrer">Open posting</a> : null}</div></article> })}</section>}<section className="application-list" aria-label="Applications"><div className="instrument-heading"><span>Automated application pipeline</span><b>{jobs.length}</b></div>{jobs.length ? jobs.map((job) => { const postUrl = safeUrl(job.post_url); return <article key={job.id}><div><strong>{job.title || 'Untitled role'}</strong><span>{job.organization || 'Organization unknown'}{job.location ? ` · ${job.location}` : ''}</span><small>{job.recommendation ? `${job.recommendation} recommendation` : 'No recommendation yet'}{job.deadline ? ` · Due ${job.deadline}` : ''}</small></div><div className="application-status"><b>{job.status || 'Unknown'}</b>{typeof job.match_percent === 'number' ? <small>{job.match_percent}% match</small> : null}{postUrl ? <a href={postUrl} target="_blank" rel="noreferrer">Open posting</a> : null}</div></article> }) : <p className="empty-state">No jobs are currently visible in the pipeline.</p>}</section></div></>}</section>
+  // Filter pills come from the data, not a hardcoded list, so a status the
+  // pipeline starts using cannot become unreachable here.
+  const statusOptions = ['All', ...Array.from(new Set(jobs.map((job) => job.status).filter(Boolean))).sort()]
+  const filtered = statusFilter === 'All' ? jobs : jobs.filter((job) => job.status === statusFilter)
+  const shown = filtered.slice(0, PIPELINE_LIMIT)
+  const hidden = filtered.length - shown.length
+
+  return <section className="career-view" aria-labelledby="career-heading">
+    <header className="view-header">
+      <div>
+        <p className="eyebrow">Career operations / 05</p>
+        <h2 id="career-heading">Job search field</h2>
+        <p>Live readout from the Claude Code job pipeline. Update jobs through that workflow, not this dashboard.</p>
+      </div>
+    </header>
+
+    {jobError ? <p className="database-error" role="alert">Job pipeline error: {jobError}</p> : <>
+      {unreportedLastWeek > 0 && <p className="database-error" role="alert">
+        {unreportedLastWeek} work-search contact{unreportedLastWeek === 1 ? '' : 's'} from last week still {unreportedLastWeek === 1 ? 'needs' : 'need'} to be reported to GA DOL.
+      </p>}
+
+      <div className="career-grid">
+        <article className="career-panel compliance-panel">
+          <span>This week’s work search</span>
+          <strong>{weeklyContacts}<small>/3 contacts</small></strong>
+          <p>{weeklyContacts >= 3 ? 'GA DOL contact requirement met for this week.' : `${3 - weeklyContacts} more contact${3 - weeklyContacts === 1 ? '' : 's'} needed this week.`}</p>
+          <p className="career-source">{appliedThisWeek} application{appliedThisWeek === 1 ? '' : 's'} logged this week · Source: Claude Code → dashboard_jobs</p>
+        </article>
+        <article className="career-panel">
+          <span>Active applications</span>
+          <strong>{activeJobs.length}</strong>
+          <p>Live pipeline data, without a second System Horizon tracker.</p>
+          <div className="career-statuses">
+            {['Discovered', 'Docs Created', 'Applied', 'Interview'].map((status) =>
+              <div key={status}><small>{status}</small><b>{jobs.filter((job) => job.status === status).length}</b></div>)}
+          </div>
+        </article>
+      </div>
+
+      <div className="career-workbench">
+        {/* Primary: the short list that changes what she does next. */}
+        {aRated.length > 0 && <section className="application-list" aria-label="A-rated leads">
+          <div className="instrument-heading"><span>A-rated leads (≥85% match, still open)</span><b>{aRated.length}</b></div>
+          {aRated.map((job) => <JobRow job={job} key={job.id} />)}
+        </section>}
+
+        {/* Secondary: the whole pipeline, bounded and filterable. */}
+        <section className="application-list" aria-label="Applications">
+          <div className="instrument-heading">
+            <span>Automated application pipeline</span>
+            <b>{statusFilter === 'All' ? jobs.length : `${filtered.length} / ${jobs.length}`}</b>
+          </div>
+          {jobs.length > 0 && <div className="registry-controls career-pipeline-controls" role="group" aria-label="Filter pipeline by status">
+            {statusOptions.map((option) =>
+              <button className={statusFilter === option ? 'selected' : ''} key={option} type="button" onClick={() => setStatusFilter(option)}>{option}</button>)}
+          </div>}
+          {shown.map((job) => <JobRow job={job} key={job.id} />)}
+          {hidden > 0 && <p className="empty-state">
+            {hidden} more {statusFilter === 'All' ? 'in the pipeline' : `with status ${statusFilter}`} not shown. Narrow the filter to see them.
+          </p>}
+          {jobs.length === 0 && <p className="empty-state">No jobs are currently visible in the pipeline.</p>}
+          {jobs.length > 0 && filtered.length === 0 && <p className="empty-state">No jobs with status {statusFilter}.</p>}
+        </section>
+      </div>
+    </>}
+  </section>
 }
 
 function AccessGate() {

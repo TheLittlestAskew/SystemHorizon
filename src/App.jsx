@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from './supabase'
 import { jobPipeline } from './jobPipeline'
+import { JOB_ACCESS, jobAccessState } from './jobAccess'
 import { navGroups, navUtilityItems, defaultOpenNavGroups } from './navConfig'
 import { captureBodyError, captureFromRow, captureToRow, nowFromRow, nowToRow, pendingCaptures, resolveNow, routeCapturePatch } from './homeState'
 import { A_RATED_STATUS, SEVERITY, UNREPORTED_STATUS, buildNeedsAttention, gdolWeekEnding, gdolWeekWindow, inGdolWindow, repoStatusFlags, shiftDays } from './needsAttention'
@@ -470,12 +471,49 @@ function JobRow({ job }) {
 // so SH never authenticates against that project. Granting anon is NOT the fix:
 // the view has security_invoker unset, so it runs as its owner and bypasses
 // job_applications' RLS, and the anon key is checked into this public repo.
+// A permission error now means something genuinely unexpected: the signed-out case
+// is handled before any query runs, so reaching this means the session exists and
+// still was not allowed. Say so plainly rather than repeating the old anon advice.
 function jobPipelineHelp(message) {
   if (!/permission denied/i.test(message ?? '')) return null
-  return 'System Horizon reads this pipeline as `anon`, and `dashboard_jobs` only grants access to signed-in roles. Granting `anon` is not the fix: that view bypasses row security and this repo is public, so it would publish the whole job search. Career stays read-only until SH can authenticate against that project.'
+  return 'You are signed in to the job pipeline but it still refused the read. That is unexpected: `dashboard_jobs` grants SELECT to `authenticated`. Do not "fix" this by granting `anon` — that view bypasses row security and this repo is public, so it would publish the whole job search.'
 }
 
-function CareerView({ jobs, jobError }) {
+// Sign-in for the job project only. Deliberately separate from AccessGate, which
+// signs in to the app: two projects, two sessions, and signing out of one must not
+// sign out of the other.
+function JobPipelineSignIn() {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [message, setMessage] = useState('')
+  const [isWorking, setIsWorking] = useState(false)
+
+  async function submit(event) {
+    event.preventDefault()
+    setMessage('')
+    if (!email.trim() || password.length < 8) {
+      setMessage('Use your email and a password of at least 8 characters.')
+      return
+    }
+    setIsWorking(true)
+    const { error } = await jobPipeline.auth.signInWithPassword({ email: email.trim(), password })
+    setIsWorking(false)
+    // No success branch: onAuthStateChange swaps this form out for the pipeline.
+    if (error) setMessage(error.message)
+  }
+
+  return <form className="job-signin" onSubmit={submit}>
+    <p className="eyebrow">Job pipeline not connected</p>
+    <p>The job search lives in a separate Supabase project, so it needs its own sign-in. Nothing is stored in this app: the session stays in your browser.</p>
+    <label>Email<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" /></label>
+    <label>Password<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" /></label>
+    <Button tone="coral" type="submit" disabled={isWorking}>{isWorking ? 'Connecting…' : 'Connect job pipeline'}</Button>
+    {message && <p className="job-signin-error" role="alert">{message}</p>}
+  </form>
+}
+
+function CareerView({ jobs, jobError, jobSignedIn }) {
+  const access = jobAccessState({ signedIn: jobSignedIn, error: jobError })
   const [statusFilter, setStatusFilter] = useState('All')
   const [showAll, setShowAll] = useState(false)
   const now = new Date()
@@ -515,10 +553,10 @@ function CareerView({ jobs, jobError }) {
       </div>
     </header>
 
-    {jobError ? <div className="database-error" role="alert">
-      <p>Job pipeline error: {jobError}</p>
-      {jobPipelineHelp(jobError) ? <p className="database-error-help">{jobPipelineHelp(jobError)}</p> : null}
-    </div> : <>
+    {access.state === JOB_ACCESS.error ? <div className="database-error" role="alert">
+      <p>Job pipeline error: {access.message}</p>
+      {jobPipelineHelp(access.message) ? <p className="database-error-help">{jobPipelineHelp(access.message)}</p> : null}
+    </div> : access.state === JOB_ACCESS.signedOut ? <JobPipelineSignIn /> : <>
       {unreportedLastWeek > 0 && <p className="database-error" role="alert">
         {unreportedLastWeek} work-search contact{unreportedLastWeek === 1 ? '' : 's'} from last week still {unreportedLastWeek === 1 ? 'needs' : 'need'} to be reported to GA DOL.
       </p>}
@@ -652,10 +690,10 @@ function CaptureControl({ onSave }) {
 // equal-weight cards would flatten the ordering the aggregator exists to
 // produce. Color never carries the meaning on its own, because each row states
 // its reason in words.
-function NeedsAttention({ jobs, jobError, repoHealth, repoHealthError }) {
+function NeedsAttention({ jobs, jobError, jobSignedIn, repoHealth, repoHealthError }) {
   const { alerts, overflow, errors } = useMemo(
-    () => buildNeedsAttention({ jobs, jobError, repoHealth, repoError: repoHealthError }),
-    [jobs, jobError, repoHealth, repoHealthError],
+    () => buildNeedsAttention({ jobs, jobError, jobSignedIn, repoHealth, repoError: repoHealthError }),
+    [jobs, jobError, jobSignedIn, repoHealth, repoHealthError],
   )
 
   return <section className="attention-stack" aria-labelledby="attention-heading">
@@ -677,10 +715,10 @@ function NeedsAttention({ jobs, jobError, repoHealth, repoHealthError }) {
 // of exactly Horizon | Projects | Career | System. Side Quests and Calendar get
 // no slot. Each slot links into its area, so it changes what she does next
 // rather than only reporting a number.
-function FieldStatus({ now, tasks, captures, projects, jobs, jobError, repoHealth, repoHealthError, onSelectView }) {
+function FieldStatus({ now, tasks, captures, projects, jobs, jobError, jobSignedIn, repoHealth, repoHealthError, onSelectView }) {
   const slots = useMemo(
-    () => buildFieldStatus({ now, tasks, captures, projects, jobs, jobError, repoHealth, repoHealthError }),
-    [now, tasks, captures, projects, jobs, jobError, repoHealth, repoHealthError],
+    () => buildFieldStatus({ now, tasks, captures, projects, jobs, jobError, jobSignedIn, repoHealth, repoHealthError }),
+    [now, tasks, captures, projects, jobs, jobError, jobSignedIn, repoHealth, repoHealthError],
   )
 
   return <nav className="field-status" aria-label="Field status">
@@ -719,7 +757,7 @@ function TodayAndNext({ events }) {
   </section>
 }
 
-function Horizon({ projects, tasks, now, captures, events, jobs, jobError, repoHealth, repoHealthError, onProjects, onOpenProject, onSelectView, onChooseNow, onUpdateTaskStatus, onCaptureIntoTask, onDismissCapture }) {
+function Horizon({ projects, tasks, now, captures, events, jobs, jobError, jobSignedIn, repoHealth, repoHealthError, onProjects, onOpenProject, onSelectView, onChooseNow, onUpdateTaskStatus, onCaptureIntoTask, onDismissCapture }) {
   const [capacity, setCapacity] = useState('Steady')
   const [picking, setPicking] = useState(false)
   const [pickTaskId, setPickTaskId] = useState('')
@@ -784,7 +822,7 @@ function Horizon({ projects, tasks, now, captures, events, jobs, jobError, repoH
     </section>
 
     <div className="home-queues">
-      <NeedsAttention jobs={jobs} jobError={jobError} repoHealth={repoHealth} repoHealthError={repoHealthError} />
+      <NeedsAttention jobs={jobs} jobError={jobError} jobSignedIn={jobSignedIn} repoHealth={repoHealth} repoHealthError={repoHealthError} />
       <TodayAndNext events={events} />
     </div>
 
@@ -834,7 +872,7 @@ function Horizon({ projects, tasks, now, captures, events, jobs, jobError, repoH
       </article>
     </section>
 
-    <FieldStatus now={now} tasks={tasks} captures={captures} projects={projects} jobs={jobs} jobError={jobError} repoHealth={repoHealth} repoHealthError={repoHealthError} onSelectView={onSelectView} />
+    <FieldStatus now={now} tasks={tasks} captures={captures} projects={projects} jobs={jobs} jobError={jobError} jobSignedIn={jobSignedIn} repoHealth={repoHealth} repoHealthError={repoHealthError} onSelectView={onSelectView} />
   </>
 }
 
@@ -1556,6 +1594,9 @@ function App() {
   const [events, setEvents] = useState([])
   const [jobs, setJobs] = useState([])
   const [jobError, setJobError] = useState('')
+  // A second, independent session: the job pipeline is a different Supabase
+  // project, so signing in to the app does not sign in to it. See NORTH_STAR M11.
+  const [jobSession, setJobSession] = useState(null)
   const [repoHealth, setRepoHealth] = useState([])
   const [repoHealthError, setRepoHealthError] = useState('')
   const [swiftWatch, setSwiftWatch] = useState([])
@@ -1594,7 +1635,18 @@ function App() {
     setEvents((data ?? []).map(eventFromRow))
   }
 
-  async function loadJobPipeline() {
+  // Does not query while signed out of the job project. Reading as anon returns a
+  // permission error, and reporting that as a failure would be wrong: it is not
+  // broken, it is unauthenticated. The signed-out state is carried by jobSession,
+  // and jobError stays reserved for things that are actually wrong. The session is
+  // passed in rather than read from the closure so the effect's dependency list
+  // fully accounts for what this reads (react-hooks/exhaustive-deps).
+  async function loadJobPipeline(authSession) {
+    if (!authSession) {
+      setJobs([])
+      setJobError('')
+      return
+    }
     const { data, error } = await jobPipeline.from('dashboard_jobs').select('id,status,title,organization,location,match_percent,recommendation,post_url,deadline,submitted,ws_activity_date,ws_reported').order('last_update', { ascending: false })
     if (error) {
       setJobs([])
@@ -1667,10 +1719,22 @@ function App() {
     catch { /* Navigation preference is optional when storage is blocked. */ }
   }, [navCollapsed])
 
+  // Tracks the job project's own session. Separate storage key per project, so
+  // this never disturbs the app session above (asserted in jobPipeline.test.mjs).
+  useEffect(() => {
+    jobPipeline.auth.getSession().then(({ data }) => setJobSession(data.session))
+    const { data: subscription } = jobPipeline.auth.onAuthStateChange((_event, nextSession) => setJobSession(nextSession))
+    return () => subscription.subscription.unsubscribe()
+  }, [])
+
+  // Also re-runs when jobSession changes, so connecting the job pipeline from
+  // Career immediately refills it. That reloads the rest of the dashboard too,
+  // which is a fair price: it happens once per sign-in and keeps every panel
+  // consistent, and a second effect for jobs alone tripped exhaustive-deps.
   useEffect(() => {
     if (!session) return
-    Promise.all([loadProjects(), loadTasks(), loadEvents(), loadJobPipeline(), loadRepoHealth(), loadSwiftWatch(), loadSwiftCollection(), loadSwiftEvents(), loadTravelWatch(), loadCaptures(), loadNow()]).catch((error) => setDatabaseError(error.message || 'Could not load private records.'))
-  }, [session])
+    Promise.all([loadProjects(), loadTasks(), loadEvents(), loadJobPipeline(jobSession), loadRepoHealth(), loadSwiftWatch(), loadSwiftCollection(), loadSwiftEvents(), loadTravelWatch(), loadCaptures(), loadNow()]).catch((error) => setDatabaseError(error.message || 'Could not load private records.'))
+  }, [session, jobSession])
 
   async function addProject(project) {
     const { data, error } = await supabase.from('horizon_projects').insert(projectToRow(project)).select().single()
@@ -1883,13 +1947,13 @@ function App() {
           : activeView === 'Projects' ? <ProjectRegistry projects={projects} tasks={tasks} repoHealth={repoHealth} onAddProject={addProject} onSeedProjects={seedProjects} onOpenProject={openProject} />
           : activeView === 'Flow' ? <FlowView tasks={tasks} projects={projects} onOpenProjects={() => setActiveView('Projects')} onAddTask={addTask} onUpdateTaskStatus={updateTaskStatus} onDeleteTask={deleteTask} />
           : activeView === 'Calendar' ? <CalendarView events={events} projects={projects} tasks={tasks} onAddEvent={addEvent} onDeleteEvent={deleteEvent} onUpdateTaskStatus={updateTaskStatus} onDeleteTask={deleteTask} />
-          : activeView === 'Career' ? <CareerView jobs={jobs} jobError={jobError} />
+          : activeView === 'Career' ? <CareerView jobs={jobs} jobError={jobError} jobSignedIn={Boolean(jobSession)} />
           : activeView === 'Mirrors' ? <MirrorsView repoHealth={repoHealth} repoHealthError={repoHealthError} />
           : activeView === 'Archive' ? <ArchiveView />
           : activeView === 'Swift' ? <SwiftView watches={swiftWatch} collection={swiftCollection} events={swiftEvents} onAddCollectionItem={addSwiftCollectionItem} onUpdateCollectionStatus={updateSwiftCollectionStatus} onDeleteCollectionItem={deleteSwiftCollectionItem} onAddEvent={addSwiftEvent} onDeleteEvent={deleteSwiftEvent} />
           : activeView === 'Travel' ? <TravelView entries={travelWatch} onAdd={addTravelEntry} onDelete={deleteTravelEntry} />
           : activeView === 'War Room' ? <WarRoomView />
-          : <Horizon projects={projects} tasks={tasks} now={now} captures={captures} events={events} jobs={jobs} jobError={jobError} repoHealth={repoHealth} repoHealthError={repoHealthError} onProjects={() => setActiveView('Projects')} onOpenProject={openProject} onSelectView={setActiveView} onChooseNow={chooseNow} onUpdateTaskStatus={updateTaskStatus} onCaptureIntoTask={captureIntoTask} onDismissCapture={dismissCapture} />}
+          : <Horizon projects={projects} tasks={tasks} now={now} captures={captures} events={events} jobs={jobs} jobError={jobError} jobSignedIn={Boolean(jobSession)} repoHealth={repoHealth} repoHealthError={repoHealthError} onProjects={() => setActiveView('Projects')} onOpenProject={openProject} onSelectView={setActiveView} onChooseNow={chooseNow} onUpdateTaskStatus={updateTaskStatus} onCaptureIntoTask={captureIntoTask} onDismissCapture={dismissCapture} />}
       </main>
     </div>
   </div>

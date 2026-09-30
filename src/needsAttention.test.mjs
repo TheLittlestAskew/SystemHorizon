@@ -229,3 +229,28 @@ test('moved helpers still behave as they did in App.jsx', () => {
   assert.deepEqual(repoStatusFlags({ hasLocalMirror: true, uncommittedCount: 1, aheadCount: 2, behindCount: 0 }).flags, ['1 uncommitted change', '2 unpushed commits'])
   assert.equal(repoStatusFlags({ hasLocalMirror: true, uncommittedCount: 0, aheadCount: 0, behindCount: 0 }).tone, 'cyan')
 })
+
+// M11 criterion 2b: signed out, no career rule may run. Every one of them counts
+// rows, so an empty list would fabricate a GDOL shortfall alert claiming contacts
+// are needed when the truth is that the pipeline was never read.
+test('signed out raises no career alert and reports no error', () => {
+  const result = buildNeedsAttention({ jobs: [], jobSignedIn: false, repoHealth: [] })
+  assert.equal(result.alerts.filter((a) => a.source === 'career').length, 0)
+  assert.equal(result.errors.filter((e) => e.source === 'career').length, 0, 'signed out is not an error')
+})
+
+test('signed out specifically suppresses the fabricated GDOL shortfall', () => {
+  const signedOut = buildNeedsAttention({ jobs: [], jobSignedIn: false })
+  const signedIn = buildNeedsAttention({ jobs: [], jobSignedIn: true })
+  assert.equal(signedOut.alerts.find((a) => a.id === 'career:gdol-shortfall'), undefined)
+  assert.ok(signedIn.alerts.find((a) => a.id === 'career:gdol-shortfall'), 'signed in with 0 contacts is a real shortfall')
+})
+
+test('a real error while signed out is still reported as an error', () => {
+  const result = buildNeedsAttention({ jobs: [], jobSignedIn: false, jobError: 'permission denied' })
+  assert.equal(result.errors.filter((e) => e.source === 'career').length, 1)
+})
+
+test('signed in remains the default so existing callers are unchanged', () => {
+  assert.ok(buildNeedsAttention({ jobs: [] }).alerts.some((a) => a.source === 'career'))
+})

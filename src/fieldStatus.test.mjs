@@ -150,3 +150,25 @@ test('called with nothing at all, it still returns four usable slots', () => {
     assert.ok(slot.value && slot.detail && slot.view && slot.tone)
   }
 })
+
+// M11 criterion 2b: signed out, Home must not claim a contact count. Without the
+// guard this slot read "0/3 contacts · 3 more this week", inventing a statement
+// about her GDOL week from an empty array.
+test('signed out, the career slot asks for a sign-in instead of claiming 0/3 contacts', () => {
+  const slot = slotsById(buildFieldStatus({ clock: CLOCK, jobs: [], jobSignedIn: false })).career
+  assert.equal(slot.value, 'Sign in')
+  assert.equal(slot.detail, 'Job pipeline not connected')
+  assert.equal(slot.tone, 'peach', 'not coral: this is an action, not a failure')
+  assert.ok(!/\d\/\d/.test(slot.value), 'no contact count may appear while signed out')
+})
+
+test('a real error still outranks being signed out in the career slot', () => {
+  const slot = slotsById(buildFieldStatus({ clock: CLOCK, jobError: 'unreachable', jobSignedIn: false })).career
+  assert.equal(slot.value, 'Unavailable')
+  assert.equal(slot.tone, 'coral')
+})
+
+test('signed in is still the default, so existing callers keep their counts', () => {
+  const slot = slotsById(buildFieldStatus({ clock: CLOCK, jobs: [] })).career
+  assert.match(slot.value, /\d\/\d contacts/)
+})

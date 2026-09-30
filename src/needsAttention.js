@@ -158,12 +158,18 @@ function mirrorAlerts(repoHealth, now, staleAfterDays) {
 
 // A failing source contributes an error instead of alerts; the other source
 // still renders. Never returns more than ATTENTION_LIMIT alerts.
-export function buildNeedsAttention({ jobs = [], jobError = '', repoHealth = [], repoError = '', now = new Date(), staleAfterDays = MIRROR_STALE_DAYS } = {}) {
+export function buildNeedsAttention({ jobs = [], jobError = '', jobSignedIn = true, repoHealth = [], repoError = '', now = new Date(), staleAfterDays = MIRROR_STALE_DAYS } = {}) {
   const alerts = []
   const errors = []
 
+  // Signed out is neither an error nor a reason to raise an alert: every career
+  // rule counts rows, so running them on an empty list would fabricate compliance
+  // facts ("3 more work-search contacts needed") from data we simply do not have.
+  // The signed-out state is surfaced by the field-status strip instead, where it is
+  // one click from resolved. `jobSignedIn` defaults true so callers holding job
+  // rows behave as before.
   if (jobError) errors.push({ source: 'career', message: jobError })
-  else alerts.push(...careerAlerts(jobs, now))
+  else if (jobSignedIn) alerts.push(...careerAlerts(jobs, now))
 
   if (repoError) errors.push({ source: 'mirrors', message: repoError })
   else alerts.push(...mirrorAlerts(repoHealth, now, staleAfterDays))

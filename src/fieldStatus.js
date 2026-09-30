@@ -41,9 +41,17 @@ function projectsSlot(projects) {
   }
 }
 
-function careerSlot(jobs, jobError, now) {
+// `jobSignedIn` defaults to true because every caller holding job rows was signed
+// in to have got them. The state that matters is signed-out WITH an empty list:
+// without this guard that renders as "0/3 contacts", which is a claim about her
+// GDOL week invented from absent data. Section 4 forbids exactly that, and this is
+// the surface closest to her unemployment reporting, so it must not guess.
+function careerSlot(jobs, jobError, now, jobSignedIn = true) {
   if (jobError) {
     return { id: 'career', label: 'Career', value: 'Unavailable', detail: 'Job pipeline error', tone: 'coral', view: 'Career' }
+  }
+  if (!jobSignedIn) {
+    return { id: 'career', label: 'Career', value: 'Sign in', detail: 'Job pipeline not connected', tone: 'peach', view: 'Career' }
   }
   const thisWeek = gdolWeekWindow(gdolWeekEnding(now))
   const contacts = jobs.filter((job) => inGdolWindow(job.ws_activity_date, thisWeek)).length
@@ -76,11 +84,11 @@ function systemSlot(repoHealth, repoHealthError) {
 
 // Order is fixed by section 3 and never sorted: this is a stable strip, not a
 // ranking, so the slots must stay where the eye last found them.
-export function buildFieldStatus({ now = null, tasks = [], captures = [], projects = [], jobs = [], jobError = '', repoHealth = [], repoHealthError = '', clock = new Date() } = {}) {
+export function buildFieldStatus({ now = null, tasks = [], captures = [], projects = [], jobs = [], jobError = '', jobSignedIn = true, repoHealth = [], repoHealthError = '', clock = new Date() } = {}) {
   return [
     horizonSlot(now, tasks, captures),
     projectsSlot(projects),
-    careerSlot(jobs, jobError, clock),
+    careerSlot(jobs, jobError, clock, jobSignedIn),
     systemSlot(repoHealth, repoHealthError),
   ]
 }

@@ -409,22 +409,55 @@ successfully because it signs in (`tracker.html:211`). SH's Career is the only
 consumer in the ecosystem reading job data as `anon`, which is why it is the only
 one broken.
 
-#### Phase 0 research (GREEN, required before any code — see section 8)
+#### ✅ Phase 0 — DONE 2026-09-30. The design holds.
 
-Against the official `@supabase/supabase-js` v2 docs, not memory:
+Checked three ways: the **shipped source** in `node_modules`
+(`@supabase/supabase-js` **2.110.9**, the exact code this repo builds against), an
+**empirical run** instantiating both clients, and the **upstream guidance** on the
+warning itself. Source and experiment beat docs here, so all three are recorded.
 
-1. **Session isolation between two clients on two projects.** The expectation is
-   that each client namespaces its session by project ref
-   (`sb-<ref>-auth-token`), so signing in to the job project does not disturb the
-   main project's session. **Verify this and set `storageKey` explicitly if the
-   docs leave it implicit** — two clients silently sharing one storage key would
-   sign Taylor out of the app every time Career authenticated.
-2. **Whether a second `GoTrueClient` on the same page is supported**, and any
-   warning the library emits about multiple instances.
-3. **Token refresh** with two clients live at once: confirm `autoRefreshToken`
-   on the job client does not fight the main client's refresh.
-4. Write the findings into the commit body. If (1) turns out false, **stop and
-   raise it** — a shared storage key changes the design.
+**1. Session isolation: ✅ automatic, and no `storageKey` needed.**
+
+`SupabaseClient` derives the key from the project URL:
+
+```js
+let i = `sb-${r.hostname.split('.')[0]}-auth-token`   // r = new URL(supabaseUrl)
+```
+
+`hostname.split('.')[0]` **is** the project ref, so the two clients cannot collide.
+Confirmed by running them:
+
+| Client | Derived `storageKey` |
+|---|---|
+| `src/supabase.js` (app, `drtvlcgyjlofaffbwael`) | `sb-drtvlcgyjlofaffbwael-auth-token` |
+| `src/jobPipeline.js` (jobs, `vtrtyagltwdrbastpppl`) | `sb-vtrtyagltwdrbastpppl-auth-token` |
+
+▶ **Do NOT set `storageKey` explicitly.** It would restate a library default, and
+hardcoding `sb-vtrtyagltwdrbastpppl-auth-token` could silently drift from the URL
+it is supposed to mirror. **Instead assert it**: `client.auth.storageKey` is
+readable (that is how the table above was produced), so a test that the two keys
+differ is a real guard that fails loudly if the library default ever changes. That
+is stronger than configuration.
+
+**2. Two clients on one page: ✅ no warning, and the caveat does not apply.**
+
+The warning fires only on `this.instanceID > 0`, and the counter is namespaced per
+key (`nextInstanceID[this.storageKey]`). With distinct keys **both clients are
+instance 0** — verified, both reported `instanceID: 0`. The upstream wording is
+also explicitly scoped: *"may produce undefined behavior when used concurrently
+**under the same storage key**."* Different keys, different hazard class.
+Cross-tab sync is per key too (`new BroadcastChannel(this.storageKey)`).
+
+**3. Token refresh: ✅ no contention.**
+
+The Web Lock is named `` `lock:${this.storageKey}` ``, so the two clients take
+**different** locks and never serialize against each other. `autoRefreshToken` can
+stay on for both.
+
+🛑 **What this means for the build:** the one risk that could have invalidated the
+design did not materialize. Proceed with a second authenticated client. If a future
+`@supabase/supabase-js` upgrade changes the key derivation, the assertion from (1)
+is what catches it.
 
 #### The `localStorage` question, resolved
 
@@ -432,10 +465,15 @@ Section 4 says "no new state in `localStorage` except per-device conveniences".
 A persisted auth session is the auth library's own storage, not app state, and
 ⚠️ **the main client already does it**: `src/supabase.js` calls
 `createClient(url, key)` with no options, so `persistSession` defaults to `true`
-and it already writes an auth token to `localStorage`. So this milestone
-introduces no new *kind* of storage. ▶ Confirm that reading with Taylor in one
-line rather than assuming it; if she disagrees, the fallback is a session-only
-(in-memory) client that requires signing in once per tab.
+and it already writes an auth token to `localStorage` — **confirmed in Phase 0**,
+which read its derived key (`sb-drtvlcgyjlofaffbwael-auth-token`) off the live
+client. So this milestone introduces **no new kind of storage**: it adds a second
+key beside one that has always been there, written by the auth library rather than
+by app code. Treated as **GREEN** on that evidence.
+
+⚠️ Taylor can still veto it. If she reads §4 strictly enough to exclude auth
+sessions, the fallback is `persistSession: false` with an in-memory session, which
+costs one sign-in per tab and changes nothing else in this milestone.
 
 #### Build rules
 
@@ -458,12 +496,29 @@ line rather than assuming it; if she disagrees, the fallback is a session-only
   toggle all stay. This milestone changes where the rows come from, nothing else.
 - Auth-state to UI-state mapping goes in a pure function with tests, like
   `src/needsAttention.js`. Do not test it only through the component.
+- 🛑 **"Signed out" must be a distinct state on Home too, not just on Career.**
+  Found 2026-09-30 by reading the code, and this is the trap in this milestone:
+  passing signed-out through as *"no error, zero jobs"* makes **two** Home surfaces
+  state falsehoods about GDOL compliance from absent data.
+  - `fieldStatus.js` `careerSlot` would render **"0/3 contacts · 3 more this
+    week"** — a claim about her week, invented from an empty array.
+  - `needsAttention.js` would fire `career:gdol-shortfall` — **"3 more work-search
+    contacts needed by <date>"** — a fabricated compliance alert.
+
+  Both are exactly the silent fallback §4 forbids, and they are the surfaces
+  closest to her unemployment reporting, so they are the ones that must not guess.
+  ⚠️ **Reusing the existing `jobError` string for signed-out is also wrong** — it
+  would make Home cry "Career unavailable" in coral for a state that is one click
+  from resolved. Signed-out is a **third** state and needs its own channel.
 
 #### Acceptance criteria
 
 1. Signed in, Career renders real rows from `dashboard_jobs` and the pipeline
    count agrees with `select count(*)` run independently.
 2. Signed out, Career shows a sign-in affordance and **no** permission error.
+2b. Signed out, **Home tells the truth**: the field-status Career slot does not
+   claim a contact count, and Needs Attention raises **no** GDOL alert. Asserted by
+   test against an empty job list in the signed-out state, not by eyeballing it.
 3. A reload keeps both sessions. The app session and the job session are
    independent in both directions.
 4. `git diff` touches no file under `supabase/migrations/`, and `anon` still

@@ -32,26 +32,92 @@
 **This is the only decision that blocks a whole section.** Career loads, lays out
 correctly, and explains its own failure, but it shows no job rows.
 
-The mechanics: `dashboard_jobs` lives in Supabase project
-`vtrtyagltwdrbastpppl`. It grants SELECT to `authenticated` but not to `anon`,
-and `src/jobPipeline.js` connects as `anon` and never signs in to that project.
+### Verified live, 2026-09-30, read-only
 
-🛑 **Do not take the one-line fix.** `grant select on dashboard_jobs to anon`
-would work and would be a privacy incident: the view has `security_invoker`
-unset, so it bypasses `job_applications` RLS, and this repo is **public** with
-the anon key committed. That grant publishes the entire job search.
+✅ **The diagnosis this repo has been repeating is correct.** It was checked
+against the live database rather than inherited, because an adjacent claim in
+this same area ("no MCP server can reach that project") had already turned out to
+be false. `supabase-cutter` resolves to `vtrtyagltwdrbastpppl` (`Rectrix_Caedere`),
+so it can be verified from here.
 
-Three real options:
+| Fact | Query result |
+|---|---|
+| `dashboard_jobs` object type | **view** (`relkind = 'v'`) |
+| `dashboard_jobs` `reloptions` | **NULL** → `security_invoker` is **not set**, so it runs as its owner and **bypasses RLS** |
+| `dashboard_jobs` grants | `authenticated`, `service_role`. **`anon` has nothing at all** |
+| `job_applications` RLS | **enabled** |
+| `job_applications` policies | **exactly 1**: `authenticated_full_access`, `ALL`, role `{authenticated}`, `USING (true)` |
+| `job_applications` grants to `anon` | `REFERENCES`, `TRIGGER` only. **No SELECT** |
+| Rows | `job_applications` **345**, `dashboard_jobs` **345** |
+| `src/jobPipeline.js` | anon key, and `persistSession: false, autoRefreshToken: false` — configured to **never hold a session** |
 
-| Option | What it means | Cost |
-|---|---|---|
-| **A. SH authenticates** against `vtrtyagltwdrbastpppl` as a second client | The correct fix. Career reads as `authenticated`, RLS stays intact | A new milestone: second client, session handling, error states |
-| **B. A narrow public view** with `security_invoker` set and only non-sensitive columns exposed | Smaller, but you are deciding which job-search columns are public forever | Schema change, so blocked under the no-schema-change rule |
-| **C. Leave Career as an explained error state** | Zero work, honest UI, and the section stays `🛑 BLOCKED` on the DoD | Career never works |
+🛑 **So the one-line fix would publish 345 job-application rows.** Not "some data":
+the view returns the entire table, and granting `anon` SELECT on it bypasses the
+one policy that currently restricts the table to `authenticated`.
 
-**Recommendation: A**, scheduled as its own milestone after M9. It is the only
-option that does not trade privacy for convenience. ⚠️ Do not let it get started
-as a side effect of another milestone.
+⚠️ **And there is no existing anon-safe path to reuse.** Every object in this
+project that grants SELECT to `anon` was enumerated; **none of them is
+job-related.** So an option D of "point Career at the view that already exists"
+does not exist.
+
+### The constraint that decides this
+
+**The anon key is committed to a public repo** (`src/jobPipeline.js`, line 4). So
+for this project, *"grant it to `anon`"* and *"publish it on the internet"* are the
+same sentence. Cloudflare Access protects the **app**; it does not protect the
+Supabase REST API, which is reachable by anyone holding that key.
+
+That collapses the option space: **any route through `anon` publishes the job
+search.** Only authentication keeps it private.
+
+| Option | What it means | Cost | Privacy |
+|---|---|---|---|
+| **A. SH authenticates** against `vtrtyagltwdrbastpppl` | Career reads as `authenticated`, the existing policy already permits it, no schema change at all | New milestone. ⚠️ A **second, separate** auth system: a session on `drtvlcgyjlofaffbwael` is not valid here, so it means a sign-in control on Career and flipping `persistSession` to `true` | ✅ Private |
+| **B. A narrow public view** (`security_invoker = on`, column subset) | ⚠️ **Does not work alone.** With `security_invoker` on, the view respects RLS, and the only policy is `authenticated`-only — so `anon` would read **0 rows silently**. It also needs a new `anon` SELECT policy on `job_applications` | Two schema changes, both blocked under the no-schema-change rule | ✗ Publishes whatever it exposes, permanently |
+| **C. Leave Career as an explained error state** | Zero work. The UI already says why it is empty | Career never works; DoD stays `🛑 BLOCKED` | ✅ Private |
+
+**Recommendation: A**, as its own milestone after M9. It is now a stronger
+recommendation than it was before the verification, because A turns out to need
+**no schema change at all** (the `authenticated_full_access` policy already grants
+exactly what Career needs) while B needs two, and B cannot be made to work
+without also publishing data.
+
+⚠️ **Do not let A start as a side effect of another milestone**, per NORTH_STAR §6.
+The awkward part is not the query, it is that this is a **second Supabase project
+with its own auth**, so it is a real design conversation about how many times
+Taylor signs in.
+
+🛑 **Never store a password or service-role key in this repo to avoid that second
+sign-in.** The repo is public; that is the same incident as the `anon` grant with
+extra steps.
+
+### ✅ Option A is not novel work — there is a working precedent
+
+`taylorritchie/tracker.html` reads the **same** tables in the **same** project and
+works. It works because it has a `signIn` / `signUp` flow (`tracker.html:211`) and
+therefore connects as `authenticated`, which the `authenticated_full_access`
+policy permits.
+
+So the pattern option A needs is already written and already in production
+against this exact database. **SH's Career view is the only consumer in the
+ecosystem that tries to read job data as `anon`**, which is why it is the only one
+broken.
+
+▶ **Concrete starting point when this becomes a milestone:** read the sign-in
+block in `tracker.html` first, then change `src/jobPipeline.js` from
+`persistSession: false` to a persisted session plus a sign-in control on the
+Career view. No schema change, no new policy, no grant.
+
+⚠️ **Historical note so this is not "fixed" the wrong way again.** On 2026-09-22 an
+`anon_read_only` policy plus an `anon` SELECT grant **were** added to
+`job_applications`, explicitly accepting "this widens read access to the
+publishable key on GitHub Pages". **Both were removed again before 2026-09-30** —
+verified: the only surviving policy is `authenticated_full_access` and `anon` is
+down to `REFERENCES, TRIGGER`. The write revokes from that same change **did**
+survive. Read that as the privacy hardening wave deliberately closing an opening,
+not as damage: `tracker.html` signs in, so nothing depended on it. **Re-adding an
+`anon` read to unblock Career would be re-opening a hole that was closed on
+purpose.**
 
 ## D2 · Q1 · Create the Google OAuth client 🛑
 

@@ -1,0 +1,158 @@
+# v1 DECISIONS NEEDED
+
+> Written 2026-09-30. Extracted from the tail of `SH_LAYOUT_PLAN.md`, where five
+> decisions were batched, and reconciled against what actually shipped on
+> 2026-09-29 and against `docs/NORTH_STAR.md` §12.
+>
+> **Three of the original five are already resolved.** They are kept below with
+> their resolution so nobody re-asks them. The live list is §D1 to §D8.
+
+## Status at a glance
+
+| # | Decision | Blocks | State |
+|---|---|---|---|
+| **D1** | How does SH read `dashboard_jobs`? | **Career, entirely** | 🛑 **Open, needs a new milestone** |
+| **D2** | Q1 · Create the Google OAuth client | **M8** | 🛑 Open, only Taylor can do it |
+| **D3** | Q2 · Typed `timestamptz` columns for events | M8 build | ⚠️ Open, wanted before M8 |
+| **D4** | Q3 · Retarget the heartbeat script, or leave it | nothing | Open, low stakes |
+| **D5** | Q4 · `Sidequests` area vs `Side Quests` nav group | nothing | Open, low stakes |
+| **D6** | Q9 · Make `lint` mean "no warnings" | nothing | Open, one line |
+| **D7** | Q10 · Nav group labels fail WCAG AA (4.17:1) | nothing | Open, visual change so RED |
+| **D8** | Q11 · Commit trailer conflict | nothing | ⚠️ **Answered in HANDOFF, not recorded in NORTH_STAR** |
+| ~~O1~~ | Career pipeline cap: is 25 right? | — | ✅ Resolved: **Show all N** toggle |
+| ~~O2~~ | Archive: group by date or by repo? | — | ✅ Resolved: **sortable table** |
+| ~~O3~~ | Merge `sh-layout-v1` to `main`, and when? | — | ✅ Resolved: merged + deployed 2026-09-29 |
+| ~~O4~~ | Q12 · Needs Attention placement | — | ✅ Closed 2026-09-29 |
+| ~~O5~~ | Add one event and one task (an action, not a decision) | 3 DoD marks | ▶ **Still the cheapest win** |
+
+---
+
+## D1 · How does SH read `dashboard_jobs`? 🛑
+
+**This is the only decision that blocks a whole section.** Career loads, lays out
+correctly, and explains its own failure, but it shows no job rows.
+
+The mechanics: `dashboard_jobs` lives in Supabase project
+`vtrtyagltwdrbastpppl`. It grants SELECT to `authenticated` but not to `anon`,
+and `src/jobPipeline.js` connects as `anon` and never signs in to that project.
+
+🛑 **Do not take the one-line fix.** `grant select on dashboard_jobs to anon`
+would work and would be a privacy incident: the view has `security_invoker`
+unset, so it bypasses `job_applications` RLS, and this repo is **public** with
+the anon key committed. That grant publishes the entire job search.
+
+Three real options:
+
+| Option | What it means | Cost |
+|---|---|---|
+| **A. SH authenticates** against `vtrtyagltwdrbastpppl` as a second client | The correct fix. Career reads as `authenticated`, RLS stays intact | A new milestone: second client, session handling, error states |
+| **B. A narrow public view** with `security_invoker` set and only non-sensitive columns exposed | Smaller, but you are deciding which job-search columns are public forever | Schema change, so blocked under the no-schema-change rule |
+| **C. Leave Career as an explained error state** | Zero work, honest UI, and the section stays `🛑 BLOCKED` on the DoD | Career never works |
+
+**Recommendation: A**, scheduled as its own milestone after M9. It is the only
+option that does not trade privacy for convenience. ⚠️ Do not let it get started
+as a side effect of another milestone.
+
+## D2 · Q1 · Create the Google OAuth client 🛑
+
+**M8 (Google Calendar one-way sync) is Blocked on this and nothing else.** Claude
+cannot create Google Cloud credentials. You create an OAuth client with redirect
+URI `sh.tayloraritchie.com`, for `taylor.ritchie14@gmail.com`. The exact console
+steps get written during M8 prep, and that prep half is available now.
+
+Decided already, for the record: read-only pull into `horizon_events`, nothing
+pushed back to Google, built as an in-app OAuth button on Calendar rather than a
+scheduled script.
+
+## D3 · Q2 · Typed columns for event times ⚠️
+
+`horizon_events.start_time` / `end_time` are free-form `text` ("10:00 AM"), which
+is why `src/timeline.js` parses defensively and flags unreadable values instead
+of hiding them. Google returns RFC3339 datetimes, so M8 needs this settled first.
+
+**Recommended:** add typed `starts_at` / `ends_at timestamptz` alongside, backfill
+from the parseable text, and keep the text columns until you approve removing
+them. That is a schema change, so it needs your yes before anything runs.
+
+## D4 · Q3 · The heartbeat script
+
+`push-status-to-systemhorizon.ps1` writes to a table nothing in the Vite app
+reads. Retarget it at SH, or leave it feeding the legacy pages? Not blocking
+anything. **Recommended:** retarget, since the legacy pages are the stale half.
+
+## D5 · Q4 · `Sidequests` vs `Side Quests`
+
+The project **area** is `Sidequests`; the nav **group** is `Side Quests`.
+**Recommended: keep both as-is.** They answer different questions and nothing is
+broken. Listed only so it stops looking like a bug on each fresh read.
+
+## D6 · Q9 · Make the lint gate mean what it says
+
+`oxlint` exits 0 when it emits warnings, and the ruleset has a `"warn"` level
+(`react/only-export-components`). Verified by probe: an unused variable produced a
+warning **and** exit code 0. So gate item 1's "lint clean" currently means "no
+errors".
+
+There are **zero** warnings on `main` today, so tightening it breaks nothing.
+**Recommended:** `"lint": "oxlint --deny-warnings"`, one line in `package.json`,
+no lockfile change.
+
+## D7 · Q10 · Nav group labels fail WCAG AA
+
+`.nav-group-toggle` is `#6d7485` on `#0a0b1b` = **4.17:1**, under the 4.5:1
+minimum, on 10px uppercase monospace where contrast matters more rather than
+less. These are interactive button labels ("Projects", "System", "Side Quests"),
+not decoration. For comparison on the same background: `.nav-item` `#adb5c6` =
+9.48:1 ✓, Side Quests item text `#8f97a8` = 6.65:1 ✓.
+
+**Recommended:** raise to about `#8a93a6` (≈6.2:1), still clearly subordinate to
+the items. ⚠️ This is a visible change to **your** design, so it is RED and
+untouched until you say go.
+
+## D8 · Q11 · Commit message trailers ⚠️
+
+`AGENTS.md` says every commit ends `NEXT: <single next step>`. Your global
+`CLAUDE.md` says end every commit with `Co-Authored-By:`. Both cannot be last.
+
+**This was answered in `HANDOFF.md` on 2026-09-25 (AGENTS.md wins inside this
+repo: `NEXT:` last, no trailer) but NORTH_STAR §12 still reads Open.** That is a
+bookkeeping discrepancy, not a real decision. ▶ Confirm the answer still stands
+and it gets recorded in NORTH_STAR, closing Q11 properly.
+
+---
+
+## ▶ O5 · The cheapest thing on this page
+
+Not a decision, and still the highest-value action available:
+
+**Add one event in Calendar and a few tasks in Flow.**
+
+`horizon_events` holds 0 rows and `horizon_tasks` holds 1. That single action
+turns three `⚠️` DoD marks (Calendar, Flow, Horizon's Today & Next) into verified
+behavior, because right now the only thing those screens can prove is that their
+empty states render.
+
+## Resolved, kept so they are not re-asked
+
+- **O1 · Career cap.** The guessed hard 25 became `PIPELINE_LIMIT` plus a **Show
+  all N** toggle after your review (`bc80700`), so nothing is silently cut and
+  the panel counts above still match the list below.
+- **O2 · Archive grouping.** Date-grouped cards lost to a **sortable, filterable,
+  searchable table** with sticky headers after your review (`35dc298`, `c25cd97`).
+- **O3 · Merge to `main`.** Merged (`754a052`), pushed, and deployed;
+  Pages run 36627212047 for `8e143d4` is `completed / success`. The branch-only
+  rule from the original task is spent. ⚠️ Note for next time: that task also
+  said "do NOT merge to the branch GitHub Pages serves", and the merge happened
+  anyway. If that rule matters on a future pass, it needs restating.
+- **O4 · Q12 · Needs Attention placement.** Closed 2026-09-29: it stays under the
+  hero. The IA's "right alert stack" is superseded by an expandable right-side
+  shell panel you intend to add. ⚠️ Whoever builds that panel must **not** move
+  `NeedsAttention` into it by reflex; `src/needsAttention.js` is a pure function,
+  so the same data can feed a panel without the Home section moving. The panel
+  itself is unspecified and is a new conversation, not a side effect.
+
+## Housekeeping, no decision required
+
+- The `warroom-merge` branch is identical to `main` and can be deleted.
+- Post-draft: consider moving War Room state out of `localStorage` into Supabase.
+  No urgency now that the draft is over.

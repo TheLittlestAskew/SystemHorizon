@@ -86,6 +86,12 @@ Standing repo notes:
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
 
+### 2026-09-30 13:45 ET · Claude Code
+- **Changed:** `TOOLS.md` only. The job-pipeline row still read "🛑 **Career is broken live**", which M11 had just made false, and its recommendation was still phrased as a fix to be done rather than one that was copied. Both corrected to point at M11 (`86a81f3`) while keeping the verified SQL evidence and the 🛑 do-not-grant-`anon` warning, since those are the reason the fix took the shape it did.
+- **Commit:** `2625528`
+- **Next:** Unchanged. See the block above this log — Taylor signs in on Career and confirms rows render.
+- **Watch out:** ⚠️ **A shipped fix leaves stale "this is broken" claims scattered behind it.** This row was the only one found, but the sweep was not exhaustive: `TOOLS.md`, `docs/NORTH_STAR.md`, `docs/v1-definition-of-done.md` and `docs/v1-decisions-needed.md` all describe Career's breakage, and the DoD's Career mark is still `🛑 BLOCKED` **on purpose** — it should flip to `✓` only once Taylor has actually seen rows, not because the code landed.
+
 ### 2026-09-30 13:35 ET · Claude Code
 - **Changed:** **M11 built.** `src/jobPipeline.js` now persists a session (`persistSession: true`) and `loadJobPipeline(authSession)` refuses to query while signed out, so an unauthenticated read never masquerades as a failure. New `src/jobAccess.js` is the three-state machine (`ready` / `signed-out` / `error`, error outranking signed-out) that `CareerView` renders from, plus a `JobPipelineSignIn` form on Career and `.job-signin` styling. `fieldStatus.js` and `needsAttention.js` both take `jobSignedIn` and refuse to count without it. New `src/jobPipeline.test.mjs` asserts the two clients' storage keys differ. **171 tests** (was 153), lint clean, build green. **No schema change, no policy, no grant.**
 - **Commit:** `86a81f3`

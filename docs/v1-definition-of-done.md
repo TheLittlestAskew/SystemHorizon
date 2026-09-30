@@ -24,7 +24,13 @@ cannot pass without something outside this repo.
 
 ## Scoreboard
 
-**✓ 4 · ⚠️ 6 · 🛑 BLOCKED 1** across 11 sections.
+**✓ 5 · ⚠️ 6 · 🛑 BLOCKED 0** across 11 sections.
+
+> Updated 2026-09-30: **Career moved from 🛑 BLOCKED to ✓.** M11 (`86a81f3`) gave it
+> an authenticated session and Taylor confirmed rows rendering live, which closed
+> the last blocked mark in the app. **Nothing is blocked now** — the remaining six
+> `⚠️` marks are unproven rather than broken, and three of those collapse the
+> moment Calendar and Flow hold real rows (see the closing section).
 
 | # | Section | Loads | Real data | Core action | In layout | Verdict |
 |---|---|---|---|---|---|---|
@@ -33,7 +39,7 @@ cannot pass without something outside this repo.
 | 3 | **Project detail** | ✓ | ✓ | ✓ | ✓ | **✓** |
 | 4 | **Flow** | ✓ | ⚠️ | ⚠️ | ✓ | ⚠️ |
 | 5 | **Calendar** | ✓ | 🛑 | ⚠️ | ✓ | ⚠️ |
-| 6 | **Career** | ✓ | 🛑 | ⚠️ | ✓ | **🛑 BLOCKED** |
+| 6 | **Career** | ✓ | ✓ | ✓ | ✓ | **✓** |
 | 7 | **Mirrors** | ✓ | ⚠️ | ✓ | ✓ | ⚠️ |
 | 8 | **Archive** | ✓ | ✓ | ✓ | ✓ | **✓** |
 | 9 | **Swift** | ✓ | ✓ | ⚠️ | ✓ | ⚠️ |
@@ -45,8 +51,9 @@ cannot pass without something outside this repo.
 ### 1. Horizon (Home) ⚠️
 Layout is the best-arranged view in the app (M3 through M7, IA steps 1 to 6 all
 exist). Two criteria are unproven: `horizon_events` holds **0 rows** so Today &
-Next renders an empty state, and the field-status strip's Career slot reads
-`Unavailable` because `dashboard_jobs` is unreadable (see §6). **Nothing on Home
+Next renders an empty state. ✅ The field-status strip's Career slot **no longer
+reads `Unavailable`** — M11 fixed that (see §6) — so Home's remaining gap is
+Calendar's empty table, not Career. **Nothing on Home
 has had a visual check since M3**, so M4 through M7 are `Done (pending Taylor
 visual)`. Also still hardcoded, tracked in `PARKING_LOT.md`: the cycle-remaining
 instrument (`232` days, `18/35`), the capacity selector (component state, resets
@@ -75,21 +82,23 @@ The real defect was fixed: Agenda sorted `"10:00 AM"` before `"9:00 AM"` via
 unit-tested and has never run against a real event. Layout deliberately
 unchanged (3 columns in Agenda, 2 in Month).
 
-### 6. Career 🛑 BLOCKED
+### 6. Career ✓
 Layout work landed: status filter, `PIPELINE_LIMIT` cap with a **Show all N**
 toggle rather than a hard 25, `JobRow` extracted, permission error explained in
 the UI (`3af5404`, `bc80700`). Taylor reviewed it on localhost.
 
-🛑 **Blocked, and the obvious fix is a trap.** `dashboard_jobs` lives in Supabase
+✅ **Fixed by M11 (`86a81f3`), confirmed live by Taylor 2026-09-30.** Career now signs in to the job project as `authenticated` and renders real rows. The history below is kept because it names the fix that must never be taken.
+
+🛑 **The trap it avoided.** `dashboard_jobs` lives in Supabase
 project `vtrtyagltwdrbastpppl` and grants SELECT to `authenticated` but not
 `anon`; `src/jobPipeline.js` connects as `anon` and never signs in to that
 project. ⚠️ **Do NOT `grant select ... to anon`** — the view has
 `security_invoker` unset so it bypasses `job_applications` RLS, and the anon key
 is committed to this **public** repo, so the grant would publish the entire job
 search. The real fix is SH authenticating against that project, which is **a new
-milestone that does not exist yet**. ✅ **It exists now: `NORTH_STAR.md` §10 M11**,
-decided 2026-09-30 and spec'd but not built. Evidence and rejected alternatives in
-`docs/v1-decisions-needed.md` §D1. This mark stays `🛑 BLOCKED` until M11 ships.
+milestone that did not exist yet**. ✅ **It shipped the same day: `NORTH_STAR.md` §10 M11**, decided, spec'd, built
+and confirmed live on 2026-09-30. Evidence and rejected alternatives in
+`docs/v1-decisions-needed.md` §D1. ⚠️ `anon` was re-queried after the change and still holds only `REFERENCES, TRIGGER` — the fix was signing in, not widening access.
 
 ### 7. Mirrors ⚠️
 Rows render worst-first and the view honestly states its own staleness. Data is

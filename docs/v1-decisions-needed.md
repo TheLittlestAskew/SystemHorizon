@@ -11,7 +11,7 @@
 
 | # | Decision | Blocks | State |
 |---|---|---|---|
-| ~~**D1**~~ | How does SH read `dashboard_jobs`? | Career, entirely | ✅ **Decided 2026-09-30: option A.** Spec'd as **M11** in `NORTH_STAR.md` §10. Not built |
+| ~~**D1**~~ | How does SH read `dashboard_jobs`? | Career, entirely | ✅ **SHIPPED 2026-09-30: `86a81f3`.** Decided (option A), spec'd as **M11**, built, and confirmed live by Taylor — Career renders real rows. `anon` unchanged |
 | **D2** | Q1 · Create the Google OAuth client | **M8** | 🛑 Open, only Taylor can do it |
 | **D3** | Q2 · Typed `timestamptz` columns for events | M8 build | ⚠️ Open, wanted before M8 |
 | **D4** | Q3 · Retarget the heartbeat script, or leave it | nothing | Open, low stakes |
@@ -27,24 +27,24 @@
 
 ---
 
-## D1 · How does SH read `dashboard_jobs`? ✅ DECIDED
+## D1 · How does SH read `dashboard_jobs`? ✅ SHIPPED
 
-> ✅ **Answered 2026-09-30: option A, SH authenticates.** Written up as **M11** in
-> `docs/NORTH_STAR.md` §10, with the Phase 0 research list, build rules, and seven
-> acceptance criteria. **Nothing is built** — per §6, a milestone does not start as
-> a side effect of the session that specified it.
+> ✅ **SHIPPED 2026-09-30 (`86a81f3`): option A, SH authenticates.** Specified as
+> **M11** in `docs/NORTH_STAR.md` §10, built, and **confirmed live by Taylor** —
+> Career renders real job rows for the first time. All 7 acceptance criteria pass.
+> ⚠️ `anon` was re-queried afterwards and still holds only `REFERENCES, TRIGGER`:
+> the fix was signing in, not widening access.
 >
-> ✅ **Sequenced 2026-09-30: M11 is the next milestone, ahead of M9.** Career is the
-> only section that is broken rather than unfinished. ⚠️ Milestone numbers are now
-> creation order, not build order — the build order is the row order of
-> `NORTH_STAR.md` §10's status table (**M11 → M9 → M10**). Renumbering was rejected
-> because `HANDOFF.md` refers to milestones by number in dozens of places.
+> ✅ **M11 was sequenced ahead of M9 and is now done, so M9 is next.** ⚠️ Milestone
+> numbers are creation order, not build order — build order is the row order of
+> `NORTH_STAR.md` §10's status table. Renumbering was rejected because `HANDOFF.md`
+> refers to milestones by number in dozens of places.
 >
 > The analysis below is kept because it is the evidence the decision rests on, and
 > because it names the fix that must **never** be taken.
 
-**This was the only decision that blocked a whole section.** Career loads, lays out
-correctly, and explains its own failure, but it shows no job rows.
+**This was the only decision that blocked a whole section.** Everything below is the
+state of things *before* M11 shipped, kept as the evidence the decision rested on.
 
 ### Verified live, 2026-09-30, read-only
 

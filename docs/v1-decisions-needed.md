@@ -34,9 +34,11 @@
 > acceptance criteria. **Nothing is built** — per §6, a milestone does not start as
 > a side effect of the session that specified it.
 >
-> ▶ **Recommended to jump ahead of M9**, since Career is the only section that is
-> broken rather than unfinished. The queue position is Taylor's call and M11 sits
-> last in the table rather than presuming it.
+> ✅ **Sequenced 2026-09-30: M11 is the next milestone, ahead of M9.** Career is the
+> only section that is broken rather than unfinished. ⚠️ Milestone numbers are now
+> creation order, not build order — the build order is the row order of
+> `NORTH_STAR.md` §10's status table (**M11 → M9 → M10**). Renumbering was rejected
+> because `HANDOFF.md` refers to milestones by number in dozens of places.
 >
 > The analysis below is kept because it is the evidence the decision rests on, and
 > because it names the fix that must **never** be taken.

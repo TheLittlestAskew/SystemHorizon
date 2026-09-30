@@ -263,11 +263,15 @@ A 200 response from any tool is not verification. Re-read the actual state.
 | M6 | Home: three ranked Active Work return points (IA step 4) | Done (pending Taylor visual): `3aa4099`. Ranking input answered 2026-09-27: **recency of activity**. 13 new tests (105 total). 🛑 **The input was broken before it was used** — the re-seed had stamped all 16 rows with one `last_activity`, so recency could not discriminate. Semantics fixed (DB default, client no longer writes it) and the tie is disclosed in the UI. ⚠️ **Nothing writes `last_activity` on real activity yet, so it stays tied: Q14** |
 | M7 | Home: field-status strip (IA step 5) | Done (pending Taylor visual): `1ac7d17`. 16 new tests (121 total). Exercised against the real live state: No Now set / 12 active, 2 need attention / contacts this week / 2 flagged, 11 repos tracked |
 | M8 | Google Calendar one-way sync | Blocked: Taylor must create the Google OAuth client |
+| M11 | Career reads job data as `authenticated` | **Not started — this is the next milestone.** Added and sequenced here 2026-09-30 on Taylor's go-ahead (D1 option A). Placed ahead of M9 because Career is the only section that is **broken** rather than unfinished, while M9 and M10 are additive |
 | M9 | Handoff-aware task fields | Not started |
 | M10 | Horizon Task Digest (Septentrion side) | Not started |
-| M11 | Career reads job data as `authenticated` | Not started. Added 2026-09-30 on Taylor's go-ahead (D1 option A). ▶ **Recommended to jump ahead of M9**: Career is the only section in the app that is actually *broken*, and M9/M10 are additive. Ordering is Taylor's call; the table leaves it last rather than presuming |
 
 Status values: `Not started` · `In progress` · `Blocked: <reason>` · `Done (pending Taylor visual)` · `Done: <short-sha>`.
+
+🛑 **Milestone numbers are creation order, not build order.** Build order is the **row order of this table**, top to bottom. They stopped agreeing on 2026-09-30 when M11 was sequenced ahead of M9, and renumbering was rejected on purpose: `HANDOFF.md` and its archive refer to these milestones by number in dozens of places, and renumbering would silently repoint every one of them.
+
+**Current build order: M11 → M9 → M10.** The detailed spec sections below stay in **numeric** order, so M11's contract sits after M10's. Read the table for *what is next*, the section for *how to build it*.
 
 **M8 rule:** the moment Taylor reports the OAuth client exists, M8 jumps the queue and becomes the next milestone, even mid-sequence (finish the current milestone first).
 

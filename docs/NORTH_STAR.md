@@ -265,6 +265,7 @@ A 200 response from any tool is not verification. Re-read the actual state.
 | M8 | Google Calendar one-way sync | Blocked: Taylor must create the Google OAuth client |
 | M9 | Handoff-aware task fields | Not started |
 | M10 | Horizon Task Digest (Septentrion side) | Not started |
+| M11 | Career reads job data as `authenticated` | Not started. Added 2026-09-30 on Taylor's go-ahead (D1 option A). ▶ **Recommended to jump ahead of M9**: Career is the only section in the app that is actually *broken*, and M9/M10 are additive. Ordering is Taylor's call; the table leaves it last rather than presuming |
 
 Status values: `Not started` · `In progress` · `Blocked: <reason>` · `Done (pending Taylor visual)` · `Done: <short-sha>`.
 
@@ -371,6 +372,113 @@ Build rules once unblocked:
 - Writes one new note only. Never touches `HANDOFF.md`, `Return Point.md`, or Ephemeris.
 - Scheduling via Windows Task Scheduler is Taylor's step; write the exact steps and remind her to check the trigger's **Enabled** box.
 - After this lands, the optional Obsidian embed question gets revisited (default answer: a plain link plus the digest).
+
+### M11: Career reads job data as `authenticated`
+
+**Goal:** the Career view shows real job rows, without publishing the job search.
+
+Added 2026-09-30 on Taylor's go-ahead. Full evidence and the rejected alternatives
+are in `docs/v1-decisions-needed.md` D1; this section is the build contract.
+
+#### Why this milestone exists
+
+Career is the only section of the app that is **broken rather than unfinished**.
+`src/jobPipeline.js` connects to project `vtrtyagltwdrbastpppl` with the `anon` key
+and `persistSession: false`, so it never signs in. Verified live 2026-09-30:
+
+- `dashboard_jobs` is a **view** with `reloptions` NULL, so `security_invoker` is
+  unset and it runs as its owner, **bypassing RLS**.
+- Its grants are `authenticated` + `service_role`. **`anon` holds nothing on it.**
+- `job_applications` has RLS on with **exactly one** policy,
+  `authenticated_full_access` (ALL, role `authenticated`, `USING (true)`), and
+  `anon` holds only `REFERENCES, TRIGGER`.
+- Both objects hold **345** rows.
+
+🛑 **The forbidden fix:** `grant select on dashboard_jobs to anon`. It would work
+and it would publish all 345 rows past RLS, because the anon key for that project
+is committed at `src/jobPipeline.js:4` in this **public** repo. An `anon` read
+policy on `job_applications` was added 2026-09-22 and deliberately removed again
+by the 2026-09-28/29 privacy wave. **Do not re-open it.**
+
+✅ **The precedent to copy:** `taylorritchie/tracker.html` reads these same tables
+successfully because it signs in (`tracker.html:211`). SH's Career is the only
+consumer in the ecosystem reading job data as `anon`, which is why it is the only
+one broken.
+
+#### Phase 0 research (GREEN, required before any code — see section 8)
+
+Against the official `@supabase/supabase-js` v2 docs, not memory:
+
+1. **Session isolation between two clients on two projects.** The expectation is
+   that each client namespaces its session by project ref
+   (`sb-<ref>-auth-token`), so signing in to the job project does not disturb the
+   main project's session. **Verify this and set `storageKey` explicitly if the
+   docs leave it implicit** — two clients silently sharing one storage key would
+   sign Taylor out of the app every time Career authenticated.
+2. **Whether a second `GoTrueClient` on the same page is supported**, and any
+   warning the library emits about multiple instances.
+3. **Token refresh** with two clients live at once: confirm `autoRefreshToken`
+   on the job client does not fight the main client's refresh.
+4. Write the findings into the commit body. If (1) turns out false, **stop and
+   raise it** — a shared storage key changes the design.
+
+#### The `localStorage` question, resolved
+
+Section 4 says "no new state in `localStorage` except per-device conveniences".
+A persisted auth session is the auth library's own storage, not app state, and
+⚠️ **the main client already does it**: `src/supabase.js` calls
+`createClient(url, key)` with no options, so `persistSession` defaults to `true`
+and it already writes an auth token to `localStorage`. So this milestone
+introduces no new *kind* of storage. ▶ Confirm that reading with Taylor in one
+line rather than assuming it; if she disagrees, the fallback is a session-only
+(in-memory) client that requires signing in once per tab.
+
+#### Build rules
+
+- **No schema change, no new policy, no new grant.** The existing
+  `authenticated_full_access` policy already permits exactly what Career needs.
+  A diff touching `supabase/migrations/` means the approach drifted.
+- Flip `src/jobPipeline.js` from `persistSession: false` to a persisted session,
+  and add a sign-in control **on the Career view only**. Career is the only
+  consumer of that client.
+- 🛑 **Never** store a password, a service-role key, or a token in the repo,
+  in Supabase, or in the built bundle. Session only, created by Taylor signing in.
+- **Three distinct states, three distinct messages.** No silent fallbacks
+  (section 4): *not signed in* (actionable, offer the sign-in control), *signed in
+  but the read still failed* (a real bug, say so loudly), and *network or project
+  unreachable*. ⚠️ The current UI explains a **permission** error; that copy is
+  wrong once auth exists and must be replaced, not added to (no dead code).
+- Signing out of the job project must not sign Taylor out of the app, and vice
+  versa.
+- Keep the shipped v1 layout: the status filter, the cap, and the **Show all N**
+  toggle all stay. This milestone changes where the rows come from, nothing else.
+- Auth-state to UI-state mapping goes in a pure function with tests, like
+  `src/needsAttention.js`. Do not test it only through the component.
+
+#### Acceptance criteria
+
+1. Signed in, Career renders real rows from `dashboard_jobs` and the pipeline
+   count agrees with `select count(*)` run independently.
+2. Signed out, Career shows a sign-in affordance and **no** permission error.
+3. A reload keeps both sessions. The app session and the job session are
+   independent in both directions.
+4. `git diff` touches no file under `supabase/migrations/`, and `anon` still
+   holds only `REFERENCES, TRIGGER` on `job_applications` afterwards — re-query
+   to prove it, do not assume.
+5. No secret in the diff or the built bundle.
+6. Section 9 gates: `npm run lint` clean, all tests pass, `npm run build` green.
+7. ⚠️ Gate item 8 (Taylor sees it live) **cannot be self-verified** — this
+   milestone is unprovable without her signing in, so the handoff must say
+   `Done (pending Taylor visual)` and not `Done` until she confirms rows render.
+
+#### Out of scope
+
+- Writing to `job_applications` from SH. Career stays read-only; `tracker.html`
+  and the `/apply` pipeline own writes.
+- Cross-linking jobs to `horizon_projects`. It needs a cross-project join that
+  does not exist (parked in `PARKING_LOT.md`).
+- Anything about `gdol_work_search` or GDOL reporting. Different consumer,
+  different surface.
 
 ---
 

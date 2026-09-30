@@ -87,7 +87,9 @@ project. ⚠️ **Do NOT `grant select ... to anon`** — the view has
 `security_invoker` unset so it bypasses `job_applications` RLS, and the anon key
 is committed to this **public** repo, so the grant would publish the entire job
 search. The real fix is SH authenticating against that project, which is **a new
-milestone that does not exist yet**. See `docs/v1-decisions-needed.md` §D1.
+milestone that does not exist yet**. ✅ **It exists now: `NORTH_STAR.md` §10 M11**,
+decided 2026-09-30 and spec'd but not built. Evidence and rejected alternatives in
+`docs/v1-decisions-needed.md` §D1. This mark stays `🛑 BLOCKED` until M11 ships.
 
 ### 7. Mirrors ⚠️
 Rows render worst-first and the view honestly states its own staleness. Data is

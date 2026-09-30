@@ -11,7 +11,7 @@
 
 | # | Decision | Blocks | State |
 |---|---|---|---|
-| **D1** | How does SH read `dashboard_jobs`? | **Career, entirely** | 🛑 **Open, needs a new milestone** |
+| ~~**D1**~~ | How does SH read `dashboard_jobs`? | Career, entirely | ✅ **Decided 2026-09-30: option A.** Spec'd as **M11** in `NORTH_STAR.md` §10. Not built |
 | **D2** | Q1 · Create the Google OAuth client | **M8** | 🛑 Open, only Taylor can do it |
 | **D3** | Q2 · Typed `timestamptz` columns for events | M8 build | ⚠️ Open, wanted before M8 |
 | **D4** | Q3 · Retarget the heartbeat script, or leave it | nothing | Open, low stakes |
@@ -27,9 +27,21 @@
 
 ---
 
-## D1 · How does SH read `dashboard_jobs`? 🛑
+## D1 · How does SH read `dashboard_jobs`? ✅ DECIDED
 
-**This is the only decision that blocks a whole section.** Career loads, lays out
+> ✅ **Answered 2026-09-30: option A, SH authenticates.** Written up as **M11** in
+> `docs/NORTH_STAR.md` §10, with the Phase 0 research list, build rules, and seven
+> acceptance criteria. **Nothing is built** — per §6, a milestone does not start as
+> a side effect of the session that specified it.
+>
+> ▶ **Recommended to jump ahead of M9**, since Career is the only section that is
+> broken rather than unfinished. The queue position is Taylor's call and M11 sits
+> last in the table rather than presuming it.
+>
+> The analysis below is kept because it is the evidence the decision rests on, and
+> because it names the fix that must **never** be taken.
+
+**This was the only decision that blocked a whole section.** Career loads, lays out
 correctly, and explains its own failure, but it shows no job rows.
 
 ### Verified live, 2026-09-30, read-only

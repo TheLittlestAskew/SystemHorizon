@@ -82,7 +82,13 @@ the input M6's Active Work ranking depends on. `touchProjectActivity` opens with
 stamped nothing. Verified live: `horizon_projects` still reports
 **`distinct last_activity` = 1, spread `00:00:00`** across 16 rows. ▶ **M6's ranking
 will stay tied no matter how many tasks are moved until tasks carry a
-`project_id`.** The code is correct; the data cannot exercise it.
+`project_id`.** The code is correct; the data could not exercise it.
+
+✅ **Fixed 2026-10-01 (`d178fbf`): the Flow board can now assign a project to an
+existing task.** Until then the only ways to set it were the quick-add dropdown at
+creation (which defaults to "No project", hence the four nulls) and adding a task
+from inside a project's detail page. ▶ **Still pending Taylor:** assigning the four
+tasks. The capability exists; the ranking stays tied until she uses it.
 
 ### 5. Calendar ⚠️ (narrowed)
 The real defect was fixed: Agenda sorted `"10:00 AM"` before `"9:00 AM"` via

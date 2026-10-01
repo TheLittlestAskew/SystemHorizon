@@ -92,3 +92,10 @@ features, no schema changes.
 - No global loading state: every view renders its empty state during the initial fetch, so "loading" and "genuinely empty" look identical.
 - `npm run lint` passes on warnings (NORTH_STAR Q9); `--deny-warnings` would make the gate mean what it says.
 - Nav group labels are `#6d7485` on `#0a0b1b` = 4.17:1, under WCAG AA (NORTH_STAR Q10, awaiting Taylor).
+
+## Noticed 2026-10-01 while fixing task-project assignment
+
+- **Flow** — the quick-add project dropdown defaults to **"No project"** and is never reset after submit. That default is what produced four unassigned tasks and a flat `last_activity` tie. Worth considering defaulting to the last-used project, or to the project whose column/filter is in focus.
+- **Flow / Project detail** — a task can now be reassigned from the Flow board only. Doing it from `ProjectDetailView` was deliberately left out because the task would vanish from the list being looked at; if that turns out to be wanted, it needs a deliberate "moved out of this project" confirmation rather than a bare select.
+- **Calendar** — `TaskRow` on the Calendar view shows a project name but no picker, by the same reasoning. Revisit only if triage actually happens there.
+- **General** — nothing in the app can repoint a row at a project that was deleted, so `taskProjectOptions`' "Unknown project (<id>)" branch is currently reachable only via direct DB edits. It is still worth keeping: it is the difference between showing a wrong value and showing an honest one.

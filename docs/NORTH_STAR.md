@@ -265,7 +265,7 @@ A 200 response from any tool is not verification. Re-read the actual state.
 | M8 | Google Calendar one-way sync | Blocked: Taylor must create the Google OAuth client |
 | M11 | Career reads job data as `authenticated` | **Done: `86a81f3`** — Taylor confirmed rows rendering live 2026-09-30, closing criterion 1 and gate item 8. **All 7 acceptance criteria pass.** 18 new tests (171 total), lint clean with no new warnings, build green. No schema change, no policy, no grant — `anon` re-queried afterwards and still holds only `REFERENCES, TRIGGER`. ⚠️ The real find was that signed-out had to become a **third** state: as "no error, zero rows" it made the field-status slot render "0/3 contacts" and `needsAttention` fire a GDOL shortfall, both invented from absent data |
 | M9 | Handoff-aware task fields | **Done (pending Taylor visual): `8387960`.** Migration `20261001151801_horizon_tasks_promotion_state` applied and in `list_migrations`. 10 new tests (190 total), lint clean, build green. **Criteria 1, 2, 3, 5, 6, 7 pass**; **criterion 4 needs Taylor's eyes** on the Flow toggle. Verified live rather than from a success response: criterion 3 returns **0** violations, `'banked'` is rejected with **23514**, and a reversible probe set `candidate` and set it back. 🛑 **SH never writes `promoted`** — asserted by test against every input shape, not left to convention |
-| M10 | Horizon Task Digest (Septentrion side) | Not started |
+| M10 | Horizon Task Digest (Septentrion side) | **Done: `b249290`** (in the **septentrion** vault, not this repo). `Scripts/horizon-task-digest/` reads `horizon_tasks`/`horizon_projects` and writes one note, `Compass Rose/Horizon Task Digest.md`. Zero npm deps, signs in as the owner so reads are RLS-scoped, **14 tests**. ✅ Verified against the real vault: the run wrote exactly that one note, a second run reported `unchanged` (deterministic, so no git churn), and `.env` is gitignored. 🛑 **Criterion 8 is Taylor's: add the task to `task-health`'s allowlist, then schedule it and tick Enabled.** Until then it runs only on demand |
 
 Status values: `Not started` · `In progress` · `Blocked: <reason>` · `Done (pending Taylor visual)` · `Done: <short-sha>`.
 
@@ -407,6 +407,38 @@ Build rules once unblocked:
 - Writes one new note only. Never touches `HANDOFF.md`, `Return Point.md`, or Ephemeris.
 - Scheduling via Windows Task Scheduler is Taylor's step; write the exact steps and remind her to check the trigger's **Enabled** box.
 - After this lands, the optional Obsidian embed question gets revisited (default answer: a plain link plus the digest).
+
+#### ✅ Phase 0 — DONE 2026-10-01, against the real vault
+
+| Checked | Finding |
+|---|---|
+| Vault location | `C:\Users\theli\Obsidian Vaults\Septentrion`, remote `TheLittlestAskew/septentrion` |
+| **Privacy** | ✅ **PRIVATE** — unauthenticated `GET /repos/...` returns **404**. Task names are safe to write. ⚠️ A prompt used this session asserted the vault is a "PUBLIC repo"; that is **wrong**, and believing it would drive the wrong redaction call |
+| Collector pattern | From `travel-watch-sync.mjs`: standalone `.mjs`, **zero npm deps**, no imports shared with sibling scripts, own `.env`, `<name>.config.json`, `README.md`, `run-<name>.cmd`, and exported pure functions |
+| Auth | Collectors **sign in as the owner** with `HORIZON_EMAIL`/`HORIZON_PASSWORD`, deliberately **not** a service-role key, so every read is RLS-scoped. Match this |
+| `.env` state | Exists for `mirror-freshness` and `swiftwatch-sync`. 🛑 **`travel-watch-sync` has none and has therefore never run** — its DoD mark is `⚠️` for exactly that reason |
+| Note taxonomy | `Ephemeris/` = per-repo generated (**off-limits**), `Compass Rose/` = navigational, `Almanac/` = reference. `Return Point.md` at root. **No digest note exists yet** |
+| Name collision | ⚠️ `Scripts/task-health/` is about **Windows scheduled-task exit codes**, not Horizon tasks. Unrelated to this milestone despite the name |
+| Test infra | **None in the vault.** `node --test` needs no `package.json`, so a `*.test.mjs` beside the script stays zero-dep |
+
+🛑 **The finding that shapes this milestone: scheduled jobs here fail silently.** `task-health`'s own header records that the 07:00 `septentrion-sync` task **failed 8 of its last 19 runs and nothing ever said so** — outputs still landed, so the vault looked healthy while the run died before banking. A digest that is scheduled and unwatched joins that set.
+
+#### Acceptance criteria (all `orchestrator-defined`)
+
+1. `Scripts/horizon-task-digest/horizon-task-digest.mjs`: standalone, zero npm dependencies, no imports from sibling collectors.
+2. Signs in as the owner from a local `.env`; **never** a service-role key; `.env` is gitignored and never committed.
+3. **Executable check:** writes exactly **one** file, `Compass Rose/Horizon Task Digest.md`. After a run, `git status --porcelain` in the vault lists that path and nothing else.
+4. 🛑 Never writes `HANDOFF.md`, `Return Point.md`, or anything under `Ephemeris/`. Asserted by a test on the pure path guard, not by inspection.
+5. Four sections: **Active work**, **Waiting blockers**, **Handoff candidates** (`promotion_state = 'candidate'`, which M9 just created), **Recently completed**.
+6. The renderer is a pure function with `node --test` coverage, including empty data and a task with no project.
+7. **Idempotent:** two runs over unchanged data produce a **byte-identical** note, so the vault does not churn a diff every run.
+8. `README.md` carries the exact Task Scheduler steps, the ⚠️ **Enabled checkbox** reminder, **and** the step to add the task to `task-health`'s allowlist — otherwise this becomes the next job that fails unnoticed.
+
+#### Out of scope
+
+- Promoting anything. The digest **surfaces** M9's candidates; a real implementation session promotes them (§2, §5).
+- Any change inside SystemHorizon itself. This milestone is entirely vault-side; no new scheduler goes in SH.
+- The Obsidian embed question. Default stays a plain link plus the digest, revisited only once this has a stable shape.
 
 ### M11: Career reads job data as `authenticated`
 

@@ -162,6 +162,11 @@ button { -webkit-tap-highlight-color: transparent; }
 .task-promotion-candidate { border-color:rgb(255 193 120 / .45); background:rgb(255 193 120 / .1); color:#ffd49b; }
 .task-promotion-promoted { border-color:rgb(126 231 180 / .4); background:rgb(126 231 180 / .1); color:#9fe9c6; cursor:default; }
 .task-promotion:disabled { opacity:1; }
+/* A Flow column is one of four, so ~315px holds the task name OR its controls, never both on one line. Without this the four controls (project, status, handoff, delete) overflow and overlap each other, and they squeeze the name down to one word per line. Scoped to .flow-column because the same row inside a project detail or the Calendar panel is wide enough to stay inline. */
+.flow-column .task-row { flex-wrap:wrap; align-items:flex-start; gap:8px; }
+.flow-column .task-row > div:first-child { flex:1 1 100%; }
+.flow-column .task-controls { flex-wrap:wrap; width:100%; justify-content:flex-start; }
+.flow-column .task-project-select { max-width:none; flex:1 1 112px; }
 .task-controls select { padding:6px 8px; border-radius:8px; border:1px solid rgb(148 166 211 / .3); background:rgb(18 20 45 / .6); color:var(--cloud); font-size:11px; }.task-controls button { display:grid; place-items:center; width:26px; height:26px; border-radius:50%; border:1px solid rgb(148 166 211 / .3); background:rgb(18 20 45 / .6); color:#a9b2d3; cursor:pointer; font-size:14px; line-height:1; }.task-controls button:hover { border-color:#ff501f; color:#ff501f; }
 
 /* Project page: the dedicated per-project view opened from the registry. */

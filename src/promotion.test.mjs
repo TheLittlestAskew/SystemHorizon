@@ -44,7 +44,16 @@ test('labels state the condition in words, never by colour alone', () => {
   for (const state of PROMOTION_STATES) {
     const label = promotionLabel(state)
     assert.ok(label.text.length > 0 && label.hint.length > 0, `${state} needs text and a hint`)
+    assert.ok(label.short.length > 0, `${state} needs a short form for the narrow Flow column`)
   }
+})
+
+test('the short forms are three distinct words, so colour is never the only signal', () => {
+  // A Flow column is one of four and cannot fit a sentence, but shortening must not
+  // collapse two states into the same word with different tones.
+  const shorts = PROMOTION_STATES.map((state) => promotionLabel(state).short)
+  assert.equal(new Set(shorts).size, PROMOTION_STATES.length, `short forms collide: ${shorts.join(', ')}`)
+  for (const short of shorts) assert.ok(!short.includes(' '), `${short} must be one word to fit the column`)
 })
 
 test('only promoted is locked', () => {

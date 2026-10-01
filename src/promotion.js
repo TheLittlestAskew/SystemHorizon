@@ -31,10 +31,15 @@ export function canTogglePromotion(task) {
 
 // What the control says. Reads as words, not colour, so the state survives being
 // seen by someone who cannot distinguish the tones (criterion 4).
+//
+// `short` is what renders: a Flow column is one of four, so there is room for one
+// word, not a sentence. `text` stays the accessible name, so the full meaning is
+// still announced and still available on hover. The three `short` values are
+// distinct WORDS, not one word in three colours.
 export function promotionLabel(current) {
   const state = PROMOTION_STATES.includes(current) ? current : PROMOTION.none
-  if (state === PROMOTION.promoted) return { text: 'Promoted', hint: 'Banked by an implementation session. SH does not change this.', locked: true }
-  if (state === PROMOTION.candidate) return { text: 'Handoff candidate', hint: 'Marked for a future implementation session. Click to unmark.', locked: false }
-  return { text: 'Mark handoff candidate', hint: 'Flag this for a future implementation session.', locked: false }
+  if (state === PROMOTION.promoted) return { text: 'Promoted', short: 'Promoted', hint: 'Banked by an implementation session. SH does not change this.', locked: true }
+  if (state === PROMOTION.candidate) return { text: 'Handoff candidate', short: 'Candidate', hint: 'Marked for a future implementation session. Click to unmark.', locked: false }
+  return { text: 'Mark handoff candidate', short: 'Flag', hint: 'Flag this for a future implementation session.', locked: false }
 }
 

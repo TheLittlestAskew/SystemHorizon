@@ -387,8 +387,9 @@ function TaskRow({ task, projectName, projects, onStatusChange, onProjectChange,
         aria-pressed={task.promotionState === PROMOTION.candidate}
         disabled={!canTogglePromotion(task)}
         title={promotionLabel(task.promotionState).hint}
+        aria-label={promotionLabel(task.promotionState).text}
         onClick={() => onPromotionChange(task)}
-      >{promotionLabel(task.promotionState).text}</button>}
+      >{promotionLabel(task.promotionState).short}</button>}
       <select aria-label={`Status for ${task.name}`} value={task.status} onChange={(event) => onStatusChange(task.id, event.target.value)}>
         {['Active', 'Waiting', 'Parked', 'Done'].map((status) => <option key={status} value={status}>{status}</option>)}
       </select>

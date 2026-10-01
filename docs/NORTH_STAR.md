@@ -369,6 +369,37 @@ Build rules once unblocked:
 - Smallest change: reliable `updated_at` (existing trigger) plus `promotion_state text not null default 'none'` with CHECK in (`none`, `candidate`, `promoted`) on `horizon_tasks`.
 - UI: a quiet toggle to mark a task `candidate`. SH never sets `promoted`; a real implementation session does.
 
+#### ✅ Phase 0 — DONE 2026-10-01, against the live database
+
+**The spec's premise holds, and it was checked rather than assumed.**
+
+| Checked | Result |
+|---|---|
+| `updated_at` exists | ✅ `timestamptz not null default now()` |
+| Its trigger exists **and fires** | ✅ `horizon_tasks_set_updated_at` BEFORE UPDATE, enabled. **All 4 live rows have `updated_at > created_at`** (lags 13:46 to 4 days), so it is proven by data, not just declared |
+| The trigger cannot be spoofed | ✅ `set_horizon_updated_at()` is `new.updated_at = now()` with `SET search_path TO ''`. It overrides any client-sent value unconditionally |
+| Existing CHECK idiom on this table | `status = ANY (ARRAY['Active','Waiting','Parked','Done'])` — **match this shape**, not a `in (...)` variant |
+| RLS | 4 per-command policies, role `authenticated`, `auth.uid() = owner`. **Row-level, so a new column needs no policy change** |
+| `promotion_state` | Does not exist yet |
+
+🛑 **The GREEN/RED call, stated so it is not re-litigated:** §6 RED bars "`not null` on a column **with nulls**". A new column with `default 'none'` has no nulls, and the CHECK is satisfied by every row it creates, so §6 GREEN's "constraints that existing rows already satisfy" applies. **Verify it anyway** with criterion 3 below rather than reasoning about it.
+
+#### Acceptance criteria (all `orchestrator-defined`)
+
+1. `promotion_state` exists on `horizon_tasks` as `text not null default 'none'` with a CHECK matching the table's `= ANY (ARRAY[...])` idiom, limited to `none` / `candidate` / `promoted`.
+2. The migration exists as a file in `supabase/migrations/` **and** appears in `list_migrations`. ⚠️ `apply_migration` stamps the version in **server UTC**, so name the checked-in file from `list_migrations` afterwards or the file and the live version diverge.
+3. **Executable check:** `select count(*) from horizon_tasks where promotion_state is null or promotion_state not in ('none','candidate','promoted')` returns **0**, run after applying. A successful migration call is not evidence.
+4. A task can be toggled to `candidate` and back to `none` from the UI, and the control states which it is without relying on colour alone.
+5. 🛑 **SH never writes `promoted`.** Asserted by a test on the pure helper, not merely by convention: the only transitions SH may make are `none ↔ candidate`.
+6. Marking a candidate does **not** write to any `HANDOFF.md`, vault file, or repo (§2, §5). It changes one column.
+7. Section 9 gates 1–3 pass, and `taskFromRow` round-trips the new field so a reload shows the same state.
+
+#### Out of scope
+
+- Any promotion *mechanism*. M9 adds the flag only; a real implementation session is what promotes, and M10's digest is what surfaces candidates.
+- Writing to repo handoffs from the app. That is a permanent non-goal (§2), not a later milestone.
+- A `promoted_at` timestamp or audit trail. `updated_at` already moves, and nothing reads a history yet.
+
 ### M10: Horizon Task Digest (Septentrion side)
 
 **Goal:** a generated, read-only vault note summarizing active work, waiting blockers, handoff candidates, and recently completed tasks.

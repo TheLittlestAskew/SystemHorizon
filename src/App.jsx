@@ -3,6 +3,7 @@ import { supabase } from './supabase'
 import { jobPipeline } from './jobPipeline'
 import { JOB_ACCESS, jobAccessState } from './jobAccess'
 import { NO_PROJECT, isProjectChange, normalizeProjectSelection, taskProjectOptions } from './taskProject'
+import { PROMOTION, canTogglePromotion, nextPromotionState, promotionLabel } from './promotion'
 import { navGroups, navUtilityItems, defaultOpenNavGroups } from './navConfig'
 import { captureBodyError, captureFromRow, captureToRow, nowFromRow, nowToRow, pendingCaptures, resolveNow, routeCapturePatch } from './homeState'
 import { A_RATED_STATUS, SEVERITY, UNREPORTED_STATUS, buildNeedsAttention, gdolWeekEnding, gdolWeekWindow, inGdolWindow, repoStatusFlags, shiftDays } from './needsAttention'
@@ -86,9 +87,11 @@ function projectToRow(project) {
 }
 
 function taskFromRow(row) {
-  return { id: row.id, projectId: row.project_id, name: row.name, status: row.status, notes: row.notes ?? '', createdAt: row.created_at, completedAt: row.completed_at }
+  return { id: row.id, projectId: row.project_id, name: row.name, status: row.status, notes: row.notes ?? '', createdAt: row.created_at, updatedAt: row.updated_at, completedAt: row.completed_at, promotionState: row.promotion_state ?? PROMOTION.none }
 }
 
+// promotion_state is deliberately absent: new tasks take the column default
+// ('none'), and SH only ever changes it through updateTaskPromotion.
 function taskToRow(task) {
   return { project_id: task.projectId ?? null, name: task.name, status: task.status, notes: task.notes || null }
 }
@@ -370,7 +373,7 @@ function ProjectRegistry({ projects, tasks, repoHealth, onAddProject, onSeedProj
 // `projects` + `onProjectChange` are optional: the project picker only renders on
 // the Flow board, which is the cross-project triage view. Reassigning from inside
 // ProjectDetailView would make the task vanish from the list being looked at.
-function TaskRow({ task, projectName, projects, onStatusChange, onProjectChange, onDelete }) {
+function TaskRow({ task, projectName, projects, onStatusChange, onProjectChange, onPromotionChange, onDelete }) {
   const canReassign = Boolean(projects && onProjectChange)
   return <article className="task-row">
     <div><strong>{task.name}</strong>{projectName ? <span>{projectName}</span> : null}{task.notes ? <small>{task.notes}</small> : null}</div>
@@ -378,6 +381,14 @@ function TaskRow({ task, projectName, projects, onStatusChange, onProjectChange,
       {canReassign && <select className="task-project-select" aria-label={`Project for ${task.name}`} value={task.projectId ?? NO_PROJECT} onChange={(event) => onProjectChange(task, event.target.value)}>
         {taskProjectOptions(projects, task.projectId).map((option) => <option key={option.value || NO_PROJECT} value={option.value}>{option.label}</option>)}
       </select>}
+      {onPromotionChange && <button
+        type="button"
+        className={`task-promotion task-promotion-${task.promotionState ?? PROMOTION.none}`}
+        aria-pressed={task.promotionState === PROMOTION.candidate}
+        disabled={!canTogglePromotion(task)}
+        title={promotionLabel(task.promotionState).hint}
+        onClick={() => onPromotionChange(task)}
+      >{promotionLabel(task.promotionState).text}</button>}
       <select aria-label={`Status for ${task.name}`} value={task.status} onChange={(event) => onStatusChange(task.id, event.target.value)}>
         {['Active', 'Waiting', 'Parked', 'Done'].map((status) => <option key={status} value={status}>{status}</option>)}
       </select>
@@ -884,7 +895,7 @@ function Horizon({ projects, tasks, now, captures, events, jobs, jobError, jobSi
   </>
 }
 
-function FlowView({ tasks, projects, onOpenProjects, onAddTask, onUpdateTaskStatus, onUpdateTaskProject, onDeleteTask }) {
+function FlowView({ tasks, projects, onOpenProjects, onAddTask, onUpdateTaskStatus, onUpdateTaskProject, onUpdateTaskPromotion, onDeleteTask }) {
   const [taskName, setTaskName] = useState('')
   const [taskProjectId, setTaskProjectId] = useState('')
   const columns = ['Active', 'Waiting', 'Parked', 'Done']
@@ -917,7 +928,7 @@ function FlowView({ tasks, projects, onOpenProjects, onAddTask, onUpdateTaskStat
         return <div className={`flow-column${status === 'Active' ? ' flow-column-active' : ''}`} key={status}>
           <div className="instrument-heading"><span>{status}</span><b>{columnTasks.length}</b></div>
           <div className="flow-column-list">
-            {columnTasks.length ? columnTasks.map((task) => <TaskRow key={task.id} task={task} projectName={projectName(task.projectId)} projects={projects} onStatusChange={onUpdateTaskStatus} onProjectChange={onUpdateTaskProject} onDelete={onDeleteTask} />) : <p className="empty-state">Nothing here.</p>}
+            {columnTasks.length ? columnTasks.map((task) => <TaskRow key={task.id} task={task} projectName={projectName(task.projectId)} projects={projects} onStatusChange={onUpdateTaskStatus} onProjectChange={onUpdateTaskProject} onPromotionChange={onUpdateTaskPromotion} onDelete={onDeleteTask} />) : <p className="empty-state">Nothing here.</p>}
           </div>
         </div>
       })}
@@ -1817,6 +1828,22 @@ function App() {
     await touchProjectActivity(saved.projectId)
   }
 
+  // M9. Only none <-> candidate: nextPromotionState returns null for 'promoted',
+  // which a real implementation session owns, so SH refuses the write rather than
+  // silently no-opping. Nothing outside this column is touched -- no HANDOFF.md, no
+  // vault file, no repo (sections 2 and 5).
+  async function updateTaskPromotion(task) {
+    const promotionState = nextPromotionState(task.promotionState)
+    if (promotionState === null) {
+      setDatabaseError('That task is already promoted. Only an implementation session changes a promoted task.')
+      return
+    }
+    const { data, error } = await supabase.from('horizon_tasks').update({ promotion_state: promotionState }).eq('id', task.id).select().single()
+    if (error) { setDatabaseError(error.message || 'Could not change the handoff state.'); return }
+    const saved = taskFromRow(data)
+    setTasks((current) => current.map((item) => item.id === task.id ? saved : item))
+  }
+
   async function deleteTask(id) {
     setTasks((current) => current.filter((task) => task.id !== id))
     const { error } = await supabase.from('horizon_tasks').delete().eq('id', id)
@@ -1967,7 +1994,7 @@ function App() {
         {databaseError && <p className="database-error" role="alert">Database error: {databaseError}</p>}
         {activeView === 'ProjectDetail' && selectedProject ? <ProjectDetailView project={selectedProject} tasks={tasks} onBack={() => setActiveView('Projects')} onAddTask={addTask} onUpdateTaskStatus={updateTaskStatus} onDeleteTask={deleteTask} />
           : activeView === 'Projects' ? <ProjectRegistry projects={projects} tasks={tasks} repoHealth={repoHealth} onAddProject={addProject} onSeedProjects={seedProjects} onOpenProject={openProject} />
-          : activeView === 'Flow' ? <FlowView tasks={tasks} projects={projects} onOpenProjects={() => setActiveView('Projects')} onAddTask={addTask} onUpdateTaskStatus={updateTaskStatus} onUpdateTaskProject={updateTaskProject} onDeleteTask={deleteTask} />
+          : activeView === 'Flow' ? <FlowView tasks={tasks} projects={projects} onOpenProjects={() => setActiveView('Projects')} onAddTask={addTask} onUpdateTaskStatus={updateTaskStatus} onUpdateTaskProject={updateTaskProject} onUpdateTaskPromotion={updateTaskPromotion} onDeleteTask={deleteTask} />
           : activeView === 'Calendar' ? <CalendarView events={events} projects={projects} tasks={tasks} onAddEvent={addEvent} onDeleteEvent={deleteEvent} onUpdateTaskStatus={updateTaskStatus} onDeleteTask={deleteTask} />
           : activeView === 'Career' ? <CareerView jobs={jobs} jobError={jobError} jobSignedIn={Boolean(jobSession)} />
           : activeView === 'Mirrors' ? <MirrorsView repoHealth={repoHealth} repoHealthError={repoHealthError} />

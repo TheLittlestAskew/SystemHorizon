@@ -87,8 +87,11 @@ will stay tied no matter how many tasks are moved until tasks carry a
 ✅ **Fixed 2026-10-01 (`d178fbf`): the Flow board can now assign a project to an
 existing task.** Until then the only ways to set it were the quick-add dropdown at
 creation (which defaults to "No project", hence the four nulls) and adding a task
-from inside a project's detail page. ▶ **Still pending Taylor:** assigning the four
-tasks. The capability exists; the ranking stays tied until she uses it.
+from inside a project's detail page. ✅ **Done 2026-10-01: Taylor assigned all four** (3 to System Horizon, 1 to
+Invisible String Theory). `distinct last_activity` went **1 → 3**, spread
+`00:00:00` → **4d 17:56**, and M6 now ranks **1. System Horizon, 2. Invisible String
+Theory** on real recency instead of falling back to `signal`. ⚠️ Rank 3 remains a
+three-way tie on the original seed stamp, so that slot is still a signal tiebreak.
 
 ### 5. Calendar ⚠️ (narrowed)
 The real defect was fixed: Agenda sorted `"10:00 AM"` before `"9:00 AM"` via

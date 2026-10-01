@@ -363,6 +363,41 @@ Build rules once unblocked:
 - Google events are visually distinguishable from SH-native events and read-only in SH.
 - Re-running sync never duplicates; deleted or moved Google events update the SH copy on the next sync.
 
+#### ✅ Phase 0 — DONE 2026-10-01, against current Google docs
+
+**The token model fits every build rule above, which is the main finding.** `gapi.auth2` is long dead; the current approach for a browser-only app with no backend is Google Identity Services' **token model**:
+
+```js
+const client = google.accounts.oauth2.initTokenClient({
+  client_id: '613785660540-oeffpui2ikcur84uev9i2qs2hqi3q1qq.apps.googleusercontent.com',
+  scope: 'https://www.googleapis.com/auth/calendar.events.readonly',
+  callback: (response) => { /* response.access_token */ },
+})
+```
+
+| Question | Answer |
+|---|---|
+| Where does the token live? | In the callback, in JS memory. Google's docs: *“In the Token model, an access token is not stored by the OS or browser.”* ✅ So **“no Google tokens in Supabase, the repo, or localStorage” costs nothing extra** — it is the default |
+| Refresh token? | **None issued to a SPA.** *“there is no need to store per-user refresh tokens”* ✅ Which is why sync is on-demand only, matching the no-background-scheduler rule |
+| Token lifetime | Short by design. Re-obtain via `requestAccessToken()` **from a user-driven event** — i.e. the sync button. A timer cannot do it |
+| Scope chosen | `calendar.events.readonly` (*“View events on all your calendars”*) |
+| Narrower option not taken | `calendar.events.owned.readonly` is stricter but covers **only calendars she owns**, so a shared or subscribed calendar would silently vanish from Home. Broader-but-still-events-only beats silently incomplete. ▶ One-word change if she disagrees |
+| CSP | ✅ **None in `index.html`, `public/`, or the workflow**, so loading `https://accounts.google.com/gsi/client` is not blocked. If a CSP is ever added, it needs `script-src accounts.google.com` and `connect-src www.googleapis.com` |
+| Cloudflare Access | The page is gated, but the consent flow goes to `accounts.google.com` directly and the page origin stays `https://sh.tayloraritchie.com`, which is an authorized origin |
+
+⚠️ **Consent screen is in Testing**, so only listed test users can authorize. An `access_blocked` error means a missing test user, not a bug.
+
+#### Acceptance criteria (all `orchestrator-defined`)
+
+1. Additive schema: `source text not null default 'sh'` with CHECK in (`sh`,`google`), and `external_id text`. **Executable check:** a partial unique index on `(owner, external_id) where source = 'google'`, plus a `select count(*)` proving existing rows satisfy the CHECK **before** it is trusted.
+2. Pull only. **No code path writes to Google.** Asserted by grep: no `method: 'POST'|'PUT'|'PATCH'|'DELETE'` against a `googleapis.com` URL.
+3. The access token never reaches Supabase, `localStorage`, the repo, or a log line. Asserted by grep and by test on the pure layer.
+4. Sync runs **only** from a user-driven control on Calendar. No `setInterval`, no sync on mount.
+5. Google events are visually distinct and **read-only in SH**: no status, edit, or delete control writes to one.
+6. **Re-running sync never duplicates**, and a moved or deleted Google event updates or removes the SH copy on the next run. Asserted by tests on the pure reconcile function, including: same event twice, time changed, event cancelled.
+7. The mapper writes `starts_at`/`ends_at` from RFC 3339 **directly** — 🛑 **never through the `America/New_York` wall-clock path from Q2**, which would double-apply an offset.
+8. §9 gates 1–3 pass; the migration appears in `list_migrations`; criterion 8 of §9 (Taylor sees it live) is hers.
+
 ### M9: Handoff-aware task fields
 
 **Goal:** SH can mark a task as a handoff candidate without becoming a second handoff system.

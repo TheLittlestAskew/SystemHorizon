@@ -23,7 +23,7 @@
 | ~~O2~~ | Archive: group by date or by repo? | — | ✅ Resolved: **sortable table** |
 | ~~O3~~ | Merge `sh-layout-v1` to `main`, and when? | — | ✅ Resolved: merged + deployed 2026-09-29 |
 | ~~O4~~ | Q12 · Needs Attention placement | — | ✅ Closed 2026-09-29 |
-| ~~O5~~ | Add one event and one task (an action, not a decision) | 3 DoD marks | ▶ **Still the cheapest win** |
+| ~~O5~~ | Add one event and one task (an action, not a decision) | 3 DoD marks | ✅ **Done 2026-09-30**: 4 events, 4 tasks. Flow flipped to `✓`, but **only 1 of the 3 marks closed** — see the DoD's closing section. ▶ Successor action: give tasks a `project_id` |
 
 ---
 

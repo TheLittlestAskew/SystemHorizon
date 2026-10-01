@@ -24,7 +24,7 @@ cannot pass without something outside this repo.
 
 ## Scoreboard
 
-**✓ 5 · ⚠️ 6 · 🛑 BLOCKED 0** across 11 sections.
+**✓ 6 · ⚠️ 5 · 🛑 BLOCKED 0** across 11 sections.
 
 > Updated 2026-09-30: **Career moved from 🛑 BLOCKED to ✓.** M11 (`86a81f3`) gave it
 > an authenticated session and Taylor confirmed rows rendering live, which closed
@@ -37,8 +37,8 @@ cannot pass without something outside this repo.
 | 1 | **Horizon** (Home) | ✓ | ⚠️ | ⚠️ | ✓ | ⚠️ |
 | 2 | **Projects** | ✓ | ✓ | ✓ | ✓ | **✓** |
 | 3 | **Project detail** | ✓ | ✓ | ✓ | ✓ | **✓** |
-| 4 | **Flow** | ✓ | ⚠️ | ⚠️ | ✓ | ⚠️ |
-| 5 | **Calendar** | ✓ | 🛑 | ⚠️ | ✓ | ⚠️ |
+| 4 | **Flow** | ✓ | ✓ | ✓ | ✓ | **✓** |
+| 5 | **Calendar** | ✓ | ✓ | ⚠️ | ✓ | ⚠️ |
 | 6 | **Career** | ✓ | ✓ | ✓ | ✓ | **✓** |
 | 7 | **Mirrors** | ✓ | ⚠️ | ✓ | ✓ | ⚠️ |
 | 8 | **Archive** | ✓ | ✓ | ✓ | ✓ | **✓** |
@@ -50,8 +50,8 @@ cannot pass without something outside this repo.
 
 ### 1. Horizon (Home) ⚠️
 Layout is the best-arranged view in the app (M3 through M7, IA steps 1 to 6 all
-exist). Two criteria are unproven: `horizon_events` holds **0 rows** so Today &
-Next renders an empty state. ✅ The field-status strip's Career slot **no longer
+exist). ✅ **`horizon_events` now holds 4 rows (2 upcoming), so Today & Next renders
+real data for the first time.** ✅ The field-status strip's Career slot **no longer
 reads `Unavailable`** — M11 fixed that (see §6) — so Home's remaining gap is
 Calendar's empty table, not Career. **Nothing on Home
 has had a visual check since M3**, so M4 through M7 are `Done (pending Taylor
@@ -69,18 +69,41 @@ accordion, and project names opening detail pages.
 Covered by the same 2026-09-26 confirmation, which explicitly included opening a
 project from inside the accordion.
 
-### 4. Flow ⚠️
-4-column board is sound and untouched by this pass. `horizon_tasks` holds **1
-row**, so the board has never been seen carrying real volume across all four
-columns. Task movement does write `last_activity` on the parent project (Q14,
-`2452bc3`), proven with a reversible probe.
+### 4. Flow ✓
+✅ **Confirmed 2026-09-30.** `horizon_tasks` holds **4** rows (was 1) and Taylor
+created them through the board, moving two to `Done` — so add and move are both
+demonstrated by the data, not just by tests. `Waiting` and `Parked` are empty,
+which is an empty state rather than a failure: the board renders all four columns.
 
-### 5. Calendar ⚠️
+🛑 **But the `last_activity` writer is live and INERT, and that is a real finding.**
+Task movement is supposed to stamp the parent project (Q14, `2452bc3`), which is
+the input M6's Active Work ranking depends on. `touchProjectActivity` opens with
+`if (!projectId) return`, and **all 4 tasks have `project_id` null**, so moving them
+stamped nothing. Verified live: `horizon_projects` still reports
+**`distinct last_activity` = 1, spread `00:00:00`** across 16 rows. ▶ **M6's ranking
+will stay tied no matter how many tasks are moved until tasks carry a
+`project_id`.** The code is correct; the data cannot exercise it.
+
+### 5. Calendar ⚠️ (narrowed)
 The real defect was fixed: Agenda sorted `"10:00 AM"` before `"9:00 AM"` via
 `localeCompare` on raw text, now uses `compareEvents` from `src/timeline.js`
-(`3192cc9`, +2 tests). 🛑 But `horizon_events` is **empty**, so the fix is
-unit-tested and has never run against a real event. Layout deliberately
-unchanged (3 columns in Agenda, 2 in Month).
+(`3192cc9`, +2 tests). Layout deliberately unchanged (3 columns in Agenda, 2 in
+Month).
+
+✅ **`horizon_events` now holds 4 rows** (was 0), 2 of them upcoming, so Calendar and
+Home's Today & Next finally render real data.
+
+⚠️ **The sort fix is still not exercised by that data.** The bug was `"9:00 AM"`
+sorting after `"10:00 AM"`, which needs **two parseable timed events on one day**.
+Neither day has that: 2026-09-29 holds `12:30pm` plus an all-day, and 2026-10-01
+holds `10:AM` plus an all-day. ▶ **To close this mark, add two timed events on the
+same day, e.g. 9:00 AM and 10:00 AM.**
+
+⚠️ **`10:AM` is malformed and the app will show it that way, correctly.**
+`parseEventTime('10:AM')` returns `unparsed: true`, keeps the raw string as its
+display, and sorts it to the bottom. That is the designed behaviour — flag rather
+than guess — so it is not a bug, but that event will read `10:AM` and sit last.
+`10 AM`, `10:00 AM`, `12:30pm` and `14:30` all parse cleanly.
 
 ### 6. Career ✓
 Layout work landed: status filter, `PIPELINE_LIMIT` cap with a **Show all N**
@@ -149,7 +172,23 @@ Run on the final tree, per `docs/NORTH_STAR.md` §9:
 
 ## What would move the needle most
 
-Three of the six `⚠️` marks collapse to `✓` from one cheap action:
-**add one event in Calendar and a few tasks in Flow.** That turns Calendar's
-sort fix, Flow's board, and Home's Today & Next from "never met real data" into
-verified behavior. Career's `🛑` does not move without a decision (§D1).
+~~Three of the six `⚠️` marks collapse to `✓` from one cheap action: add one event
+in Calendar and a few tasks in Flow.~~
+
+✅ **Done 2026-09-30, and it paid off partly.** Taylor added 4 events and 4 tasks.
+**Flow flipped to `✓`** and Home and Calendar both render real data now. But only
+one of the three promised marks actually closed, because *having* data is not the
+same as having data that exercises the thing:
+
+| Mark | Why it did not close |
+|---|---|
+| **Calendar** ⚠️ | No day holds **two parseable timed events**, so the `9:00 AM` vs `10:00 AM` sort bug is still unexercised. ▶ Add two timed events on one day |
+| **Horizon** ⚠️ | Real data arrived, but Home still has had **no visual check since M3**; M4–M7 remain `Done (pending Taylor visual)`, and the cycle/capacity instruments are still hardcoded |
+
+▶ **The highest-value next action is not more rows, it is linking tasks to projects.**
+All 4 tasks have `project_id` null, so M6's Active Work ranking stays tied at
+`distinct last_activity = 1` forever (see §4). That is a live feature with no data
+to act on.
+
+⚠️ Lesson worth keeping: "add real data" closed one mark, not three. **Specify the
+shape the data has to take**, not just its existence.

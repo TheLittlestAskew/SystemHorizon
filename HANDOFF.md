@@ -240,11 +240,4 @@ Standing repo notes:
 - **Watch out:** ⚠️ **A `service_role`/`sb_secret` grep over `dist/` reports a hit and it is a FALSE POSITIVE.** It matches supabase-js's own key-format guard (`e.startsWith('sb_secret_')`) inside the bundled library. The real check is to decode the JWTs in the bundle: the only one is `role: anon, ref: vtrtyagltwdrbastpppl`, the intentionally-public key. `sb_secret` appears nowhere in `src/`. Do not re-raise this as an incident.
 - **Watch out:** ⚠️ **One new lint warning was introduced and then removed**, so the count is back to zero. `loadJobPipeline` originally read `jobSession` from the closure, which tripped `react-hooks(exhaustive-deps)`. The fix was to pass the session in as an argument. That matters because Q9 proposes `oxlint --deny-warnings`, and a repo with one warning cannot adopt it.
 
-### 2026-09-30 12:50 ET · Claude Code
-- **Changed:** Sequenced **M11 ahead of M9** in `docs/NORTH_STAR.md` §10 on Taylor's call, so M11 is now the next milestone and the build order is **M11 → M9 → M10**. Reordered the status table **instead of renumbering**, and recorded why: milestone numbers are now creation order while the table's row order is build order. Updated the D1 resolution note in `docs/v1-decisions-needed.md` to match. Checked first that nothing else in NORTH_STAR asserted M9 was next — only the table and the spec heading mentioned it, so there are no contradictions left behind.
-- **Commit:** `6868775`
-- **Next:** Start **M11 Phase 0**: verify supabase-js session isolation between two clients on two projects before writing any UI.
-- **Watch out:** 🛑 **Numbers no longer imply order.** A future session reading "M9" as "the next one after M8" would build the wrong thing. §10 now states this explicitly above the status table, and the detailed spec sections deliberately stay in numeric order (M11's contract sits after M10's) so the table is the single place that answers "what is next".
-- **Watch out:** ⚠️ **Renumbering is a trap, not a tidy-up.** It was considered and rejected: this file and `handoff-archive/` refer to milestones by number in dozens of places, and renumbering would silently repoint all of them. If a future session is tempted, that is the reason not to.
-
-> Older entries archived to `handoff-archive/2026-07.md`, `handoff-archive/2026-08.md`, `handoff-archive/2026-09.md` - everything before 2026-09-30 12:50 ET.
+> Older entries archived to `handoff-archive/2026-07.md`, `handoff-archive/2026-08.md`, `handoff-archive/2026-09.md` - everything before 2026-09-30 13:35 ET.

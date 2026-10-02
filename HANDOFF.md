@@ -249,12 +249,4 @@ Standing repo notes:
 - **Watch out:** ⚠️ **The Calendar sort fix is STILL unexercised by real data**, which is easy to miss now that the table is no longer empty. The bug was `"9:00 AM"` sorting after `"10:00 AM"`; proving it needs **two parseable timed events on the same day**, and neither day has that (each has one timed event plus one all-day). The unit test passes; the live proof does not exist.
 - **Watch out:** ⚠️ **Lesson that generalises: "add real data" closed one of three marks, not three.** The original O5 wording asked for existence, not shape. ▶ When a mark depends on data, **write down the shape the data must take** — "two timed events on one day", not "an event".
 
-### 2026-09-30 14:10 ET · Claude Code
-- **Changed:** **Taylor confirmed rows rendering on Career**, so M11's criterion 1 and gate item 8 are closed and **all 7 criteria pass**. Flipped M11 from `Done (pending Taylor visual)` to **`Done: 86a81f3`** in `NORTH_STAR.md` §10. Flipped Career in `docs/v1-definition-of-done.md` from `🛑 BLOCKED` to `✓`, making the scoreboard **✓ 5 · ⚠️ 6 · 🛑 0**. Marked D1 **SHIPPED** in `docs/v1-decisions-needed.md` and bumped the `TOOLS.md` job-pipeline row. No code changed.
-- **Commit:** `78401f8`
-- **Next:** **M9, handoff-aware task fields.** M8 still jumps the queue if the Google OAuth client appears.
-- **Watch out:** ✅ **`anon` was re-queried after the confirmation, not just after the build**, and still holds only `REFERENCES, TRIGGER` with `authenticated_full_access` the only policy. Career working is therefore **not** evidence that access was widened — the fix was signing in. If a future session finds `anon` holding SELECT here, something else did it.
-- **Watch out:** ⚠️ **Flipping one mark exposed three stale claims elsewhere in the same docs**, all now fixed: the DoD's Horizon section still said the field-status Career slot reads `Unavailable`, its Career section still ended "spec'd but not built", and D1 still said "M11 is the next milestone, ahead of M9". ▶ When a milestone closes, grep the docs for the old state rather than editing only the row that obviously changed — these four files all describe each other.
-- **Watch out:** ⚠️ **The DoD's "Gate status from the shipped pass" section still reports 153 tests on purpose.** That section documents the 2026-09-29 v1 layout pass, not current state. Current is **171**. Do not "correct" it.
-
-> Older entries archived to `handoff-archive/2026-07.md`, `handoff-archive/2026-08.md`, `handoff-archive/2026-09.md` - everything before 2026-09-30 14:10 ET.
+> Older entries archived to `handoff-archive/2026-07.md`, `handoff-archive/2026-08.md`, `handoff-archive/2026-09.md` - everything before 2026-09-30 14:40 ET.

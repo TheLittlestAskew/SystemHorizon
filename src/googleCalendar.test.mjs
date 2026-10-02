@@ -166,3 +166,58 @@ test('no argument at all is safe', () => {
   const plan = reconcileGoogleEvents()
   assert.deepEqual(plan, { toInsert: [], toUpdate: [], toDelete: [], skipped: [] })
 })
+
+// ---------------------------------------------------------------------------
+// The round-trip tests. Everything above builds "existing" rows from the mapper's
+// own output, so both sides are ISO and agree -- which is exactly why they missed
+// a live bug where all 16 of Taylor's timed events were rewritten on every sync.
+// These use the format Postgres actually returns.
+// ---------------------------------------------------------------------------
+
+// What Supabase hands back for a timestamptz: space separator, +00 offset, no ms.
+function asPostgresRow(event) {
+  const mapped = mapGoogleEvent(event)
+  const pg = (iso) => (iso ? iso.replace('T', ' ').replace('.000Z', '+00') : null)
+  return { id: `row-${event.id}`, ...mapped, starts_at: pg(mapped.starts_at), ends_at: pg(mapped.ends_at) }
+}
+
+test('🛑 a re-sync against DATABASE-FORMAT timestamps is still a no-op', () => {
+  // The live bug: '2026-10-03 13:00:00+00' !== '2026-10-03T13:00:00.000Z' as text,
+  // so every timed event looked changed and was rewritten on every run.
+  const existing = [asPostgresRow(TIMED)]
+  assert.match(existing[0].starts_at, /^\d{4}-\d{2}-\d{2} /, 'the fixture must use the space-separated DB format')
+  const plan = reconcileGoogleEvents([TIMED], existing)
+  assert.deepEqual(plan.toUpdate, [], 'same instant in a different text format is NOT a change')
+  assert.equal(describeSync(plan), 'already up to date')
+})
+
+test('a real time change is still detected across formats', () => {
+  const existing = [asPostgresRow(TIMED)]
+  const moved = { ...TIMED, start: { dateTime: '2026-10-03T11:00:00-04:00' }, end: TIMED.end }
+  const plan = reconcileGoogleEvents([moved], existing)
+  assert.equal(plan.toUpdate.length, 1, 'comparing instants must not make it blind to real moves')
+})
+
+test('an equivalent offset is not a change either', () => {
+  // 09:00-04:00 and 13:00Z are the same moment expressed two ways.
+  const existing = [asPostgresRow(TIMED)]
+  const restated = { ...TIMED, start: { dateTime: '2026-10-03T13:00:00Z' }, end: { dateTime: '2026-10-03T13:15:00Z' } }
+  assert.deepEqual(reconcileGoogleEvents([restated], existing).toUpdate, [])
+})
+
+test('an all-day row round-trips as a no-op too', () => {
+  const plan = reconcileGoogleEvents([ALLDAY], [asPostgresRow(ALLDAY)])
+  assert.deepEqual(plan.toUpdate, [], 'null timestamps must compare equal, not update forever')
+})
+
+test('null versus a real timestamp is still a change', () => {
+  const existing = [{ ...asPostgresRow(TIMED), starts_at: null }]
+  assert.equal(reconcileGoogleEvents([TIMED], existing).toUpdate.length, 1)
+})
+
+test('two unparseable timestamps only match when their text matches', () => {
+  const base = asPostgresRow(TIMED)
+  const junk = [{ ...base, starts_at: 'not a date' }]
+  // Against a real value it is a change, and it must not loop forever on NaN.
+  assert.equal(reconcileGoogleEvents([TIMED], junk).toUpdate.length, 1)
+})

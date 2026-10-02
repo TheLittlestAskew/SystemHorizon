@@ -81,10 +81,34 @@ export function isCancelled(event) {
 
 // Fields compared to decide whether an existing Google row needs rewriting. Only
 // what the mapper sets, so an unrelated column change never looks like a drift.
-const COMPARED = ['title', 'event_date', 'starts_at', 'ends_at', 'notes']
+const COMPARED_TEXT = ['title', 'event_date', 'notes']
+const COMPARED_INSTANT = ['starts_at', 'ends_at']
+
+// 🛑 Timestamps are compared as INSTANTS, not as text, and that distinction is
+// the whole reason this function exists in this shape.
+//
+// Postgres hands back '2026-10-03 13:00:00+00'; the mapper produces
+// '2026-10-03T13:00:00.000Z'. Same moment, different string. Comparing them as
+// text marked every timed event as changed on every single sync -- 16 pointless
+// writes per run against Taylor's real calendar, churning updated_at each time.
+//
+// ⚠️ The original tests could not catch this: they built the 'existing' rows from
+// mapGoogleEvent's own output, so both sides were already ISO and agreed. A test
+// that round-trips through the database's text format is what proves it.
+function sameInstant(a, b) {
+  if (a == null && b == null) return true
+  if (a == null || b == null) return false
+  const left = new Date(a).getTime()
+  const right = new Date(b).getTime()
+  // Two unparseable values are only 'the same' if their text is identical; NaN
+  // compares false to everything, which would otherwise mean perpetual updates.
+  if (Number.isNaN(left) || Number.isNaN(right)) return String(a) === String(b)
+  return left === right
+}
 
 function differs(existing, mapped) {
-  return COMPARED.some((key) => (existing?.[key] ?? null) !== (mapped[key] ?? null))
+  if (COMPARED_TEXT.some((key) => (existing?.[key] ?? null) !== (mapped[key] ?? null))) return true
+  return COMPARED_INSTANT.some((key) => !sameInstant(existing?.[key] ?? null, mapped[key] ?? null))
 }
 
 // Pure. Given Google's events and the Google-sourced rows SH already holds,

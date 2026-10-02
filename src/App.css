@@ -212,6 +212,13 @@ button { -webkit-tap-highlight-color: transparent; }
 .calendar-event-row { display:flex; align-items:center; gap:14px; width:100%; padding:12px 14px; border-radius:14px; border:1px solid rgb(148 166 211 / .16); background:rgb(18 20 45 / .4); color:var(--cloud); cursor:pointer; text-align:left; }.calendar-event-row:hover,.calendar-event-row:focus-visible { border-color:rgb(148 166 211 / .35); outline:0; }.calendar-event-row.selected { border-color:transparent; background:linear-gradient(110deg, #2362ff, #a54cff); }
 .calendar-event-time { flex-shrink:0; min-width:56px; color:#a9b2d3; font:11px 'Cascadia Mono', Consolas, monospace; }.calendar-event-row.selected .calendar-event-time { color:rgb(255 255 255 / .85); }
 .calendar-event-info { display:grid; gap:2px; min-width:0; }.calendar-event-info strong { font-size:13px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }.calendar-event-info small { color:#a9b2d3; font-size:11px; }.calendar-event-row.selected .calendar-event-info small { color:rgb(255 255 255 / .8); }
+/* M8 Google Calendar sync. The control sits in .view-header, which is a flex row, so the block is width-capped and the status line wraps inside it -- an error message here can be a full sentence and must not stretch the header. Learned from the Flow task row: a nowrap child in a flex row overflows rather than shrinking. */
+.calendar-sync { display:grid; justify-items:end; gap:8px; flex:0 0 auto; max-width:min(100%, 320px); }
+.calendar-sync .button { white-space:nowrap; }
+.calendar-sync-note { margin:0; color:#a9b2d3; font-size:12px; line-height:1.45; text-align:right; }
+/* Google events are read-only copies. Both cues say so in WORDS, not by colour alone. */
+.calendar-detail-readonly { margin:0; color:#9fe9c6; font-size:12px; line-height:1.45; }
+.calendar-event-info .calendar-event-source { color:#9fe9c6; letter-spacing:.06em; text-transform:uppercase; }
 .calendar-detail-panel { display:grid; gap:14px; align-content:start; min-height:220px; padding:24px; border-radius:20px; border:1px solid rgb(148 166 211 / .2); background:linear-gradient(145deg, rgb(29 33 70 / .6), rgb(18 20 45 / .7)); color:var(--cloud); }
 .calendar-detail-date { color:#a9b2d3; font:10px 'Cascadia Mono', Consolas, monospace; letter-spacing:.06em; text-transform:uppercase; }
 .calendar-detail-panel h3 { margin:0; font-size:24px; letter-spacing:-.03em; }

@@ -4,6 +4,8 @@ import { jobPipeline } from './jobPipeline'
 import { JOB_ACCESS, jobAccessState } from './jobAccess'
 import { NO_PROJECT, isProjectChange, normalizeProjectSelection, taskProjectOptions } from './taskProject'
 import { PROMOTION, canTogglePromotion, nextPromotionState, promotionLabel } from './promotion'
+import { SOURCE_GOOGLE, describeSync, reconcileGoogleEvents } from './googleCalendar'
+import { fetchGoogleEvents, requestAccessToken } from './googleSync'
 import { navGroups, navUtilityItems, defaultOpenNavGroups } from './navConfig'
 import { captureBodyError, captureFromRow, captureToRow, nowFromRow, nowToRow, pendingCaptures, resolveNow, routeCapturePatch } from './homeState'
 import { A_RATED_STATUS, SEVERITY, UNREPORTED_STATUS, buildNeedsAttention, gdolWeekEnding, gdolWeekWindow, inGdolWindow, repoStatusFlags, shiftDays } from './needsAttention'
@@ -97,7 +99,7 @@ function taskToRow(task) {
 }
 
 function eventFromRow(row) {
-  return { id: row.id, projectId: row.project_id, title: row.title, date: row.event_date, startTime: row.start_time, endTime: row.end_time, notes: row.notes ?? '' }
+  return { id: row.id, projectId: row.project_id, title: row.title, date: row.event_date, startTime: row.start_time, endTime: row.end_time, notes: row.notes ?? '', source: row.source ?? 'sh', startsAt: row.starts_at ?? null }
 }
 
 function eventToRow(event) {
@@ -937,7 +939,9 @@ function FlowView({ tasks, projects, onOpenProjects, onAddTask, onUpdateTaskStat
   </section>
 }
 
-function CalendarView({ events, projects, tasks, onAddEvent, onDeleteEvent, onUpdateTaskStatus, onDeleteTask }) {
+function CalendarView({ events, projects, tasks, onAddEvent, onDeleteEvent, onSyncGoogle, onUpdateTaskStatus, onDeleteTask }) {
+  // M8. Sync state is local to this view because the control is the only trigger.
+  const [syncState, setSyncState] = useState({ busy: false, message: '' })
   const [mode, setMode] = useState('Agenda')
   const [cursor, setCursor] = useState(() => { const date = new Date(); date.setDate(1); return date })
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10))
@@ -1001,13 +1005,35 @@ function CalendarView({ events, projects, tasks, onAddEvent, onDeleteEvent, onUp
       <h3>{activeEvent.title}</h3>
       {activeEvent.projectId ? <p className="calendar-detail-project">{projectName(activeEvent.projectId)}</p> : null}
       {activeEvent.notes ? <p>{activeEvent.notes}</p> : null}
-      <Button type="button" onClick={() => onDeleteEvent(activeEvent.id)}>Delete event</Button>
+      {/* Criterion 5: a Google event is a read-only copy. Google owns it, so SH
+          offers no control that would write to it -- the delete is absent rather
+          than disabled, because a disabled button invites a second attempt. */}
+      {activeEvent.source === SOURCE_GOOGLE
+        ? <p className="calendar-detail-readonly">From Google Calendar. Read-only here — change it in Google and sync again.</p>
+        : <Button type="button" onClick={() => onDeleteEvent(activeEvent.id)}>Delete event</Button>}
     </> : <p className="empty-state">No upcoming events. Add one to see it here.</p>}
   </div>
 
   return <section className="calendar-view" aria-labelledby="calendar-heading">
     <header className="view-header">
       <div><p className="eyebrow">System index / 04</p><h2 id="calendar-heading">Calendar field</h2><p>Commitments, build blocks, and the space around them.</p></div>
+      {/* M8. The ONLY sync trigger. Google requires the token request to come
+          from a user gesture, and NORTH_STAR forbids a background scheduler, so
+          there is no sync-on-mount and no interval anywhere. */}
+      <div className="calendar-sync">
+        <Button type="button" disabled={syncState.busy} onClick={async () => {
+          setSyncState({ busy: true, message: '' })
+          try {
+            const summary = await onSyncGoogle()
+            setSyncState({ busy: false, message: summary })
+          } catch (error) {
+            // Spoken, not swallowed: a failed sync that looks like a no-op is
+            // the thing NORTH_STAR section 4 forbids.
+            setSyncState({ busy: false, message: error.message || 'Google sync failed.' })
+          }
+        }}>{syncState.busy ? 'Syncing…' : 'Sync Google Calendar'}</Button>
+        {syncState.message && <p className="calendar-sync-note" role="status">{syncState.message}</p>}
+      </div>
     </header>
 
     <div className="registry-controls calendar-mode-toggle" role="group" aria-label="Calendar view mode">
@@ -1048,7 +1074,7 @@ function CalendarView({ events, projects, tasks, onAddEvent, onDeleteEvent, onUp
             <div className="calendar-date-heading">{group.label}</div>
             {group.items.map((event) => <button key={event.id} type="button" className={`calendar-event-row${activeEvent?.id === event.id ? ' selected' : ''}`} onClick={() => setSelectedEventId(event.id)}>
               <span className="calendar-event-time">{event.startTime || '—'}</span>
-              <span className="calendar-event-info"><strong>{event.title}</strong>{event.projectId ? <small>{projectName(event.projectId)}</small> : null}</span>
+              <span className="calendar-event-info"><strong>{event.title}</strong>{event.source === SOURCE_GOOGLE ? <small className="calendar-event-source">Google</small> : event.projectId ? <small>{projectName(event.projectId)}</small> : null}</span>
             </button>)}
           </div>) : <p className="empty-state">Nothing scheduled ahead. Add an event to see it here.</p>}
         </div>
@@ -1901,6 +1927,50 @@ function App() {
     setEvents((current) => [...current, eventFromRow(data)].sort((a, b) => a.date < b.date ? -1 : 1))
   }
 
+  // M8. Called ONLY from the Calendar sync control: Google requires the token
+  // request to come from a user gesture, and NORTH_STAR forbids a background
+  // scheduler. There is deliberately no sync-on-mount and no interval.
+  //
+  // 🛑 The access token stays in this function. It is never stored, never put
+  // into state, and never logged.
+  async function syncGoogleCalendar() {
+    const accessToken = await requestAccessToken()
+    const googleEvents = await fetchGoogleEvents(accessToken)
+
+    // Read the existing Google rows from the database rather than from component
+    // state: the reconcile compares database-shaped fields, and filtering to
+    // source='google' here is what guarantees an sh-native row can never become a
+    // deletion candidate.
+    const { data: existingRows, error: readError } = await supabase
+      .from('horizon_events')
+      .select('id,source,external_id,title,event_date,starts_at,ends_at,notes')
+      .eq('source', SOURCE_GOOGLE)
+    if (readError) throw new Error(readError.message || 'Could not read the existing Google events.')
+
+    const plan = reconcileGoogleEvents(googleEvents, existingRows ?? [])
+
+    if (plan.toInsert.length) {
+      const { error } = await supabase.from('horizon_events').insert(plan.toInsert)
+      if (error) throw new Error(error.message || 'Could not add the new Google events.')
+    }
+    for (const row of plan.toUpdate) {
+      const { id, ...patch } = row
+      const { error } = await supabase.from('horizon_events').update(patch).eq('id', id)
+      if (error) throw new Error(error.message || 'Could not update a Google event.')
+    }
+    if (plan.toDelete.length) {
+      // Scoped by source as well as id: a belt-and-braces guard so a bug in the
+      // reconcile still cannot delete one of her own events.
+      const { error } = await supabase.from('horizon_events').delete()
+        .eq('source', SOURCE_GOOGLE)
+        .in('id', plan.toDelete.map((row) => row.id))
+      if (error) throw new Error(error.message || 'Could not remove cancelled Google events.')
+    }
+
+    await loadEvents()
+    return describeSync(plan)
+  }
+
   async function deleteEvent(id) {
     setEvents((current) => current.filter((event) => event.id !== id))
     const { error } = await supabase.from('horizon_events').delete().eq('id', id)
@@ -1996,7 +2066,7 @@ function App() {
         {activeView === 'ProjectDetail' && selectedProject ? <ProjectDetailView project={selectedProject} tasks={tasks} onBack={() => setActiveView('Projects')} onAddTask={addTask} onUpdateTaskStatus={updateTaskStatus} onDeleteTask={deleteTask} />
           : activeView === 'Projects' ? <ProjectRegistry projects={projects} tasks={tasks} repoHealth={repoHealth} onAddProject={addProject} onSeedProjects={seedProjects} onOpenProject={openProject} />
           : activeView === 'Flow' ? <FlowView tasks={tasks} projects={projects} onOpenProjects={() => setActiveView('Projects')} onAddTask={addTask} onUpdateTaskStatus={updateTaskStatus} onUpdateTaskProject={updateTaskProject} onUpdateTaskPromotion={updateTaskPromotion} onDeleteTask={deleteTask} />
-          : activeView === 'Calendar' ? <CalendarView events={events} projects={projects} tasks={tasks} onAddEvent={addEvent} onDeleteEvent={deleteEvent} onUpdateTaskStatus={updateTaskStatus} onDeleteTask={deleteTask} />
+          : activeView === 'Calendar' ? <CalendarView events={events} projects={projects} tasks={tasks} onAddEvent={addEvent} onDeleteEvent={deleteEvent} onSyncGoogle={syncGoogleCalendar} onUpdateTaskStatus={updateTaskStatus} onDeleteTask={deleteTask} />
           : activeView === 'Career' ? <CareerView jobs={jobs} jobError={jobError} jobSignedIn={Boolean(jobSession)} />
           : activeView === 'Mirrors' ? <MirrorsView repoHealth={repoHealth} repoHealthError={repoHealthError} />
           : activeView === 'Archive' ? <ArchiveView />

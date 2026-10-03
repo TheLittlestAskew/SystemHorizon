@@ -10,6 +10,7 @@ import { navGroups, navUtilityItems, defaultOpenNavGroups } from './navConfig'
 import { captureBodyError, captureFromRow, captureToRow, nowFromRow, nowToRow, pendingCaptures, resolveNow, routeCapturePatch } from './homeState'
 import { A_RATED_STATUS, SEVERITY, UNREPORTED_STATUS, buildNeedsAttention, gdolWeekEnding, gdolWeekWindow, inGdolWindow, repoStatusFlags, shiftDays } from './needsAttention'
 import { buildTimeline, compareEvents } from './timeline'
+import { cycleReading } from './cycle'
 import { ARCHIVE_REPOS, filterArchive, parseHandoffEntries, sortArchive } from './archive'
 import { rankActiveWork } from './activeWork'
 import { buildFieldStatus } from './fieldStatus'
@@ -167,11 +168,14 @@ function DateReadout() {
   </div>
 }
 
-function DotMatrix({ completed = 18, total = 35 }) {
+// No default completed/total: they were `18`/`35`, a period that does not exist,
+// and a default is what let an invented number render as if it were measured.
+// Callers pass a real reading from `src/cycle.js` or the component is misused.
+function DotMatrix({ completed, total, label }) {
   const safeTotal = Math.max(1, total)
   const safeCompleted = Math.min(Math.max(0, completed), safeTotal)
 
-  return <div className="dot-matrix" aria-label={`${safeCompleted} of ${safeTotal} days complete`}>
+  return <div className="dot-matrix" aria-label={label ?? `${safeCompleted} of ${safeTotal} days complete`}>
     {Array.from({ length: safeTotal }, (_, index) => <span className={index < safeCompleted ? 'complete' : ''} key={index} />)}
   </div>
 }
@@ -786,6 +790,10 @@ function Horizon({ projects, tasks, now, captures, events, jobs, jobError, jobSi
   const [pickNote, setPickNote] = useState('')
 
   const activeWork = useMemo(() => rankActiveWork({ projects, tasks }), [projects, tasks])
+  // Read once per mount rather than per render: a bare cycleReading() in JSX
+  // would recompute on every keystroke in the capture field for a value that
+  // changes once a day. It is stale only if the tab is left open past midnight.
+  const cycle = useMemo(() => cycleReading(), [])
   const resolved = resolveNow(now, tasks)
   const inbox = pendingCaptures(captures)
   const choosable = tasks.filter((task) => task.status !== 'Done')
@@ -859,8 +867,8 @@ function Horizon({ projects, tasks, now, captures, events, jobs, jobError, jobSi
 
       <article className="instrument time-instrument">
         <div className="instrument-heading"><span>Cycle remaining</span><b>02</b></div>
-        <div className="day-counter"><strong>232</strong><span>days left in 2026</span></div>
-        <DotMatrix completed={18} total={35} />
+        <div className="day-counter"><strong>{cycle.daysLeft}</strong><span>days left in {cycle.year}</span></div>
+        <DotMatrix completed={cycle.completed} total={cycle.total} label={cycle.label} />
       </article>
 
       <article className="instrument project-instrument">

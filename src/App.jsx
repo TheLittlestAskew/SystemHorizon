@@ -11,6 +11,7 @@ import { captureBodyError, captureFromRow, captureToRow, nowFromRow, nowToRow, p
 import { A_RATED_STATUS, SEVERITY, UNREPORTED_STATUS, buildNeedsAttention, gdolWeekEnding, gdolWeekWindow, inGdolWindow, repoStatusFlags, shiftDays, systemStatus } from './needsAttention'
 import { buildTimeline, compareEvents } from './timeline'
 import { cycleReading } from './cycle'
+import { syncStatus } from './syncStatus'
 import { ARCHIVE_REPOS, filterArchive, parseHandoffEntries, sortArchive } from './archive'
 import { rankActiveWork } from './activeWork'
 import { buildFieldStatus } from './fieldStatus'
@@ -1668,6 +1669,9 @@ function App() {
   const [now, setNow] = useState(null)
   const [databaseError, setDatabaseError] = useState('')
   const greeting = useMemo(() => new Date().getHours() < 12 ? 'Morning field check' : new Date().getHours() < 18 ? 'Afternoon field check' : 'Evening field check', [])
+  // The footer indicator is in the persistent chrome, so it is the one status
+  // visible from every view -- it must be able to report a bad state.
+  const sync = syncStatus({ databaseError, sourceErrors: [jobError, repoHealthError] })
 
   async function loadProjects() {
     const { data, error } = await supabase.from('horizon_projects').select('*').order('last_activity', { ascending: false, nullsFirst: false })
@@ -2069,7 +2073,7 @@ function App() {
             </div>
           })}
         </nav>
-        <div className="nav-footer"><Signal /><span>Sync stable</span></div>
+        <div className="nav-footer"><Signal tone={sync.tone} /><span>{sync.label}</span></div>
       </aside>
 
       <main className={isWarRoom ? 'main-content warroom-main' : 'main-content'}>

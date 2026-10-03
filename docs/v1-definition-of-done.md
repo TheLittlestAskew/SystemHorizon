@@ -24,7 +24,8 @@ cannot pass without something outside this repo.
 
 ## Scoreboard
 
-**✓ 6 · ⚠️ 5 · 🛑 BLOCKED 0** across 11 sections.
+**✓ 7 · ⚠️ 4 · 🛑 BLOCKED 0** across 11 sections. (Horizon closed 2026-10-03; counts
+re-derived from the verdict column rather than decremented by hand.)
 
 > Updated 2026-09-30: **Career moved from 🛑 BLOCKED to ✓.** M11 (`86a81f3`) gave it
 > an authenticated session and Taylor confirmed rows rendering live, which closed
@@ -34,7 +35,7 @@ cannot pass without something outside this repo.
 
 | # | Section | Loads | Real data | Core action | In layout | Verdict |
 |---|---|---|---|---|---|---|
-| 1 | **Horizon** (Home) | ✓ | ⚠️ | ⚠️ | ✓ | ⚠️ |
+| 1 | **Horizon** (Home) | ✓ | ✓ | ✓ | ✓ | **✓** |
 | 2 | **Projects** | ✓ | ✓ | ✓ | ✓ | **✓** |
 | 3 | **Project detail** | ✓ | ✓ | ✓ | ✓ | **✓** |
 | 4 | **Flow** | ✓ | ✓ | ✓ | ✓ | **✓** |
@@ -192,7 +193,7 @@ same as having data that exercises the thing:
 | Mark | Why it did not close |
 |---|---|
 | **Calendar** ⚠️ | No day holds **two parseable timed events**, so the `9:00 AM` vs `10:00 AM` sort bug is still unexercised. ▶ Add two timed events on one day |
-| **Horizon** ⚠️ | Real data arrived, but Home still has had **no visual check since M3**; M4–M7 remain `Done (pending Taylor visual)`, and the cycle/capacity instruments are still hardcoded |
+| ~~**Horizon** ⚠️~~ | ✅ **CLOSED 2026-10-03.** Home got its first visual pass since M3, in a real browser against real data. It was not merely unverified — it was **stating three falsehoods**: `232 days left in 2026` (true: 89), an unconditional `Systems nominal` over nine live alerts, and an unconditional `Sync stable` in the persistent chrome. All three now derive from real state, and the failure path was **induced and observed**, not assumed. The 182px dead space is closed (`27c7fdd`, `dc7c300`, `98acd7e`). ⚠️ `capacity` still persists nowhere and `041° 28′` is still decorative — both left as Taylor's call, neither states a falsehood |
 
 ▶ **The highest-value next action is not more rows, it is linking tasks to projects.**
 All 4 tasks have `project_id` null, so M6's Active Work ranking stays tied at

@@ -8,7 +8,7 @@ import { SOURCE_GOOGLE, describeSync, reconcileGoogleEvents } from './googleCale
 import { fetchGoogleEvents, requestAccessToken } from './googleSync'
 import { navGroups, navUtilityItems, defaultOpenNavGroups } from './navConfig'
 import { captureBodyError, captureFromRow, captureToRow, nowFromRow, nowToRow, pendingCaptures, resolveNow, routeCapturePatch } from './homeState'
-import { A_RATED_STATUS, SEVERITY, UNREPORTED_STATUS, buildNeedsAttention, gdolWeekEnding, gdolWeekWindow, inGdolWindow, repoStatusFlags, shiftDays } from './needsAttention'
+import { A_RATED_STATUS, SEVERITY, UNREPORTED_STATUS, buildNeedsAttention, gdolWeekEnding, gdolWeekWindow, inGdolWindow, repoStatusFlags, shiftDays, systemStatus } from './needsAttention'
 import { buildTimeline, compareEvents } from './timeline'
 import { cycleReading } from './cycle'
 import { ARCHIVE_REPOS, filterArchive, parseHandoffEntries, sortArchive } from './archive'
@@ -716,11 +716,11 @@ function CaptureControl({ onSave }) {
 // equal-weight cards would flatten the ordering the aggregator exists to
 // produce. Color never carries the meaning on its own, because each row states
 // its reason in words.
-function NeedsAttention({ jobs, jobError, jobSignedIn, repoHealth, repoHealthError }) {
-  const { alerts, overflow, errors } = useMemo(
-    () => buildNeedsAttention({ jobs, jobError, jobSignedIn, repoHealth, repoError: repoHealthError }),
-    [jobs, jobError, jobSignedIn, repoHealth, repoHealthError],
-  )
+// Takes the already-computed aggregate rather than building it: the hero's
+// status line reads the same alerts, and two independent calls could drift into
+// reporting different states on one screen.
+function NeedsAttention({ attention }) {
+  const { alerts, overflow, errors } = attention
 
   return <section className="attention-stack" aria-labelledby="attention-heading">
     <div className="instrument-heading"><span id="attention-heading">Needs attention</span><b>{String(alerts.length).padStart(2, '0')}</b></div>
@@ -794,6 +794,13 @@ function Horizon({ projects, tasks, now, captures, events, jobs, jobError, jobSi
   // would recompute on every keystroke in the capture field for a value that
   // changes once a day. It is stale only if the tab is left open past midnight.
   const cycle = useMemo(() => cycleReading(), [])
+  // Computed once here and passed down, so the hero status line and the Needs
+  // attention panel can never report different states on the same screen.
+  const attention = useMemo(
+    () => buildNeedsAttention({ jobs, jobError, jobSignedIn, repoHealth, repoError: repoHealthError }),
+    [jobs, jobError, jobSignedIn, repoHealth, repoHealthError],
+  )
+  const status = systemStatus(attention)
   const resolved = resolveNow(now, tasks)
   const inbox = pendingCaptures(captures)
   const choosable = tasks.filter((task) => task.status !== 'Done')
@@ -814,7 +821,7 @@ function Horizon({ projects, tasks, now, captures, events, jobs, jobError, jobSi
   return <>
     <section className="horizon-stage" aria-labelledby="today-heading">
       <div className="topographic-field" aria-hidden="true"><span /><span /><span /><span /></div>
-      <div className="stage-topline"><span>Horizon / live map</span><span><Signal /> Systems nominal</span></div>
+      <div className="stage-topline"><span>Horizon / live map</span><span><Signal tone={status.tone} /> {status.label}</span></div>
       <div className="stage-copy">
         <p className="eyebrow">Today’s operating cue</p>
         <h2 id="today-heading">Choose the next<br />true thing.</h2>
@@ -852,7 +859,7 @@ function Horizon({ projects, tasks, now, captures, events, jobs, jobError, jobSi
     </section>
 
     <div className="home-queues">
-      <NeedsAttention jobs={jobs} jobError={jobError} jobSignedIn={jobSignedIn} repoHealth={repoHealth} repoHealthError={repoHealthError} />
+      <NeedsAttention attention={attention} />
       <TodayAndNext events={events} />
     </div>
 

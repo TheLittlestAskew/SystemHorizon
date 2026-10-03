@@ -13,7 +13,16 @@
 // logic and the palette lives in one place.
 export const SEVERITY = { action: 1, awareness: 2 }
 
-export const ATTENTION_LIMIT = 5
+// A FLOOD GUARD, not a layout constant. It was 5, which hid 4 routine alerts
+// behind "4 more not shown" while 182px of dead space sat directly beneath the
+// panel -- the cap was costing information and buying nothing.
+//
+// 🛑 Do NOT tune this to make the two Home columns the same height. Both columns
+// are data-driven (the neighbour renders however many events exist), so no
+// single value balances them on any day but the one it was measured on -- that
+// is how `232 days left` happened. Column balance is a CSS concern; this number
+// only answers "how many alerts before the list stops being readable".
+export const ATTENTION_LIMIT = 12
 
 // The mirror-freshness collector is a scheduled local script, so a gap means it
 // stopped running. A week is long enough to not cry wolf over a quiet weekend.
@@ -180,4 +189,28 @@ export function buildNeedsAttention({ jobs = [], jobError = '', jobSignedIn = tr
     overflow: Math.max(0, ordered.length - ATTENTION_LIMIT),
     errors,
   }
+}
+
+// The hero's status line. It was the literal text "Systems nominal", rendered
+// unconditionally -- so on 2026-10-03 it reassured Taylor that systems were
+// nominal while nine alerts sat directly below it and the mirror-freshness
+// collector had been dead for forty days.
+//
+// 🛑 An unconditional reassurance is worse than a wrong number: `232 days left`
+// is merely false, but "nominal" actively tells her not to look. A status
+// indicator that cannot report a bad state is decoration wearing an
+// instrument's clothes.
+//
+// Severity order is errors > action > awareness > clear. Errors outrank action
+// because a source that failed to load is an UNKNOWN, not a clean read -- the
+// one state that must never be reported as nominal.
+export function systemStatus({ alerts = [], errors = [] } = {}) {
+  if (errors.length > 0) return { tone: 'coral', label: 'Sources unavailable', level: 'error' }
+
+  const action = alerts.filter((alert) => alert.severity === SEVERITY.action).length
+  if (action > 0) return { tone: 'coral', label: `${action} need${action === 1 ? 's' : ''} action`, level: 'action' }
+
+  if (alerts.length > 0) return { tone: 'peach', label: `${alerts.length} to be aware of`, level: 'awareness' }
+
+  return { tone: 'cyan', label: 'Systems nominal', level: 'clear' }
 }

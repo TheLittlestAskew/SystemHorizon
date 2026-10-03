@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { ATTENTION_LIMIT, GDOL_WEEKLY_CONTACTS, SEVERITY, buildNeedsAttention, gdolWeekEnding, inGdolWindow, repoStatusFlags, toDateKey } from './needsAttention.js'
+import { ATTENTION_LIMIT, GDOL_WEEKLY_CONTACTS, SEVERITY, buildNeedsAttention, systemStatus, gdolWeekEnding, inGdolWindow, repoStatusFlags, toDateKey } from './needsAttention.js'
 
 // The executable form of M4's acceptance criteria in docs/NORTH_STAR.md: never
 // more than five alerts, deterministic order (severity then date), and tests for
@@ -38,25 +38,37 @@ test('a fully satisfied week with clean mirrors needs nothing', () => {
   assert.equal(result.errors.length, 0)
 })
 
-test('never returns more than five alerts, and reports the overflow', () => {
-  // 12 inputs: 12 flagged repos.
-  const repoHealth = Array.from({ length: 12 }, (_, i) => ({
-    id: `r${String(i).padStart(2, '0')}`, repoName: `repo-${i}`, hasLocalMirror: true,
-    uncommittedCount: 1, aheadCount: 0, behindCount: 0, checkedAt: '2026-09-25T00:00:00Z',
-  }))
-  const result = buildNeedsAttention({ now: NOW, jobs: satisfiedGdol(), repoHealth })
+// These two derive their input counts from ATTENTION_LIMIT rather than naming a
+// literal. The overflow case previously built exactly 12 repos against a limit
+// of 5; when the limit was raised to 12 the test still PASSED while asserting
+// `overflow === 0` -- it had quietly stopped testing overflow at all. Deriving
+// the fixture from the constant means raising the limit again cannot silently
+// hollow these out.
+const flaggedRepos = (count) => Array.from({ length: count }, (_, i) => ({
+  id: `r${String(i).padStart(2, '0')}`, repoName: `repo-${i}`, hasLocalMirror: true,
+  uncommittedCount: 1, aheadCount: 0, behindCount: 0, checkedAt: '2026-09-25T00:00:00Z',
+}))
+
+test('caps at ATTENTION_LIMIT alerts and reports the remainder as overflow', () => {
+  const excess = 4
+  const result = buildNeedsAttention({ now: NOW, jobs: satisfiedGdol(), repoHealth: flaggedRepos(ATTENTION_LIMIT + excess) })
   assert.equal(result.alerts.length, ATTENTION_LIMIT)
-  assert.equal(result.overflow, 12 - ATTENTION_LIMIT)
+  assert.equal(result.overflow, excess)
+  assert.ok(result.overflow > 0, 'the fixture must actually exceed the limit, or this asserts nothing')
 })
 
-test('exactly five alerts reports no overflow', () => {
-  const repoHealth = Array.from({ length: 5 }, (_, i) => ({
-    id: `r${i}`, repoName: `repo-${i}`, hasLocalMirror: true,
-    uncommittedCount: 1, aheadCount: 0, behindCount: 0, checkedAt: '2026-09-25T00:00:00Z',
-  }))
-  const result = buildNeedsAttention({ now: NOW, jobs: satisfiedGdol(), repoHealth })
-  assert.equal(result.alerts.length, 5)
+test('exactly ATTENTION_LIMIT alerts reports no overflow', () => {
+  const result = buildNeedsAttention({ now: NOW, jobs: satisfiedGdol(), repoHealth: flaggedRepos(ATTENTION_LIMIT) })
+  assert.equal(result.alerts.length, ATTENTION_LIMIT)
   assert.equal(result.overflow, 0)
+})
+
+// The regression this change exists to prevent: the old limit of 5 suppressed
+// routine alerts. Nine is what Taylor actually had on 2026-10-03.
+test('a routine nine-alert day is shown in full, not truncated', () => {
+  const result = buildNeedsAttention({ now: NOW, jobs: satisfiedGdol(), repoHealth: flaggedRepos(9) })
+  assert.equal(result.alerts.length, 9)
+  assert.equal(result.overflow, 0, 'a normal day must not hide rows behind "more not shown"')
 })
 
 test('action-needed sorts before awareness regardless of input order', () => {
@@ -253,4 +265,47 @@ test('a real error while signed out is still reported as an error', () => {
 
 test('signed in remains the default so existing callers are unchanged', () => {
   assert.ok(buildNeedsAttention({ jobs: [] }).alerts.some((a) => a.source === 'career'))
+})
+
+// systemStatus: the hero line that used to read "Systems nominal" no matter what.
+test('systemStatus never reports nominal while anything needs action', () => {
+  const status = systemStatus({ alerts: [{ id: 'a', severity: SEVERITY.action }], errors: [] })
+  assert.equal(status.level, 'action')
+  assert.equal(status.tone, 'coral')
+  assert.notEqual(status.label, 'Systems nominal')
+})
+
+test('systemStatus reports an unavailable source above everything else', () => {
+  // An error outranks action because a source that failed to load is an
+  // UNKNOWN, and an unknown must never be painted as a clean read.
+  const status = systemStatus({ alerts: [{ id: 'a', severity: SEVERITY.action }], errors: [{ source: 'career', message: 'boom' }] })
+  assert.equal(status.level, 'error')
+  assert.equal(status.label, 'Sources unavailable')
+})
+
+test('systemStatus distinguishes awareness from action', () => {
+  const status = systemStatus({ alerts: [{ id: 'a', severity: SEVERITY.awareness }, { id: 'b', severity: SEVERITY.awareness }] })
+  assert.equal(status.level, 'awareness')
+  assert.equal(status.tone, 'peach')
+  assert.equal(status.label, '2 to be aware of')
+})
+
+test('systemStatus says nominal only when genuinely clear', () => {
+  const status = systemStatus({ alerts: [], errors: [] })
+  assert.equal(status.label, 'Systems nominal')
+  assert.equal(status.tone, 'cyan')
+  assert.equal(systemStatus().label, 'Systems nominal', 'no argument is the same as clear')
+})
+
+test('systemStatus counts only action alerts in its action label, and pluralises', () => {
+  const mixed = [{ id: 'a', severity: SEVERITY.action }, { id: 'b', severity: SEVERITY.awareness }, { id: 'c', severity: SEVERITY.action }]
+  assert.equal(systemStatus({ alerts: mixed }).label, '2 need action')
+  assert.equal(systemStatus({ alerts: [{ id: 'a', severity: SEVERITY.action }] }).label, '1 needs action')
+})
+
+// The live state on 2026-10-03: nine awareness alerts and a 40-day-stale
+// collector, while the hero read "Systems nominal".
+test('the live 2026-10-03 state does not report as nominal', () => {
+  const result = buildNeedsAttention({ now: NOW, jobs: satisfiedGdol(), repoHealth: flaggedRepos(9) })
+  assert.notEqual(systemStatus(result).label, 'Systems nominal')
 })

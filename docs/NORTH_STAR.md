@@ -220,7 +220,7 @@ Workers never spawn workers. Single-file, tightly coupled edits (most of `App.js
 ### Tools
 
 - **Supabase MCP** on project `drtvlcgyjlofaffbwael`: `list_tables`, `execute_sql` (read-only queries), `apply_migration`, `list_migrations`.
-- **chrome-devtools-mcp**: visual checks against the local dev server after Taylor logs in. Never build a standalone static preview as a workaround for the login (see the 2026-09-21 handoff friction).
+- **chrome-devtools-mcp**: visual checks against the local dev server. Never build a standalone static preview as a workaround for the login (see the 2026-09-21 handoff friction). ✅ **PROVEN WORKING 2026-10-03, and "after Taylor logs in" turned out to be wrong.** `npm run dev` then point the MCP at **`http://localhost:5173/`** and it loads **already signed in** — the MCP's persistent Chrome profile carries the Supabase session, so there is no login step at all. 🛑 **Do NOT point it at `https://sh.tayloraritchie.com`.** The public hostname sits behind **Cloudflare Access** (Zero Trust, `fancy-waterfall-793f.cloudflareaccess.com`), whose bot detection traps a CDP-controlled browser in an unpassable human-verification loop. ⚡ **Five sessions of "chrome-devtools-mcp won't attach" were this and only this: the wrong URL.** Localhost has no Zero Trust gate.
 - **Filesystem**: vault at `C:\Users\theli\Obsidian Vaults\Septentrion\` (for the Task Digest only).
 - **Remote Control**: push notifications for questions and milestone completions.
 - **git / npm / node**: local.

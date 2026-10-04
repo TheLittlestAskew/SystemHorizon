@@ -7,7 +7,7 @@ import { PROMOTION, canTogglePromotion, nextPromotionState, promotionLabel } fro
 import { SOURCE_GOOGLE, describeSync, reconcileGoogleEvents } from './googleCalendar'
 import { fetchGoogleEvents, requestAccessToken } from './googleSync'
 import { navGroups, navUtilityItems, defaultOpenNavGroups } from './navConfig'
-import { captureBodyError, captureFromRow, captureToRow, nowFromRow, nowToRow, pendingCaptures, resolveNow, routeCapturePatch } from './homeState'
+import { CAPACITY_OPTIONS, capacityAgeLabel, capacityToRow, captureBodyError, captureFromRow, captureToRow, nowFromRow, nowToRow, pendingCaptures, resolveCapacity, resolveNow, routeCapturePatch } from './homeState'
 import { A_RATED_STATUS, SEVERITY, UNREPORTED_STATUS, buildNeedsAttention, gdolWeekEnding, gdolWeekWindow, inGdolWindow, repoStatusFlags, shiftDays, systemStatus } from './needsAttention'
 import { buildTimeline, compareEvents } from './timeline'
 import { cycleReading } from './cycle'
@@ -784,8 +784,11 @@ function TodayAndNext({ events }) {
   </section>
 }
 
-function Horizon({ projects, tasks, now, captures, events, jobs, jobError, jobSignedIn, repoHealth, repoHealthError, onProjects, onOpenProject, onSelectView, onChooseNow, onUpdateTaskStatus, onCaptureIntoTask, onDismissCapture }) {
-  const [capacity, setCapacity] = useState('Steady')
+function Horizon({ projects, tasks, now, captures, events, jobs, jobError, jobSignedIn, repoHealth, repoHealthError, onProjects, onOpenProject, onSelectView, onChooseNow, onChooseCapacity, onUpdateTaskStatus, onCaptureIntoTask, onDismissCapture }) {
+  // Capacity comes from horizon_now rather than component state, and expires:
+  // see resolveCapacity in homeState.js for why an unexpiring one would be worse
+  // than the reset-on-reload it replaced.
+  const capacity = resolveCapacity(now)
   const [picking, setPicking] = useState(false)
   const [pickTaskId, setPickTaskId] = useState('')
   const [pickNote, setPickNote] = useState('')
@@ -867,9 +870,20 @@ function Horizon({ projects, tasks, now, captures, events, jobs, jobError, jobSi
     <section className="instrument-grid" aria-label="Horizon modules">
       <article className="instrument capacity-instrument">
         <div className="instrument-heading"><span>Capacity / now</span><b>01</b></div>
-        <div className="capacity-reading"><strong>{capacity}</strong><small>{capacity === 'Light' ? 'Make the next move small.' : capacity === 'High focus' ? 'Protect a meaningful build block.' : 'Enough room for a deep block.'}</small></div>
+        <div className="capacity-reading">
+          <strong>{capacity.state === 'set' ? capacity.value : 'Not set'}</strong>
+          <small>{capacity.state !== 'set' ? 'How much room do you have today?' : capacity.value === 'Light' ? 'Make the next move small.' : capacity.value === 'High focus' ? 'Protect a meaningful build block.' : 'Enough room for a deep block.'}</small>
+          {/* The age is the honest half of this instrument: a capacity that
+              cannot say when it was reported is the defect this replaced. */}
+          {capacityAgeLabel(capacity) && <small className="capacity-age">{capacity.state === 'stale' ? `Last ${capacityAgeLabel(capacity)}` : capacityAgeLabel(capacity)}</small>}
+        </div>
         <div className="segmented-control" role="group" aria-label="Set current capacity">
-          {['Light', 'Steady', 'High focus'].map((option) => <button className={capacity === option ? 'selected' : ''} key={option} type="button" onClick={() => setCapacity(option)}>{option}</button>)}
+          {CAPACITY_OPTIONS.map((option) => {
+            // Only a live capacity shows as selected. A stale one still names
+            // what was last reported above, but must not claim to be current.
+            const selected = capacity.state === 'set' && capacity.value === option
+            return <button className={selected ? 'selected' : ''} aria-pressed={selected} key={option} type="button" onClick={() => onChooseCapacity(option)}>{option}</button>
+          })}
         </div>
       </article>
 
@@ -1940,6 +1954,16 @@ function App() {
     setNow(nowFromRow(data))
   }
 
+  // Writes only the two capacity columns. horizon_now.set_at means "when I chose
+  // my next true thing", so reporting capacity must not restamp it, and must not
+  // clear a task_id or note that are still current.
+  async function chooseCapacity(capacity) {
+    if (!session?.user?.id) { setDatabaseError('Sign in again before setting capacity.'); return }
+    const { data, error } = await supabase.from('horizon_now').upsert({ owner: session.user.id, ...capacityToRow(capacity) }, { onConflict: 'owner' }).select().single()
+    if (error) { setDatabaseError(error.message || 'Could not record your capacity.'); return }
+    setNow(nowFromRow(data))
+  }
+
   async function addEvent(event) {
     const { data, error } = await supabase.from('horizon_events').insert(eventToRow(event)).select().single()
     if (error) { setDatabaseError(error.message || 'Could not save the event.'); return }
@@ -2092,7 +2116,7 @@ function App() {
           : activeView === 'Swift' ? <SwiftView watches={swiftWatch} collection={swiftCollection} events={swiftEvents} onAddCollectionItem={addSwiftCollectionItem} onUpdateCollectionStatus={updateSwiftCollectionStatus} onDeleteCollectionItem={deleteSwiftCollectionItem} onAddEvent={addSwiftEvent} onDeleteEvent={deleteSwiftEvent} />
           : activeView === 'Travel' ? <TravelView entries={travelWatch} onAdd={addTravelEntry} onDelete={deleteTravelEntry} />
           : activeView === 'War Room' ? <WarRoomView />
-          : <Horizon projects={projects} tasks={tasks} now={now} captures={captures} events={events} jobs={jobs} jobError={jobError} jobSignedIn={Boolean(jobSession)} repoHealth={repoHealth} repoHealthError={repoHealthError} onProjects={() => setActiveView('Projects')} onOpenProject={openProject} onSelectView={setActiveView} onChooseNow={chooseNow} onUpdateTaskStatus={updateTaskStatus} onCaptureIntoTask={captureIntoTask} onDismissCapture={dismissCapture} />}
+          : <Horizon projects={projects} tasks={tasks} now={now} captures={captures} events={events} jobs={jobs} jobError={jobError} jobSignedIn={Boolean(jobSession)} repoHealth={repoHealth} repoHealthError={repoHealthError} onProjects={() => setActiveView('Projects')} onOpenProject={openProject} onSelectView={setActiveView} onChooseNow={chooseNow} onChooseCapacity={chooseCapacity} onUpdateTaskStatus={updateTaskStatus} onCaptureIntoTask={captureIntoTask} onDismissCapture={dismissCapture} />}
       </main>
     </div>
   </div>

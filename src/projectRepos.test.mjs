@@ -6,9 +6,10 @@ import {
 } from './projectRepos.js'
 import { ARCHIVE_REPOS } from './archive.js'
 
-// SystemHorizon and sitl_vault are in ARCHIVE_REPOS; 'aftermath-atlas' is not.
+// SystemHorizon and pacts_power_vault are in ARCHIVE_REPOS; 'aftermath-atlas' is not.
+// (sitl_vault was removed 2026-10-04: renamed to skitl_vault, which is private.)
 const SH = { id: 'p1', name: 'System Horizon', repoNames: ['SystemHorizon'] }
-const MULTI = { id: 'p2', name: 'Septentrion', repoNames: ['SystemHorizon', 'sitl_vault'] }
+const MULTI = { id: 'p2', name: 'Septentrion', repoNames: ['SystemHorizon', 'pacts_power_vault'] }
 const UNMONITORED = { id: 'p3', name: 'Aftermath Meridian', repoNames: ['aftermath-atlas'] }
 const MIXED = { id: 'p4', name: 'Mixed', repoNames: ['SystemHorizon', 'aftermath-atlas'] }
 const NO_REPO = { id: 'p5', name: 'Learn JavaScript', repoNames: null }
@@ -16,7 +17,9 @@ const NO_REPO = { id: 'p5', name: 'Learn JavaScript', repoNames: null }
 test('the fixtures match the real ARCHIVE_REPOS set', () => {
   // If ARCHIVE_REPOS changes, these fixtures must still mean what they say.
   assert.equal(ARCHIVE_REPOS.includes('SystemHorizon'), true)
-  assert.equal(ARCHIVE_REPOS.includes('sitl_vault'), true)
+  assert.equal(ARCHIVE_REPOS.includes('pacts_power_vault'), true)
+  // The repo this list dropped on 2026-10-04 must stay dropped.
+  assert.equal(ARCHIVE_REPOS.includes('sitl_vault'), false)
   assert.equal(ARCHIVE_REPOS.includes('aftermath-atlas'), false)
 })
 
@@ -28,9 +31,9 @@ test('one repo resolves as linked and monitored', () => {
 
 test('several repos all resolve', () => {
   const status = projectRepoStatus(MULTI)
-  assert.deepEqual(status.linked, ['SystemHorizon', 'sitl_vault'])
-  assert.deepEqual(status.monitored, ['SystemHorizon', 'sitl_vault'])
-  assert.deepEqual(handoffReposForProject(MULTI), ['SystemHorizon', 'sitl_vault'])
+  assert.deepEqual(status.linked, ['SystemHorizon', 'pacts_power_vault'])
+  assert.deepEqual(status.monitored, ['SystemHorizon', 'pacts_power_vault'])
+  assert.deepEqual(handoffReposForProject(MULTI), ['SystemHorizon', 'pacts_power_vault'])
 })
 
 test('no repo is a real state with its own sentence, not an empty tab', () => {
@@ -85,7 +88,7 @@ test('the notice pluralises so it never reads "are not monitored" for one repo',
 
 const HEALTH = [
   { repoName: 'SystemHorizon', flags: ['Unbanked handoff'] },
-  { repoName: 'sitl_vault', flags: [] },
+  { repoName: 'pacts_power_vault', flags: [] },
   { repoName: 'wtff_vault', flags: ['4 uncommitted changes'] },
 ]
 
@@ -95,7 +98,7 @@ test('portfolio scope returns every repo-health row', () => {
 
 test('project scope returns only that project\'s repos', () => {
   assert.deepEqual(repoHealthForProject(HEALTH, SH).map((r) => r.repoName), ['SystemHorizon'])
-  assert.deepEqual(repoHealthForProject(HEALTH, MULTI).map((r) => r.repoName), ['SystemHorizon', 'sitl_vault'])
+  assert.deepEqual(repoHealthForProject(HEALTH, MULTI).map((r) => r.repoName), ['SystemHorizon', 'pacts_power_vault'])
 })
 
 test('a project with no repo gets an empty list, which the notice explains', () => {
@@ -110,7 +113,7 @@ test('a repo in horizon_repo_health but in no project is never dropped', () => {
 })
 
 test('with no projects at all, every repo is unclaimed rather than none', () => {
-  assert.deepEqual(unclaimedRepos(HEALTH, []), ['SystemHorizon', 'sitl_vault', 'wtff_vault'])
+  assert.deepEqual(unclaimedRepos(HEALTH, []), ['SystemHorizon', 'pacts_power_vault', 'wtff_vault'])
 })
 
 // --- reverse lookup ----------------------------------------------------------

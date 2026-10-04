@@ -5,7 +5,22 @@
 // The source is each repo's HANDOFF.md fetched over the network, not a table.
 // Nothing here writes anything.
 
-export const ARCHIVE_REPOS = ['SystemHorizon', 'ashfall_vault', 'rectrixcaedere', 'taylorritchie', 'sitl_vault', 'pacts_power_vault']
+// 🛑 EVERY REPO HERE MUST BE PUBLIC. The fetch is an anonymous GET against
+// raw.githubusercontent.com, which serves public repos only; a private repo
+// returns 404 and is indistinguishable from a missing file. SystemHorizon is
+// itself a PUBLIC repo, so the alternative -- shipping a token to authenticate
+// the request -- would publish that token. There is no client-side fix for a
+// private repo here, which is why this list can only ever hold public ones.
+//
+// ⚠️ `sitl_vault` was removed 2026-10-04. It had been failing every load, and
+// BOTH of its reasons matter, because fixing only one looks like a fix and
+// is not:
+//   1. the repo was RENAMED to `skitl_vault` in the 2026-10-02 SKITL rename, and
+//   2. `skitl_vault` is PRIVATE, so the anonymous fetch 404s under the new name
+//      too. It does have a real HANDOFF.md; nothing here can reach it.
+// ▶ To bring SITL's handoffs back, `skitl_vault` has to become public. That is
+// Taylor's call, not a code change.
+export const ARCHIVE_REPOS = ['SystemHorizon', 'ashfall_vault', 'rectrixcaedere', 'taylorritchie', 'pacts_power_vault']
 
 // The closed label set from AGENTS.md. Longest first so "Claude desktop" is
 // tested before any shorter prefix could swallow it.

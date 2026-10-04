@@ -62,6 +62,45 @@ test('ARCHIVE_REPOS is a unique list, so failure rows cannot collide on repo nam
   assert.equal(ARCHIVE_REPOS.length > 0, true)
 })
 
+// 🛑 Repos that are PRIVATE or RENAMED can never be fetched here, because the
+// request is an anonymous GET against raw.githubusercontent.com and this repo
+// is public, so no token can ship with it to authenticate one.
+//
+// `sitl_vault` sat in this list failing on every single load. It had TWO
+// independent reasons, which is what made it worth pinning: the repo was
+// renamed to `skitl_vault`, AND `skitl_vault` is private. Fixing only the name
+// looks like a fix and still 404s.
+//
+// A permanently-failing repo also destroys the value of the failure notice:
+// if one repo always errors, the banner is wallpaper and a NEW outage goes
+// unnoticed. Keeping this list fetchable is what keeps that signal honest.
+test('🛑 no known-unfetchable repo is in ARCHIVE_REPOS', () => {
+  const unfetchable = {
+    sitl_vault: 'renamed to skitl_vault on 2026-10-02, and skitl_vault is private',
+    skitl_vault: 'private; raw.githubusercontent.com serves public repos only',
+    septentrion: 'private',
+    'claude-artifacts': 'private',
+    'aftermath-atlas': 'private',
+    'aftermath-admin': 'private',
+    'creative-writing': 'private',
+    obsidian_vault: 'private',
+    Dimension20: 'private',
+    Dimension_20: 'private',
+  }
+  const offenders = ARCHIVE_REPOS.filter((repo) => unfetchable[repo])
+    .map((repo) => `${repo} (${unfetchable[repo]})`)
+  assert.deepEqual(offenders, [],
+    'a private or renamed repo 404s on every load and turns the failure notice into wallpaper')
+})
+
+test('the public repo list still holds the five that actually resolve', () => {
+  // Confirmed against the live repo list on 2026-10-04: these five are public
+  // and each returned 200 for HANDOFF.md on main.
+  assert.deepEqual([...ARCHIVE_REPOS].sort(), [
+    'SystemHorizon', 'ashfall_vault', 'pacts_power_vault', 'rectrixcaedere', 'taylorritchie',
+  ])
+})
+
 // --- sorting -------------------------------------------------------------
 
 const ROWS = [

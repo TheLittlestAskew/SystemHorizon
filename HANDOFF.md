@@ -256,12 +256,4 @@ Standing repo notes:
 - **Watch out:** ⚠️ **`http://localhost:5173` was added as an origin AND a redirect on purpose.** Without it M8 cannot be tested on the dev server, and that only becomes apparent after the code is written. Origins take no trailing slash and no path.
 - **Watch out:** 🛑 **M8 is unblocked but NOT buildable.** Q1 and Q2 are separate gates and only Q1 is closed. A session that reads "OAuth client exists" and starts writing the mapper will find nowhere typed to land RFC 3339 values and will be tempted to stuff them into the text columns — which is option C, and it makes `compareEvents` guess at a third format.
 
-### 2026-10-01 14:15 ET · Claude Code
-- **Changed:** **M10 shipped, in the septentrion vault rather than here.** `Scripts/horizon-task-digest/` (vault commit `b249290`): a standalone zero-dependency collector that reads Horizon and writes one generated note. Phase 0 and 8 acceptance criteria were written into `NORTH_STAR.md` §10 M10 first; M10's status row is now `Done`. **No change to this repo's code** — docs only.
-- **Commit:** `d14672f` (vault side: `b249290`, handoff `d1b7458`)
-- **Next:** Taylor: allowlist the digest task in `task-health`, then schedule it. **M8 is then the only milestone left**, blocked on her Google OAuth client.
-- **Watch out:** ✅ **Phase 0 corrected a dangerous belief:** a prompt used this session described the septentrion vault as a **PUBLIC repo**. It is **private** (unauthenticated `GET /repos/TheLittlestAskew/septentrion` returns 404), which is why writing real task names into a vault note is safe. ▶ Had that claim been trusted, the digest would have been built wrong in one direction or leaked in the other. Verify repo visibility before writing personal data anywhere.
-- **Watch out:** ⚠️ **`Scripts/task-health/` is about Windows scheduled-task exit codes, not Horizon tasks.** The names collide and they are unrelated. Do not merge or 'reconcile' them.
-- **Watch out:** ⚠️ **The digest reads the owner's own rows via a password sign-in, not a service-role key**, exactly like the sibling collectors. 🛑 Never 'simplify' that to a service key: the vault is private but the pattern is what keeps every read RLS-scoped.
-
-> Older entries archived to `handoff-archive/2026-07.md`, `handoff-archive/2026-08.md`, `handoff-archive/2026-09.md`, `handoff-archive/2026-10.md` - everything before 2026-10-01 14:15 ET.
+> Older entries archived to `handoff-archive/2026-07.md`, `handoff-archive/2026-08.md`, `handoff-archive/2026-09.md`, `handoff-archive/2026-10.md` - everything before 2026-10-01 14:40 ET.

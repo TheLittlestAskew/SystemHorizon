@@ -15,7 +15,10 @@ import { syncStatus } from './syncStatus'
 import { ARCHIVE_REPOS, filterArchive, parseHandoffEntries, sortArchive } from './archive'
 import { rankActiveWork } from './activeWork'
 import { buildFieldStatus } from './fieldStatus'
+import { AREA_ORDER } from './areas'
+import { activityFromRow, calendarSyncedActivity, captureAddedActivity, eventAddedActivity, projectAddedActivity, registryResyncedActivity, taskCreatedActivity, taskDeletedActivity, taskFlaggedActivity, taskLinkedActivity, taskStatusActivity } from './activityLog'
 import WarRoomView from './WarRoomView'
+import PulseView from './PulseView'
 import './App.css'
 
 // Minimal line icons, hand-drawn in a thin-stroke/rounded-terminal style (not
@@ -25,6 +28,8 @@ const navIcons = {
   Horizon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="11" r="5" /><line x1="3" y1="18" x2="21" y2="18" /></svg>,
   Projects: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" /></svg>,
   Flow: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="4" height="14" rx="1" /><rect x="10" y="5" width="4" height="9" rx="1" /><rect x="17" y="5" width="4" height="12" rx="1" /></svg>,
+  // A pulse trace: what has moved, and what has flatlined.
+  Pulse: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12h4l3-7 4 14 3-7h6" /></svg>,
   Calendar: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="18" height="16" rx="2" /><line x1="3" y1="10" x2="21" y2="10" /><line x1="8" y1="3" x2="8" y2="7" /><line x1="16" y1="3" x2="16" y2="7" /></svg>,
   Career: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="8" width="18" height="12" rx="2" /><path d="M8 8V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><line x1="3" y1="13" x2="21" y2="13" /></svg>,
   Mirrors: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 11a8 8 0 0 0-14.9-3.5" /><path d="M4 5v4h4" /><path d="M4 13a8 8 0 0 0 14.9 3.5" /><path d="M20 19v-4h-4" /></svg>,
@@ -45,28 +50,30 @@ function NavItem({ label, activeView, onSelect }) {
 // campaign vaults underneath it, the just-for-fun stuff, the job hunt, then
 // raw skill-building. AREA_ORDER below drives the actual grouping.
 const initialProjects = [
-  { id: 'system-horizon', name: 'System Horizon', area: 'Ops & Infra', kind: 'app', status: 'Active', health: 'Green', tone: 'cyan', metric: '10/10 nav views live', signal: 90, summary: 'The cross-device control panel for projects, return points, tasks, and the next true thing — full dark canvas across every view.', nextAction: 'Set up the changedetection.io flight-price watch for Travel (see HANDOFF) — not urgent until early November.', details: ['Full-dark visual rollout shipped across all 10 nav views.', 'War Room (Fantasy Football draft board) merged in as nav item 10.', 'Calendar rebuilt to a 3-column Agenda layout plus a Month grid toggle.', 'Mirror-freshness and Swiftwatch sync scripts verified end-to-end via Task Scheduler.', 'Backlog ideas from Codex, none built yet: grocery price comparison page, desktop brain-dump capture widget, private prescription/refill tracker, family gift-idea notes.'] },
-  { id: 'septentrion', name: 'Septentrion / Observatory', area: 'Ops & Infra', kind: 'app + vault', status: 'Active', health: 'Green', tone: 'cyan', metric: '5 panels · daily 07:30 task', signal: 88, summary: 'The mind palace: a Return Point that stays current from every repo handoff.', nextAction: 'Choose the jobs-Supabase connection and finish the HTML Embed path.', details: ['5 operational panels are shipped.', 'Daily generator task is scheduled for 07:30.', 'Repo feeds need a freshness check on the eventual live page.'] },
-  { id: 'rectrix-caedere', name: 'Rectrix Caedere', area: 'Aftermath', kind: 'app + content', status: 'Active', health: 'Green', tone: 'cyan', metric: 'Live site + roll dashboard', signal: 86, summary: 'Campaign, public brand system, and the flagship creative-data product at rectrixcaedere.com.', nextAction: 'Confirm the latest roll-sync health and surface its freshness.', details: ['Oracle-deck product concept and brand assets belong here.', 'The historic prop-types black-screen bug is resolved.', 'Canonical name: campaign + brand + public site.'] },
-  { id: 'aftermath-meridian', name: 'Aftermath Meridian', area: 'Aftermath', parentName: 'Rectrix Caedere', kind: 'app', status: 'Active', health: 'Yellow', tone: 'coral', metric: 'Spread · Court · Orrery', signal: 42, summary: 'The live roll-analytics website behind Rectrix Caedere and Dimension 20 data.', nextAction: 'Reconcile the diverged branch and six orphaned remote migrations.', details: ['Open: seed.sql line-30 quoting bug.', 'Browser extension is part of the product.', 'Aftermath Atlas is the Supabase data layer, not a duplicate project.'] },
+  { id: 'system-horizon', repoNames: ['SystemHorizon'], name: 'System Horizon', area: 'Ops & Infra', kind: 'app', status: 'Active', health: 'Green', tone: 'cyan', metric: '10/10 nav views live', signal: 90, summary: 'The cross-device control panel for projects, return points, tasks, and the next true thing — full dark canvas across every view.', nextAction: 'Set up the changedetection.io flight-price watch for Travel (see HANDOFF) — not urgent until early November.', details: ['Full-dark visual rollout shipped across all 10 nav views.', 'War Room (Fantasy Football draft board) merged in as nav item 10.', 'Calendar rebuilt to a 3-column Agenda layout plus a Month grid toggle.', 'Mirror-freshness and Swiftwatch sync scripts verified end-to-end via Task Scheduler.', 'Backlog ideas from Codex, none built yet: grocery price comparison page, desktop brain-dump capture widget, private prescription/refill tracker, family gift-idea notes.'] },
+  { id: 'septentrion', repoNames: ['septentrion'], name: 'Septentrion / Observatory', area: 'Ops & Infra', kind: 'app + vault', status: 'Active', health: 'Green', tone: 'cyan', metric: '5 panels · daily 07:30 task', signal: 88, summary: 'The mind palace: a Return Point that stays current from every repo handoff.', nextAction: 'Choose the jobs-Supabase connection and finish the HTML Embed path.', details: ['5 operational panels are shipped.', 'Daily generator task is scheduled for 07:30.', 'Repo feeds need a freshness check on the eventual live page.'] },
+  { id: 'rectrix-caedere', repoNames: ['rectrixcaedere'], name: 'Rectrix Caedere', area: 'Aftermath', kind: 'app + content', status: 'Active', health: 'Green', tone: 'cyan', metric: 'Live site + roll dashboard', signal: 86, summary: 'Campaign, public brand system, and the flagship creative-data product at rectrixcaedere.com.', nextAction: 'Confirm the latest roll-sync health and surface its freshness.', details: ['Oracle-deck product concept and brand assets belong here.', 'The historic prop-types black-screen bug is resolved.', 'Canonical name: campaign + brand + public site.'] },
+  { id: 'aftermath-meridian', repoNames: ['aftermath-atlas'], name: 'Aftermath Meridian', area: 'Aftermath', parentName: 'Rectrix Caedere', kind: 'app', status: 'Active', health: 'Yellow', tone: 'coral', metric: 'Spread · Court · Orrery', signal: 42, summary: 'The live roll-analytics website behind Rectrix Caedere and Dimension 20 data.', nextAction: 'Reconcile the diverged branch and six orphaned remote migrations.', details: ['Open: seed.sql line-30 quoting bug.', 'Browser extension is part of the product.', 'Aftermath Atlas is the Supabase data layer, not a duplicate project.'] },
   { id: 'dimension-20', name: 'Dimension 20 pipeline', area: 'Aftermath', kind: 'automation + archive', status: 'Active', health: 'Yellow', tone: 'coral', metric: 'Episode 1 proven · 2–17 pending', signal: 39, summary: 'A high-volume transcript-to-session-note pipeline feeding the Aftermath Atlas data layer.', nextAction: 'Process Episodes 2–17, then establish the campaign progress matrix.', details: ['24 campaigns and 225 transcripts are imported.', 'Reconciliation policy needs visible source notes.', 'Writes to Aftermath Atlas.'] },
-  { id: 'sitl', name: 'Sky Is The Limit', area: 'Undercroft', kind: 'automation + archive', status: 'Active', health: 'Green', tone: 'cyan', metric: 'mp3 → note → approve', signal: 91, summary: 'The transcription pipeline that turns campaign audio into approved session notes.', nextAction: 'Check watcher status and clear the pending-approvals queue.', details: ['AssemblyAI custom spelling is part of the pipeline.', 'The scheduled watcher auto-starts.', 'This is the pattern cloned for Dimension 20.'] },
-  { id: 'flowers-forget', name: 'Where The Flowers Forget', area: 'Undercroft', kind: 'archive', status: 'Paused', health: 'Yellow', tone: 'violet', metric: 'Season 02 integrated', signal: 48, summary: 'Campaign archive of transcripts, session notes, and roll logs.', nextAction: 'Keep the archive parked until the next season or import needs attention.', details: ['Season 02 is integrated into Aftermath Meridian.', 'Best future view: processed-versus-pending episode progress.', 'No live pipeline is needed while paused.'] },
-  { id: 'ashfall-britannia', name: 'Ashfall Britannia', area: 'Undercroft', kind: 'archive', status: 'Active', health: 'Green', tone: 'cyan', metric: 'Player journal', signal: 76, summary: 'A campaign vault framed as your player journal, not campaign operations.', nextAction: 'Add the most recent session and character-note return point.', details: ['Your role is Player.', 'Taylor (DM) is a different Taylor.', 'Keep the page lighter than the analytics projects.'] },
-  { id: 'pacts-power', name: 'Pacts & Power', area: 'Undercroft', kind: 'archive', status: 'Paused', health: 'Idle', tone: 'violet', metric: 'Vault synced', signal: 22, summary: 'A settled campaign vault with its audio cleanup and sync work complete.', nextAction: 'Leave parked unless the campaign resumes or retrieval is needed.', details: ['PAT → GCM sync work is complete.', 'No dashboard tile until it is active again.', 'This is a minimal archive, not a live system.'] },
+  { id: 'sitl', repoNames: ['sitl_vault'], name: 'Sky Is The Limit', area: 'Undercroft', kind: 'automation + archive', status: 'Active', health: 'Green', tone: 'cyan', metric: 'mp3 → note → approve', signal: 91, summary: 'The transcription pipeline that turns campaign audio into approved session notes.', nextAction: 'Check watcher status and clear the pending-approvals queue.', details: ['AssemblyAI custom spelling is part of the pipeline.', 'The scheduled watcher auto-starts.', 'This is the pattern cloned for Dimension 20.'] },
+  { id: 'flowers-forget', repoNames: ['wtff_vault'], name: 'Where The Flowers Forget', area: 'Undercroft', kind: 'archive', status: 'Paused', health: 'Yellow', tone: 'violet', metric: 'Season 02 integrated', signal: 48, summary: 'Campaign archive of transcripts, session notes, and roll logs.', nextAction: 'Keep the archive parked until the next season or import needs attention.', details: ['Season 02 is integrated into Aftermath Meridian.', 'Best future view: processed-versus-pending episode progress.', 'No live pipeline is needed while paused.'] },
+  { id: 'ashfall-britannia', repoNames: ['ashfall_vault'], name: 'Ashfall Britannia', area: 'Undercroft', kind: 'archive', status: 'Active', health: 'Green', tone: 'cyan', metric: 'Player journal', signal: 76, summary: 'A campaign vault framed as your player journal, not campaign operations.', nextAction: 'Add the most recent session and character-note return point.', details: ['Your role is Player.', 'Taylor (DM) is a different Taylor.', 'Keep the page lighter than the analytics projects.'] },
+  { id: 'pacts-power', repoNames: ['pacts_power_vault'], name: 'Pacts & Power', area: 'Undercroft', kind: 'archive', status: 'Paused', health: 'Idle', tone: 'violet', metric: 'Vault synced', signal: 22, summary: 'A settled campaign vault with its audio cleanup and sync work complete.', nextAction: 'Leave parked unless the campaign resumes or retrieval is needed.', details: ['PAT → GCM sync work is complete.', 'No dashboard tile until it is active again.', 'This is a minimal archive, not a live system.'] },
   { id: 'invisible-string-theory', name: 'Invisible String Theory', area: 'Sidequests', kind: 'intel', status: 'Active', health: 'Green', tone: 'cyan', metric: 'Signals + merch watch', signal: 79, summary: 'A Taylor Swift intelligence project for Easter eggs, merch, and evidence-backed next-move predictions.', nextAction: 'Review the newest Swiftwatch detection against the prediction log.', details: ['Signal library includes song-title source notes.', 'Merch tracker separates available, wishlist, and owned.', 'Swiftwatch is the sensor; this is the analyst.'] },
   { id: 'swiftwatch', name: 'Swiftwatch', area: 'Sidequests', parentName: 'Invisible String Theory', kind: 'intel / monitor', status: 'Active', health: 'Green', tone: 'cyan', metric: '2 watches · chain verified', signal: 90, summary: 'A local change-detection monitor for the Taylor Swift store and taylorswift.com.', nextAction: 'Automated via Task Scheduler — spot-check the next detection cycle looks clean.', details: ['Store checks every 30 minutes; site checks every 2 hours.', 'changedetection → Apprise → ntfy → BurntToast verified and Task Scheduler-registered.', 'Duplicate-toast bug was fixed.'] },
   { id: 'fantasy-football', name: 'Fantasy Football', area: 'Sidequests', kind: 'app + learning', status: 'Active', health: 'Green', tone: 'cyan', metric: 'Draft complete · War Room live in SH (nav 10)', signal: 85, summary: 'A 20-team PPR league tracker and draft-day command center, now folded into System Horizon as the War Room.', nextAction: 'Track season activity — trades, waivers, standings — now that the draft is behind you.', details: ['War Room merged into System Horizon as nav item 10: draft board, ESPN live sync, CSV import, per-player notes.', '20-team snake draft completed 8/29; seat 9 = "Hits Different" (you).', 'ESPN cookie rotated 9/1 after a plaintext exposure, reverified live against the API.', 'Draft state lives in localStorage by design — single-device and latency-critical, a documented exception to the usual Supabase-everything rule.'] },
-  { id: 'career-ops', name: 'Resume & Job Hunting', area: 'Career', kind: 'automation', status: 'Active', health: 'Green', tone: 'cyan', metric: 'Tracker + weekly discovery', signal: 84, summary: 'The job-search command center: applications, resume variants, compliance, and next moves.', nextAction: 'Check this week’s three GA DOL work-search contacts.', details: ['Funnel: Discovered → Applied → Interview → Offer.', 'Recent scores include MAVEN 94% and NDI 84%.', 'Sunday and Friday GDOL toasts support the deadline.'] },
+  { id: 'career-ops', repoNames: ['taylorritchie'], name: 'Resume & Job Hunting', area: 'Career', kind: 'automation', status: 'Active', health: 'Green', tone: 'cyan', metric: 'Tracker + weekly discovery', signal: 84, summary: 'The job-search command center: applications, resume variants, compliance, and next moves.', nextAction: 'Check this week’s three GA DOL work-search contacts.', details: ['Funnel: Discovered → Applied → Interview → Offer.', 'Recent scores include MAVEN 94% and NDI 84%.', 'Sunday and Friday GDOL toasts support the deadline.'] },
   { id: 'storybook-resume', name: 'Storybook Resume', area: 'Career', kind: 'app', status: 'Idea', health: 'Idle', tone: 'violet', metric: '9 scenes · 0/10 built', signal: 0, summary: 'A scroll-snap resume built as a career journey, with an Among Trees design DNA.', nextAction: 'Choose the first of the committed ten build tasks when capacity opens.', details: ['The nine-scene storyboard exists.', 'The 10-task plan is committed.', 'Nothing is built yet, so this stays out of Horizon.'] },
-  { id: 'nonprofit-power-platform', name: 'Nonprofit Power Platform', area: 'Career', kind: 'content / case study', status: 'Paused', health: 'Yellow', tone: 'coral', metric: '129 sanitized tr_ tables', signal: 55, summary: 'A public-safe case study of a six-area Power Platform build, designed without exposing private source data.', nextAction: 'Review the unmerged branches and decide whether to finish the public case-study merge.', details: ['Public repo contains zero PII.', 'Source-private and public-sanitized work stay separated.', 'This is for hiring-manager review, not a live operations tile.'] },
+  { id: 'nonprofit-power-platform', repoNames: ['nonprofit-power-platform-ecosystem'], name: 'Nonprofit Power Platform', area: 'Career', kind: 'content / case study', status: 'Paused', health: 'Yellow', tone: 'coral', metric: '129 sanitized tr_ tables', signal: 55, summary: 'A public-safe case study of a six-area Power Platform build, designed without exposing private source data.', nextAction: 'Review the unmerged branches and decide whether to finish the public case-study merge.', details: ['Public repo contains zero PII.', 'Source-private and public-sanitized work stay separated.', 'This is for hiring-manager review, not a live operations tile.'] },
   { id: 'learn-javascript', name: 'Learn JavaScript', area: 'Learning', kind: 'learning', status: 'Active', health: 'Idle', tone: 'violet', metric: 'Ongoing skill track', signal: 30, summary: 'The deliberate JavaScript practice track behind the apps you are learning to build and maintain.', nextAction: 'Log the next concept or exercise as a visible return point.', details: ['Self-rated as beginner, with strong editing and systems instincts.', 'Future view: concepts learned, exercises, and consistency.', 'Optional home tile only if a study streak becomes useful.'] },
 ]
 
 // Fixed section order for the registry list. Anything with an area outside
 // this list (e.g. a freshly added project still at the default 'Unsorted')
 // renders in its own trailing section instead of being dropped.
-const AREA_ORDER = ['Ops & Infra', 'Aftermath', 'Undercroft', 'Sidequests', 'Career', 'Learning']
+// Moved to src/areas.js in M12 so PulseView can share one definition; importing
+// it back from App.jsx would be circular. Re-exported here is deliberate: the
+// three existing uses below read unchanged.
 
 // One-line description shown on each area card. Areas outside this map (e.g.
 // a freshly added 'Unsorted' project) just get a generic fallback line.
@@ -80,14 +87,20 @@ const AREA_META = {
 }
 
 function projectFromRow(row) {
-  return { id: row.id, name: row.name, area: row.area, parentName: row.parent_name ?? null, kind: row.kind ?? 'project', status: row.status, health: row.health, tone: row.health === 'Green' ? 'cyan' : row.health === 'Yellow' || row.health === 'Red' ? 'coral' : 'violet', metric: row.metric_value ?? 'No metric yet', signal: row.signal ?? 0, summary: row.description ?? 'No description yet.', nextAction: row.next_action ?? 'Choose the next honest move.', details: row.notes ?? [], lastActivity: row.last_activity ?? null }
+  // repoNames defaults to [] rather than null so every consumer can treat it as
+  // a list. "No repo linked" is then a length check, not a null check.
+  return { id: row.id, name: row.name, area: row.area, parentName: row.parent_name ?? null, kind: row.kind ?? 'project', status: row.status, health: row.health, tone: row.health === 'Green' ? 'cyan' : row.health === 'Yellow' || row.health === 'Red' ? 'coral' : 'violet', metric: row.metric_value ?? 'No metric yet', signal: row.signal ?? 0, summary: row.description ?? 'No description yet.', nextAction: row.next_action ?? 'Choose the next honest move.', details: row.notes ?? [], lastActivity: row.last_activity ?? null, repoNames: row.repo_names ?? [] }
 }
 
 function projectToRow(project) {
   // last_activity is omitted on purpose. It defaults to now() on insert, and
   // leaving it out of the payload means re-running the registry seed no longer
   // overwrites every row with the same timestamp, which is what flattened it.
-  return { name: project.name, description: project.summary, area: project.area, parent_name: project.parentName ?? null, status: project.status, kind: project.kind, health: project.health, metric_value: project.metric, next_action: project.nextAction, notes: project.details, signal: project.signal }
+  // M12: repo_names rides the existing Re-sync registry path, so the project <->
+  // repo link is populated by machinery that already exists (section 6 GREEN).
+  // A project with no repo sends null rather than [], so "never set" and
+  // "deliberately empty" stay distinguishable in the database.
+  return { name: project.name, description: project.summary, area: project.area, parent_name: project.parentName ?? null, status: project.status, kind: project.kind, health: project.health, metric_value: project.metric, next_action: project.nextAction, notes: project.details, signal: project.signal, repo_names: project.repoNames?.length ? project.repoNames : null }
 }
 
 function taskFromRow(row) {
@@ -1680,6 +1693,15 @@ function App() {
   const [travelWatch, setTravelWatch] = useState([])
   const [captures, setCaptures] = useState([])
   const [now, setNow] = useState(null)
+  // M12. The activity log behind Pulse's stream.
+  const [activity, setActivity] = useState([])
+  const [activityError, setActivityError] = useState('')
+  // Counts log writes that failed AFTER their mutation already committed. The
+  // client has no transaction to roll back, and section 4 forbids swallowing
+  // it, so the gap is counted and shown. Session-scoped on purpose: it clears
+  // on reload because the write is NOT retried -- retrying an append-only log
+  // risks duplicate entries, which is worse than a gap the UI admits to.
+  const [activityLogFailures, setActivityLogFailures] = useState(0)
   const [databaseError, setDatabaseError] = useState('')
   const greeting = useMemo(() => new Date().getHours() < 12 ? 'Morning field check' : new Date().getHours() < 18 ? 'Afternoon field check' : 'Evening field check', [])
   // The footer indicator is in the persistent chrome, so it is the one status
@@ -1772,6 +1794,21 @@ function App() {
     setTravelWatch((data ?? []).map(travelFromRow))
   }
 
+  // M12. Follows loadRepoHealth rather than loadTasks: it keeps its own error
+  // state instead of throwing, because Pulse can still render the handoff half
+  // of its stream without the activity half, and the whole app must not fail to
+  // load over one optional panel. The error is NAMED in the stream, not hidden.
+  async function loadActivity() {
+    const { data, error } = await supabase.from('horizon_activity').select('*').order('occurred_at', { ascending: false }).limit(200)
+    if (error) {
+      setActivity([])
+      setActivityError(error.message || 'Could not load your activity.')
+      return
+    }
+    setActivity((data ?? []).map(activityFromRow))
+    setActivityError('')
+  }
+
   async function loadCaptures() {
     const { data, error } = await supabase.from('horizon_capture').select('*').order('created_at', { ascending: false })
     if (error) throw error
@@ -1811,7 +1848,7 @@ function App() {
   // consistent, and a second effect for jobs alone tripped exhaustive-deps.
   useEffect(() => {
     if (!session) return
-    Promise.all([loadProjects(), loadTasks(), loadEvents(), loadJobPipeline(jobSession), loadRepoHealth(), loadSwiftWatch(), loadSwiftCollection(), loadSwiftEvents(), loadTravelWatch(), loadCaptures(), loadNow()]).catch((error) => setDatabaseError(error.message || 'Could not load private records.'))
+    Promise.all([loadProjects(), loadTasks(), loadEvents(), loadJobPipeline(jobSession), loadRepoHealth(), loadSwiftWatch(), loadSwiftCollection(), loadSwiftEvents(), loadTravelWatch(), loadCaptures(), loadNow(), loadActivity()]).catch((error) => setDatabaseError(error.message || 'Could not load private records.'))
   }, [session, jobSession])
 
   async function addProject(project) {
@@ -1820,12 +1857,16 @@ function App() {
     const saved = projectFromRow(data)
     setProjects((current) => [saved, ...current])
     setSelectedProjectId(saved.id)
+    await logActivity(projectAddedActivity(saved))
   }
 
   async function seedProjects() {
     try {
-      await initializePortfolioRegistry()
+      const rows = await initializePortfolioRegistry()
       await loadProjects()
+      // ONE entry, not 16. A line per project would bury Taylor's own actions
+      // under machine noise, which is the exact failure Pulse exists to avoid.
+      await logActivity(registryResyncedActivity(rows?.length ?? 0))
     } catch (error) {
       setDatabaseError(error.message || 'Could not load the portfolio registry.')
     }
@@ -1845,6 +1886,27 @@ function App() {
     })
   }
 
+  // M12. Appends ONE row to horizon_activity. Never updates, never deletes --
+  // the append-only guarantee lives in activityLog.js, which exposes no such
+  // path, and a grep over src/ proves no update/delete call exists here either.
+  //
+  // 🛑 It must never break the mutation that triggered it. The primary write has
+  // already committed by the time this runs, so a failure here is a GAP IN THE
+  // LOG, not a failed action: it is counted and surfaced in Pulse's stream
+  // header rather than raised as an error over work that actually succeeded.
+  async function logActivity(row) {
+    try {
+      // activityRow throws on a kind outside the closed set, which is a
+      // programming error -- caught here so it can never reach Taylor as a
+      // broken action.
+      const { data, error } = await supabase.from('horizon_activity').insert(row).select().single()
+      if (error) throw error
+      setActivity((current) => [activityFromRow(data), ...current])
+    } catch {
+      setActivityLogFailures((count) => count + 1)
+    }
+  }
+
   // The only thing that records project activity (Q14, answered 2026-09-27:
   // task movement counts, bookkeeping does not). Home's Active Work ranking
   // reads last_activity, so without this it stays permanently tied.
@@ -1862,15 +1924,35 @@ function App() {
     const saved = taskFromRow(data)
     setTasks((current) => [saved, ...current])
     await touchProjectActivity(saved.projectId)
+    await logActivity(taskCreatedActivity(saved))
+  }
+
+  // M12. Same insert as addTask, but it RETURNS the error message instead of
+  // raising it globally, because Pulse's composer must keep the typed text on
+  // screen next to the reason (the M3 rule: never lose a thought). Mirrors
+  // addCapture's contract -- '' means saved.
+  async function addTaskFromPulse(task) {
+    const { data, error } = await supabase.from('horizon_tasks').insert(taskToRow(task)).select().single()
+    if (error) return error.message || 'Could not save the task.'
+    const saved = taskFromRow(data)
+    setTasks((current) => [saved, ...current])
+    await touchProjectActivity(saved.projectId)
+    await logActivity(taskCreatedActivity(saved))
+    return ''
   }
 
   async function updateTaskStatus(id, status) {
+    // Captured BEFORE the write: the summary names both ends of the move, and
+    // afterwards the old status is gone. "Changed status" without the ends does
+    // not tell her what happened.
+    const previous = tasks.find((task) => task.id === id)
     const patch = { status, completed_at: status === 'Done' ? new Date().toISOString() : null }
     const { data, error } = await supabase.from('horizon_tasks').update(patch).eq('id', id).select().single()
     if (error) { setDatabaseError(error.message || 'Could not update the task.'); return }
     const saved = taskFromRow(data)
     setTasks((current) => current.map((task) => task.id === id ? saved : task))
     await touchProjectActivity(saved.projectId)
+    await logActivity(taskStatusActivity(saved, previous?.status ?? null, status))
   }
 
   // Assigning a project also stamps that project's last_activity, same as a status
@@ -1885,6 +1967,7 @@ function App() {
     const saved = taskFromRow(data)
     setTasks((current) => current.map((item) => item.id === task.id ? saved : item))
     await touchProjectActivity(saved.projectId)
+    await logActivity(taskLinkedActivity(saved, projectId, projects.find((project) => project.id === projectId)?.name ?? null))
   }
 
   // M9. Only none <-> candidate: nextPromotionState returns null for 'promoted',
@@ -1901,15 +1984,24 @@ function App() {
     if (error) { setDatabaseError(error.message || 'Could not change the handoff state.'); return }
     const saved = taskFromRow(data)
     setTasks((current) => current.map((item) => item.id === task.id ? saved : item))
+    // task_flagged, NOT task_status: marking a handoff candidate is not a
+    // status change, and a line reading "status changed" when the status did
+    // not change is a small lie the log should not tell.
+    await logActivity(taskFlaggedActivity(saved, promotionState))
   }
 
   async function deleteTask(id) {
+    // Captured before the delete, because afterwards there is nothing left to
+    // name. horizon_activity.subject_id has no FK precisely so this row can
+    // outlive the task it describes.
+    const doomed = tasks.find((task) => task.id === id)
     setTasks((current) => current.filter((task) => task.id !== id))
     const { error } = await supabase.from('horizon_tasks').delete().eq('id', id)
     if (error) { setDatabaseError(error.message || 'Could not delete the task.'); await loadTasks(); return }
     // horizon_now.task_id is `on delete set null`, so mirror that locally
     // instead of leaving a Now pointing at a task that no longer exists.
     setNow((current) => current && current.taskId === id ? { ...current, taskId: null } : current)
+    if (doomed) await logActivity(taskDeletedActivity(doomed))
   }
 
   // Returns an error message rather than throwing, so the header control can
@@ -1917,7 +2009,11 @@ function App() {
   async function addCapture(body) {
     const { data, error } = await supabase.from('horizon_capture').insert(captureToRow(body)).select().single()
     if (error) return error.message || 'Could not save the capture.'
-    setCaptures((current) => [captureFromRow(data), ...current])
+    const saved = captureFromRow(data)
+    setCaptures((current) => [saved, ...current])
+    // A capture carries no project, so this row's project_id is null and it
+    // renders in portfolio scope only. That is a real state, not a gap.
+    await logActivity(captureAddedActivity(saved))
     return ''
   }
 
@@ -1943,6 +2039,7 @@ function App() {
     const task = taskFromRow(data)
     setTasks((current) => [task, ...current])
     await applyCaptureRoute(capture.id, routeCapturePatch('task', task.id))
+    await logActivity(taskCreatedActivity(task))
   }
 
   // One atomic upsert on the owner primary key, so Now is never briefly empty.
@@ -1966,7 +2063,9 @@ function App() {
   async function addEvent(event) {
     const { data, error } = await supabase.from('horizon_events').insert(eventToRow(event)).select().single()
     if (error) { setDatabaseError(error.message || 'Could not save the event.'); return }
-    setEvents((current) => [...current, eventFromRow(data)].sort((a, b) => a.date < b.date ? -1 : 1))
+    const saved = eventFromRow(data)
+    setEvents((current) => [...current, saved].sort((a, b) => a.date < b.date ? -1 : 1))
+    await logActivity(eventAddedActivity(saved))
   }
 
   // M8. Called ONLY from the Calendar sync control: Google requires the token
@@ -2010,6 +2109,11 @@ function App() {
     }
 
     await loadEvents()
+    // ONE entry, never one per event. Her 2026-10-02 sync reconciled 36 events;
+    // 36 rows would bury her own actions under machine noise. A zero-change sync
+    // still logs, because "already up to date" is the outcome that would have
+    // made the 2026-10-02 idempotency bug visible.
+    await logActivity(calendarSyncedActivity({ inserted: plan.toInsert.length, updated: plan.toUpdate.length, deleted: plan.toDelete.length }))
     return describeSync(plan)
   }
 
@@ -2108,6 +2212,7 @@ function App() {
         {activeView === 'ProjectDetail' && selectedProject ? <ProjectDetailView project={selectedProject} tasks={tasks} onBack={() => setActiveView('Projects')} onAddTask={addTask} onUpdateTaskStatus={updateTaskStatus} onDeleteTask={deleteTask} />
           : activeView === 'Projects' ? <ProjectRegistry projects={projects} tasks={tasks} repoHealth={repoHealth} onAddProject={addProject} onSeedProjects={seedProjects} onOpenProject={openProject} />
           : activeView === 'Flow' ? <FlowView tasks={tasks} projects={projects} onOpenProjects={() => setActiveView('Projects')} onAddTask={addTask} onUpdateTaskStatus={updateTaskStatus} onUpdateTaskProject={updateTaskProject} onUpdateTaskPromotion={updateTaskPromotion} onDeleteTask={deleteTask} />
+          : activeView === 'Pulse' ? <PulseView projects={projects} tasks={tasks} events={events} repoHealth={repoHealth} activity={activity} activityError={activityError} logFailures={activityLogFailures} onOpenProject={openProject} onAddTask={addTaskFromPulse} onCapture={addCapture} />
           : activeView === 'Calendar' ? <CalendarView events={events} projects={projects} tasks={tasks} onAddEvent={addEvent} onDeleteEvent={deleteEvent} onSyncGoogle={syncGoogleCalendar} onUpdateTaskStatus={updateTaskStatus} onDeleteTask={deleteTask} />
           : activeView === 'Career' ? <CareerView jobs={jobs} jobError={jobError} jobSignedIn={Boolean(jobSession)} />
           : activeView === 'Mirrors' ? <MirrorsView repoHealth={repoHealth} repoHealthError={repoHealthError} />

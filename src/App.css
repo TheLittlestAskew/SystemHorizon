@@ -347,3 +347,125 @@ button { -webkit-tap-highlight-color: transparent; }
 .travel-view .swift-event-section.travel-soonest .swift-item-row strong { color:var(--cloud); }
 .travel-view .swift-event-section.travel-soonest .swift-item-row span { color:#a9b2d3; }
 .travel-view .swift-event-section.travel-soonest .swift-item-row small { color:#8892b7; }
+
+/* ---------------------------------------------------------------------------
+   M12 Pulse. Three columns, master-detail: project list / stream / side pane.
+   No new colour tokens -- everything below uses the existing --cyan / --coral /
+   --peach / --violet set and the same surface treatment as .instrument.
+   --------------------------------------------------------------------------- */
+
+/* Used by the collapsed SidePane rail, where a tab shows one initial but must
+   keep its full accessible name. Nothing else in the app had this. */
+.visually-hidden { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap; border:0; }
+
+.pulse-view { display:flex; flex-direction:column; gap:18px; }
+/* 280 / flex / 320. The third track is `auto` so a COLLAPSED pane gives its
+   width back to the stream instead of holding an empty 320px column; the pane
+   itself fixes the expanded width below. */
+.pulse-columns { display:grid; grid-template-columns:280px minmax(0,1fr) auto; gap:14px; align-items:start; }
+
+/* --- left column --- */
+.pulse-projects { display:flex; flex-direction:column; gap:14px; max-height:calc(100dvh - 210px); overflow-y:auto; padding:14px; border-radius:18px; border:1px solid rgb(155 171 255 / .14); background:rgb(17 20 42 / .5); }
+.pulse-area { display:flex; flex-direction:column; gap:3px; }
+.pulse-area-heading { margin:0 0 4px; color:#8892b7; font-family:'Cascadia Mono', Consolas, monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; font-weight:500; }
+.pulse-project { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:8px; width:100%; padding:7px 9px; border:0; border-left:2px solid transparent; border-radius:8px; background:transparent; color:#d9e1f5; cursor:pointer; font-size:13px; text-align:left; }
+.pulse-project:hover { background:rgb(155 171 255 / .08); }
+.pulse-project .signal { margin-top:0; }
+.pulse-project-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.pulse-project-age { color:#8892b7; font-family:'Cascadia Mono', Consolas, monospace; font-size:10px; letter-spacing:.04em; }
+.pulse-project-selected { border-left-color:var(--cyan); background:rgb(59 130 246 / .12); color:var(--cloud); }
+/* Staleness is not a defect for a parked project, so it reads quieter. */
+.pulse-project-parked { color:#8892b7; }
+
+/* --- centre column --- */
+.pulse-stream { display:flex; flex-direction:column; gap:10px; min-width:0; }
+.pulse-composer { display:flex; gap:8px; }
+.pulse-composer input { flex:1 1 auto; min-width:0; padding:10px 12px; border-radius:10px; border:1px solid rgb(155 171 255 / .22); background:rgb(12 14 32 / .8); color:var(--cloud); font-size:13px; }
+.pulse-composer input::placeholder { color:#7e88ad; }
+.pulse-composer .button { flex:0 0 auto; }
+
+.pulse-note { margin:0; padding:8px 11px; border-radius:9px; border:1px solid rgb(255 209 26 / .22); background:rgb(255 209 26 / .07); color:#e4d9b4; font-size:12px; line-height:1.45; }
+
+.pulse-entries { display:flex; flex-direction:column; gap:0; margin:0; padding:0; list-style:none; border-radius:16px; border:1px solid rgb(155 171 255 / .14); background:rgb(17 20 42 / .5); overflow:hidden; }
+.pulse-entry { display:flex; flex-direction:column; gap:5px; padding:11px 14px; border-top:1px solid rgb(155 171 255 / .1); }
+.pulse-entry:first-child { border-top:0; }
+.pulse-entry-head { display:flex; justify-content:space-between; gap:10px; color:#8892b7; font-family:'Cascadia Mono', Consolas, monospace; font-size:10px; letter-spacing:.06em; text-transform:uppercase; }
+.pulse-entry-when { flex:0 0 auto; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.pulse-entry-origin { flex:0 1 auto; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#9aa5c8; }
+.pulse-entry p { margin:0; color:#d9e1f5; font-size:13px; line-height:1.45; }
+.pulse-footer { margin:0; color:#8892b7; font-family:'Cascadia Mono', Consolas, monospace; font-size:10px; letter-spacing:.06em; text-transform:uppercase; }
+
+/* --- right column: the generic SidePane --- */
+/* 320px is the pane's TOTAL, rail included: the rail takes what it needs and
+   the panel takes the rest. Sizing the panel to 320 instead let the rail add
+   its width on top and stole ~110px from the stream, which is the one column
+   this view exists to show. */
+.side-pane { display:grid; width:320px; grid-template-columns:auto minmax(0,1fr); grid-template-areas:'head head' 'tabs panel'; gap:0; border-radius:18px; border:1px solid rgb(155 171 255 / .14); background:rgb(17 20 42 / .5); overflow:hidden; }
+/* Collapsed drops the panel column but NEVER the tab rail, so no content is
+   reachable only by expanding. Width goes back to the rail so the stream gains
+   the space rather than an empty column keeping it. */
+.side-pane-collapsed { width:auto; grid-template-columns:auto; grid-template-areas:'head' 'tabs'; }
+.side-pane-head { grid-area:head; display:flex; align-items:center; justify-content:space-between; gap:8px; padding:9px 11px; border-bottom:1px solid rgb(155 171 255 / .12); }
+.side-pane-title { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#9aa5c8; font-family:'Cascadia Mono', Consolas, monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; }
+.side-pane-toggle { flex:0 0 auto; padding:2px 7px; border-radius:7px; border:1px solid rgb(155 171 255 / .22); background:transparent; color:#b9c3e2; cursor:pointer; font-size:12px; line-height:1.3; }
+
+.side-pane-tabs { grid-area:tabs; display:flex; flex-direction:column; gap:2px; min-width:44px; padding:9px 7px; border-right:1px solid rgb(155 171 255 / .12); }
+.side-pane-tab { padding:7px 9px; border:0; border-radius:8px; background:transparent; color:#9aa5c8; cursor:pointer; font-size:11px; text-align:left; white-space:nowrap; }
+.side-pane-tab:hover { background:rgb(155 171 255 / .08); }
+.side-pane-tab-active { background:rgb(59 130 246 / .16); color:var(--cloud); }
+.side-pane-tab-label { display:inline-block; }
+/* The collapsed rail must never reach zero width or the pane vanishes with no
+   way back. Pinned by sidePaneCss.test.mjs. */
+.side-pane-collapsed .side-pane-tabs { min-width:40px; border-right:0; }
+.side-pane-collapsed .side-pane-tab { text-align:center; }
+
+.side-pane-panel { grid-area:panel; padding:12px 14px; max-height:calc(100dvh - 250px); overflow-y:auto; }
+.pulse-pane-body { display:flex; flex-direction:column; gap:9px; }
+.pulse-pane-stat { display:flex; align-items:baseline; justify-content:space-between; gap:10px; }
+.pulse-pane-stat span { color:#8892b7; font-family:'Cascadia Mono', Consolas, monospace; font-size:10px; letter-spacing:.06em; text-transform:uppercase; }
+.pulse-pane-stat strong { color:var(--cloud); font-size:15px; letter-spacing:-.02em; }
+.pulse-pane-row { display:flex; align-items:start; gap:9px; width:100%; padding:8px 0; border-top:1px solid rgb(155 171 255 / .1); text-align:left; }
+.pulse-pane-row:first-of-type { border-top:0; }
+.pulse-pane-row strong { display:block; color:#e4e9f7; font-size:13px; }
+.pulse-pane-row small { display:block; margin-top:2px; color:#8892b7; font-size:11px; line-height:1.4; }
+.pulse-pane-row-button { border-left:0; border-right:0; border-bottom:0; background:transparent; color:inherit; cursor:pointer; }
+.pulse-pane-row-button:hover strong { color:var(--cloud); }
+.pulse-next-action { margin:4px 0 0; color:#d9e1f5; font-size:13px; line-height:1.45; }
+.pulse-pane-link { padding:0; border:0; background:transparent; color:var(--cyan); cursor:pointer; font-size:12px; text-align:left; }
+
+/* --- the ring --- */
+.pulse-ring { position:relative; display:flex; flex-direction:column; align-items:center; gap:3px; padding:4px 0 10px; }
+.pulse-ring-art { width:86px; height:86px; }
+/* One arc, no gradient, no drop shadow. Colour carries status only. */
+.pulse-ring-track { fill:none; stroke:rgb(155 171 255 / .16); stroke-width:7; }
+.pulse-ring-arc { fill:none; stroke-width:7; stroke-linecap:butt; }
+.pulse-ring-cyan .pulse-ring-arc { stroke:var(--cyan); }
+.pulse-ring-amber .pulse-ring-arc { stroke:var(--peach); }
+.pulse-ring-coral .pulse-ring-arc { stroke:var(--coral); }
+/* The number is readable without the arc. */
+.pulse-ring-value { position:absolute; top:31px; color:var(--cloud); font-size:20px; letter-spacing:-.04em; }
+.pulse-ring small { color:#8892b7; font-size:11px; text-align:center; }
+.pulse-ring-empty { padding:14px 0; }
+.pulse-ring-empty strong { color:#d9e1f5; font-size:14px; }
+.pulse-ring-shortfall { margin-top:5px; padding:4px 10px; border-radius:999px; border:1px solid rgb(255 80 31 / .36); background:transparent; color:#ffb49c; cursor:pointer; font-size:11px; }
+.pulse-ring-shortfall:hover { background:rgb(255 80 31 / .12); }
+.pulse-ring-clean { color:#8892b7; }
+
+/* --- responsive: existing breakpoints only, no new ones --- */
+@media (max-width:1000px) {
+  /* Two columns; the pane keeps its rail so its content stays reachable. */
+  .pulse-columns { grid-template-columns:240px minmax(0,1fr); }
+  /* The pane moves to its own full-width row rather than being squeezed into a
+     third column that no longer fits. */
+  .side-pane { width:auto; grid-column:1 / -1; grid-template-columns:auto minmax(0,1fr); }
+}
+@media (max-width:680px) {
+  .pulse-columns { grid-template-columns:1fr; }
+  /* The project list becomes a horizontal chip rail above the stream. This is
+     the ONLY thing in the app allowed to scroll sideways. */
+  .pulse-projects { flex-direction:row; gap:8px; max-height:none; overflow-x:auto; overflow-y:hidden; padding:10px; }
+  .pulse-area { flex:0 0 auto; }
+  .pulse-project { width:auto; }
+  .pulse-project-name { max-width:140px; }
+  .side-pane-panel { max-height:50dvh; }
+}

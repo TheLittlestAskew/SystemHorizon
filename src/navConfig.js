@@ -10,7 +10,10 @@ export const navUtilityItems = ['Calendar']
 // with one child. `tier: 'side'` marks the lower-priority Side Quests group.
 export const navGroups = [
   { id: 'horizon', label: 'Horizon', items: ['Horizon'], direct: true },
-  { id: 'projects', label: 'Projects', items: ['Projects', 'Flow'] },
+  // M12 added Pulse third. NORTH_STAR section 3 locks nav STRUCTURE -- which
+  // groups exist, Calendar as a utility, Side Quests collapsed -- and adding a
+  // view inside an existing group changes none of that and removes nothing.
+  { id: 'projects', label: 'Projects', items: ['Projects', 'Flow', 'Pulse'] },
   { id: 'career', label: 'Career', items: ['Career'], direct: true },
   { id: 'system', label: 'System', items: ['Mirrors', 'Archive'] },
   { id: 'sidequests', label: 'Side Quests', items: ['Swift', 'War Room', 'Travel'], tier: 'side', defaultOpen: false },

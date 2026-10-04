@@ -9,7 +9,7 @@ import { navGroups, navUtilityItems, defaultOpenNavGroups } from './navConfig.js
 
 // Every view App.jsx can route to from the sidebar. ProjectDetail is reached by
 // clicking a project inside Projects, not from the nav, so it is not listed.
-const EVERY_VIEW = ['Horizon', 'Projects', 'Flow', 'Calendar', 'Career', 'Mirrors', 'Archive', 'Swift', 'Travel', 'War Room']
+const EVERY_VIEW = ['Horizon', 'Projects', 'Flow', 'Pulse', 'Calendar', 'Career', 'Mirrors', 'Archive', 'Swift', 'Travel', 'War Room']
 
 function readingOrder() {
   return [...navUtilityItems, ...navGroups.flatMap((group) => group.items)]
@@ -26,7 +26,9 @@ test('area group order is exactly Horizon, Projects, Career, System, Side Quests
 test('group contents match the locked IA', () => {
   const byLabel = Object.fromEntries(navGroups.map((group) => [group.label, group.items]))
   assert.deepEqual(byLabel.Horizon, ['Horizon'])
-  assert.deepEqual(byLabel.Projects, ['Projects', 'Flow'])
+  // M12: Pulse is third in the group, and Projects and Flow both survive it.
+  assert.deepEqual(byLabel.Projects, ['Projects', 'Flow', 'Pulse'])
+  assert.equal(byLabel.Projects.indexOf('Pulse'), 2)
   assert.deepEqual(byLabel.Career, ['Career'])
   assert.deepEqual(byLabel.System, ['Mirrors', 'Archive'])
   assert.deepEqual(byLabel['Side Quests'], ['Swift', 'War Room', 'Travel'])

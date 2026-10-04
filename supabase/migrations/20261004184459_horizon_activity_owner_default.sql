@@ -1,0 +1,21 @@
+-- Correction to the migration immediately before this one.
+--
+-- The M12 spec's section 5.2 schema declared `owner uuid not null references
+-- auth.users(id)` with NO default, but every other horizon_ table defaults it to
+-- auth.uid(): horizon_projects, horizon_tasks and horizon_capture all do, which
+-- is why projectToRow and taskToRow never send an owner.
+--
+-- Without this default, logActivity would have to pass session.user.id at all
+-- eleven write sites, and any site that forgot would fail the not-null
+-- constraint at runtime rather than at review time. Matching the family
+-- convention removes that whole class of mistake.
+--
+-- Kept as its own migration rather than folded into the previous file, because
+-- the previous one was already applied and stamped. The history is the honest
+-- record of what happened.
+--
+-- Verified: owner column_default reads auth.uid(), and an insert with no owner
+-- in a direct SQL session (where auth.uid() is null) is still rejected, so the
+-- column did not quietly become nullable.
+alter table public.horizon_activity
+  alter column owner set default auth.uid();

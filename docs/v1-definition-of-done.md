@@ -49,16 +49,53 @@ re-derived from the verdict column rather than decremented by hand.)
 
 ## Why each mark
 
-### 1. Horizon (Home) ⚠️
+### 1. Horizon (Home) ✓
 Layout is the best-arranged view in the app (M3 through M7, IA steps 1 to 6 all
 exist). ✅ **`horizon_events` now holds 4 rows (2 upcoming), so Today & Next renders
 real data for the first time.** ✅ The field-status strip's Career slot **no longer
-reads `Unavailable`** — M11 fixed that (see §6) — so Home's remaining gap is
-Calendar's empty table, not Career. **Nothing on Home
-has had a visual check since M3**, so M4 through M7 are `Done (pending Taylor
-visual)`. Also still hardcoded, tracked in `PARKING_LOT.md`: the cycle-remaining
-instrument (`232` days, `18/35`), the capacity selector (component state, resets
-on reload), and the "Systems nominal" topline.
+reads `Unavailable`** — M11 fixed that (see §6).
+
+✅ **Closed 2026-10-03 (`27c7fdd`, `dc7c300`, `98acd7e`): Home got its first visual
+pass since M3, in a real browser against real data.** ~~Nothing on Home has had a
+visual check since M3~~ — M4 through M7 are no longer `pending Taylor visual`. The
+pass found Home was not merely unverified but **stating three falsehoods**, all of
+one shape (a value no input could change, rendering as though measured):
+
+| Was | Truth | Now |
+|---|---|---|
+| `232 days left in 2026`, dot matrix `18 of 35` | **89**; `35` is not the length of any real period | Derived from the clock by `src/cycle.js` |
+| `Systems nominal`, unconditional literal text | nine live alerts beneath it, mirror collector dead 40 days | `systemStatus()`, reads "9 to be aware of" |
+| `Sync stable` in the persistent sidebar chrome | `databaseError`/`jobError`/`repoHealthError` all unread | Error-aware; **failure induced and observed**, not assumed |
+
+✅ **The three formerly-hardcoded values tracked in `PARKING_LOT.md` are all
+resolved.** ~~the cycle-remaining instrument (`232` days, `18/35`), the capacity
+selector (component state, resets on reload), and the "Systems nominal" topline~~.
+Cycle and topline are in the table above; **capacity now persists with its own
+expiry clock** (`a038c62`, see below).
+
+✅ **Capacity verified live 2026-10-04, end to end.** `capacity` was `useState('Steady')`
+that reset on reload and which nothing read. It now persists, and the value ships
+**inseparably from its own clock** — `horizon_now_capacity_together` makes a capacity
+that cannot be aged impossible at the database level, because a stored capacity with
+no clock reads as current forever, which is the `232` defect exactly. Proven in a
+browser against the live row, not inferred:
+
+- Clicking **High focus** wrote `capacity` + `capacity_set_at`, and `task_id`, `note`
+  and `set_at` **all survived the upsert unchanged** — this was the one claim
+  `a038c62` left inferred from `postgrest-js` source rather than observed. It holds.
+- 🛑 **`set_at` did not move**, confirming the two-clocks design: `horizon_now.set_at`
+  means "when I chose my next true thing" and capacity must never restamp it.
+- Survived a reload reading `High focus` · `set just now`, correct button
+  `aria-pressed="true"`, the other two `false`.
+- ⚠️ **The 10h rolling expiry was induced, not just unit-tested.** Backdating
+  `capacity_set_at` 11 hours made it read **`Not set` · `Last set 11h ago`** with no
+  button selected — it names what was last reported without claiming to be current.
+- Console clean. The probe was reverted, so the row asserts nothing Taylor did not
+  choose herself.
+
+⚠️ **One decorative value deliberately remains:** `041° 28′ / field depth`
+(`App.jsx:862`). It is chrome that reads like an instrument, but unlike `232` it
+states no measurable falsehood. Taylor's call — see `docs/v1-decisions-needed.md`.
 
 ### 2. Projects ✓
 16 `horizon_projects` rows, re-seeded and verified row-by-row against
@@ -193,12 +230,20 @@ same as having data that exercises the thing:
 | Mark | Why it did not close |
 |---|---|
 | **Calendar** ⚠️ | No day holds **two parseable timed events**, so the `9:00 AM` vs `10:00 AM` sort bug is still unexercised. ▶ Add two timed events on one day |
-| ~~**Horizon** ⚠️~~ | ✅ **CLOSED 2026-10-03.** Home got its first visual pass since M3, in a real browser against real data. It was not merely unverified — it was **stating three falsehoods**: `232 days left in 2026` (true: 89), an unconditional `Systems nominal` over nine live alerts, and an unconditional `Sync stable` in the persistent chrome. All three now derive from real state, and the failure path was **induced and observed**, not assumed. The 182px dead space is closed (`27c7fdd`, `dc7c300`, `98acd7e`). ⚠️ `capacity` still persists nowhere and `041° 28′` is still decorative — both left as Taylor's call, neither states a falsehood |
+| ~~**Horizon** ⚠️~~ | ✅ **CLOSED 2026-10-03.** Home got its first visual pass since M3, in a real browser against real data. It was not merely unverified — it was **stating three falsehoods**: `232 days left in 2026` (true: 89), an unconditional `Systems nominal` over nine live alerts, and an unconditional `Sync stable` in the persistent chrome. All three now derive from real state, and the failure path was **induced and observed**, not assumed. The 182px dead space is closed (`27c7fdd`, `dc7c300`, `98acd7e`). ✅ **`capacity` now persists with an expiry and was verified live 2026-10-04** (`a038c62`) — ~~still persists nowhere~~. ⚠️ `041° 28′` is still decorative, left as Taylor's call; it states no falsehood |
 
-▶ **The highest-value next action is not more rows, it is linking tasks to projects.**
+~~▶ **The highest-value next action is not more rows, it is linking tasks to projects.**
 All 4 tasks have `project_id` null, so M6's Active Work ranking stays tied at
-`distinct last_activity = 1` forever (see §4). That is a live feature with no data
-to act on.
+`distinct last_activity = 1` forever (see §4).~~
+
+✅ **Done 2026-10-01.** `d178fbf` gave the Flow board a project picker, Taylor assigned
+all four, and `distinct last_activity` went **1 → 3** (spread `00:00:00` → 4d 17:56),
+so M6 ranks on genuine recency (see §4). ⚠️ Rank 3 is still a three-way tie on the
+original seed stamp and will resolve itself as she touches tasks on other projects.
+
+▶ **The only remaining `⚠️` that one cheap action closes is Calendar, and it needs a
+specific data shape: two parseable timed events on the same day.** Mirrors, Swift and
+Travel need their collectors to run, which is Septentrion-side, not this repo.
 
 ⚠️ Lesson worth keeping: "add real data" closed one mark, not three. **Specify the
 shape the data has to take**, not just its existence.

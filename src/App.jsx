@@ -859,7 +859,6 @@ function Horizon({ projects, tasks, now, captures, events, jobs, jobError, jobSi
           </div>}
         </form>}
       </div>
-      <div className="stage-coordinate">041° 28′ / field depth</div>
     </section>
 
     <div className="home-queues">

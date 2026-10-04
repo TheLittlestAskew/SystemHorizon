@@ -244,14 +244,4 @@ Standing repo notes:
 - **Watch out:** ⚠️ **The row is shared by four surfaces** (`ProjectDetailView` ×2, `FlowView`, `CalendarView`) and only Flow is narrow. The wrap fix is deliberately scoped to `.flow-column`; applying it globally would stack controls under the name on wide panels where they already fit. ▶ Check which surface a `.task-row` change affects before widening a selector.
 - **Watch out:** ⚠️ **`.flow-column.flow-column-active .task-row` rules sit AFTER the wrap fix with higher specificity** (two classes). They currently set only colours, so nothing is overridden — but a layout declaration added there **would** win. Verified by walking the stylesheet in cascade order rather than assuming.
 
-### 2026-10-01 11:45 ET · Claude Code — escaped a literal pipe that was silently dropping a TOOLS.md row
-
-- **Changed:** Escaped a literal `|` inside the `supabase-aftermath-meridian` row's Notes cell in `TOOLS.md` (a separator pipe in the Notes cell). Markdown reads an unescaped pipe as a column break, so the row carried more than the contract's 7 columns.
-  - 🛑 **The failure mode is why this mattered: `/septentrion-sync` SKIPPED the row rather than erroring**, so the tool showed as unused across every project in `The Toolbox` while looking perfectly fine in this file.
-  - 📌 Found by auditing **all 16 `TOOLS.md` files** after hitting the identical bug twice by hand in `skitl_vault` the same day. Three repos had it; this was one.
-  - ✅ The Toolbox rollup now parses it: 15 tables, **342** tools, **0** problems (was 340 with 2 problems).
-- **Commit:** `f1e9908`
-- **Next:** Unchanged — this was a one-line formatting repair, not project work.
-- **Watch out:** ⚠️ **`TOOLS.md` rows are parsed mechanically on column count.** Any `|` inside a cell must be written `\|`. The check is: an Active row splits into **9** fields on unescaped pipes (7 columns + the leading and trailing empties), a Retired row into **7**.
-
-> Older entries archived to `handoff-archive/2026-07.md`, `handoff-archive/2026-08.md`, `handoff-archive/2026-09.md`, `handoff-archive/2026-10.md` - everything before 2026-10-01 11:45 ET.
+> Older entries archived to `handoff-archive/2026-07.md`, `handoff-archive/2026-08.md`, `handoff-archive/2026-09.md`, `handoff-archive/2026-10.md` - everything before 2026-10-01 12:05 ET.

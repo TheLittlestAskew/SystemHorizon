@@ -32,6 +32,9 @@ re-derived from the verdict column rather than decremented by hand.)
 > the last blocked mark in the app. **Nothing is blocked now** — the remaining six
 > `⚠️` marks are unproven rather than broken, and three of those collapse the
 > moment Calendar and Flow hold real rows (see the closing section).
+>
+> Updated 2026-10-11: **Calendar, Mirrors and Swift moved to ✓.** Travel is the
+> one `⚠️` left, deferred to November (no flight watch wired yet).
 
 | # | Section | Loads | Real data | Core action | In layout | Verdict |
 |---|---|---|---|---|---|---|
@@ -39,11 +42,11 @@ re-derived from the verdict column rather than decremented by hand.)
 | 2 | **Projects** | ✓ | ✓ | ✓ | ✓ | **✓** |
 | 3 | **Project detail** | ✓ | ✓ | ✓ | ✓ | **✓** |
 | 4 | **Flow** | ✓ | ✓ | ✓ | ✓ | **✓** |
-| 5 | **Calendar** | ✓ | ✓ | ⚠️ | ✓ | ⚠️ |
+| 5 | **Calendar** | ✓ | ✓ | ✓ | ✓ | **✓** |
 | 6 | **Career** | ✓ | ✓ | ✓ | ✓ | **✓** |
-| 7 | **Mirrors** | ✓ | ⚠️ | ✓ | ✓ | ⚠️ |
+| 7 | **Mirrors** | ✓ | ✓ | ✓ | ✓ | **✓** |
 | 8 | **Archive** | ✓ | ✓ | ✓ | ✓ | **✓** |
-| 9 | **Swift** | ✓ | ✓ | ⚠️ | ✓ | ⚠️ |
+| 9 | **Swift** | ✓ | ✓ | ✓ | ✓ | **✓** |
 | 10 | **Travel** | ✓ | ⚠️ | ⚠️ | ✓ | ⚠️ |
 | 11 | **War Room** | ✓ | n/a | ✓ | ✓ | **✓** |
 
@@ -146,6 +149,13 @@ Neither day has that: 2026-09-29 holds `12:30pm` plus an all-day, and 2026-10-01
 holds `10:AM` plus an all-day. ▶ **To close this mark, add two timed events on the
 same day, e.g. 9:00 AM and 10:00 AM.**
 
+✅ **CLOSED 2026-10-11 by a controlled probe.** Two events were inserted on
+2026-10-11, **10:00 AM first, then 9:00 AM**, so insertion order would put them
+wrong. The app's own `compareEvents` sorted them `9:00` before `10:00` in node, and
+Taylor confirmed the Agenda rendered **PROBE A 9:00 above PROBE B 10:00** in her
+signed-in browser. Both probe rows were then deleted (`delete ... returning` gave
+back exactly those 2 ids).
+
 ⚠️ **`10:AM` is malformed and the app will show it that way, correctly.**
 `parseEventTime('10:AM')` returns `unparsed: true`, keeps the raw string as its
 display, and sorts it to the bottom. That is the designed behaviour — flag rather
@@ -170,11 +180,13 @@ milestone that did not exist yet**. ✅ **It shipped the same day: `NORTH_STAR.m
 and confirmed live on 2026-09-30. Evidence and rejected alternatives in
 `docs/v1-decisions-needed.md` §D1. ⚠️ `anon` was re-queried after the change and still holds only `REFERENCES, TRIGGER` — the fix was signing in, not widening access.
 
-### 7. Mirrors ⚠️
-Rows render worst-first and the view honestly states its own staleness. Data is
-real but the mirror-freshness collector **has not run since 2026-08-24**, so
-every flag is over a month old. M4 raises that staleness as its own alert rather
-than presenting stale flags as current.
+### 7. Mirrors ✓
+Rows render worst-first and the view honestly states its own staleness.
+~~The mirror-freshness collector **has not run since 2026-08-24**~~ ✅ **Corrected
+2026-10-10: the collector never stopped.** It runs daily at 07:15; the 08-24 date
+came from an orphan `sitl_vault` row left behind by the SKITL rename, because the
+collector upserts and never prunes. The orphan was deleted with Taylor's OK; the
+11 remaining rows are all fresh.
 
 ### 8. Archive ✓
 Rebuilt from a flat 40-card feed into a **sortable, filterable, searchable table**
@@ -183,9 +195,10 @@ instead of silently dropped (`7aafe57`, `35dc298`, `c25cd97`; logic extracted to
 `src/archive.js`, +11 tests, `sortArchive` throws on an unknown key). 61 rows
 live. Taylor reviewed it on localhost before the merge.
 
-### 9. Swift ⚠️
+### 9. Swift ✓
 Tabs (Watch / Collection / Calendar) work and were audited, not changed. Real
-rows present (2 / 1 / 1). Not independently re-verified this pass. Design note to
+rows present (2 / 1 / 1). ✅ **Re-verified 2026-10-11:** Taylor clicked through all
+three tabs in her signed-in browser and each rendered its rows without errors. Design note to
 preserve: `predicted` + `confidence` on `horizon_swift_events` exist so forecasts
 never render as facts, hence the "Predicted · N%" versus "Logged" badges.
 
@@ -229,7 +242,7 @@ same as having data that exercises the thing:
 
 | Mark | Why it did not close |
 |---|---|
-| **Calendar** ⚠️ | No day holds **two parseable timed events**, so the `9:00 AM` vs `10:00 AM` sort bug is still unexercised. ▶ Add two timed events on one day |
+| ~~**Calendar** ⚠️~~ | ✅ **CLOSED 2026-10-11** by a two-row probe, see §5. Was: no day holds **two parseable timed events**, so the `9:00 AM` vs `10:00 AM` sort bug is still unexercised. ▶ Add two timed events on one day |
 | ~~**Horizon** ⚠️~~ | ✅ **CLOSED 2026-10-03.** Home got its first visual pass since M3, in a real browser against real data. It was not merely unverified — it was **stating three falsehoods**: `232 days left in 2026` (true: 89), an unconditional `Systems nominal` over nine live alerts, and an unconditional `Sync stable` in the persistent chrome. All three now derive from real state, and the failure path was **induced and observed**, not assumed. The 182px dead space is closed (`27c7fdd`, `dc7c300`, `98acd7e`). ✅ **`capacity` now persists with an expiry and was verified live 2026-10-04** (`a038c62`) — ~~still persists nowhere~~. ⚠️ `041° 28′` is still decorative, left as Taylor's call; it states no falsehood |
 
 ~~▶ **The highest-value next action is not more rows, it is linking tasks to projects.**
@@ -241,9 +254,10 @@ all four, and `distinct last_activity` went **1 → 3** (spread `00:00:00` → 4
 so M6 ranks on genuine recency (see §4). ⚠️ Rank 3 is still a three-way tie on the
 original seed stamp and will resolve itself as she touches tasks on other projects.
 
-▶ **The only remaining `⚠️` that one cheap action closes is Calendar, and it needs a
-specific data shape: two parseable timed events on the same day.** Mirrors, Swift and
-Travel need their collectors to run, which is Septentrion-side, not this repo.
+✅ **2026-10-11: Calendar, Mirrors and Swift all closed.** ▶ **Travel is the only
+`⚠️` left**, and it is deferred to early November: it needs a changedetection.io
+flight watch wired (a watch UUID in `travel-watch-sync.config.json`), which is
+Septentrion-side, not this repo.
 
 ⚠️ Lesson worth keeping: "add real data" closed one mark, not three. **Specify the
 shape the data has to take**, not just its existence.

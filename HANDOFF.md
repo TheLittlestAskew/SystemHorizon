@@ -5,7 +5,9 @@
 
 ## ▶ DO NEXT
 
-> 🆕 **2026-10-11 (latest): v1 is down to ONE mark. Calendar, Mirrors and Swift are ✓ in `docs/v1-definition-of-done.md` (`41c936b`).** Calendar's sort was proven with a probe inserted out of order (10:00 then 9:00) and seen rendering 9:00 first; probe rows deleted, 0 left. Swift's tabs confirmed live by Taylor. ▶ **Only Travel remains, deferred to early November:** wire a changedetection.io flight watch (watch UUID in `travel-watch-sync.config.json`). The Swift/Calendar instructions in the 10-10 note below are DONE.
+> 🆕 **2026-10-11 ~17:00 (latest): v1 DEFINITION OF DONE IS ALL ✓ (`82e7439`).** Travel closed: changedetection watch `efc4b328` (Google Flights ATL-PHL Dec 3-6, cheapest fare) + `Travel Watch Sync` task (08:30/14:30/20:30) wrote `source='auto'` rows ($73) into `horizon_travel_watch`. ▶ **Only open item: Taylor glances at the Travel tab to see the auto row render** (inferred, not eyeballed). Everything below is history.
+>
+> **2026-10-11: v1 is down to ONE mark. Calendar, Mirrors and Swift are ✓ in `docs/v1-definition-of-done.md` (`41c936b`).** Calendar's sort was proven with a probe inserted out of order (10:00 then 9:00) and seen rendering 9:00 first; probe rows deleted, 0 left. Swift's tabs confirmed live by Taylor. ▶ **Only Travel remains, deferred to early November:** wire a changedetection.io flight watch (watch UUID in `travel-watch-sync.config.json`). The Swift/Calendar instructions in the 10-10 note below are DONE.
 >
 > **2026-10-10: `lithotripsy/sitl-archive-gap` is MERGED to `main` (fast-forward to `c5e29e3`, pushed). ✅ DECIDED: `skitl_vault` STAYS PRIVATE. Do not re-raise making it public.** It went private on 2026-09-27 on purpose: going public would republish the vault's personal notes (Inner Life, POV Journal, DDB user IDs, notes about real people) that the 09-30 site fix stopped shipping. SITL handoffs are deliberately absent from Archive and Pulse, and the test guarding `ARCHIVE_REPOS` keeps it that way. Verified before merging: **408/408 tests**, lint exit 0, build exit 0. ▶ **What's left for v1 is unchanged and none of it is code here:** Calendar needs two timed events on one day (her data); Swift / Travel need their Septentrion-side collectors to run. ✅ **CORRECTED 2026-10-10: mirror-freshness was NEVER broken.** The `Mirror Freshness Sync` task runs daily at 07:15 (exit 0) and has written `skitl_vault` since the 10-01 config repoint. The "not run since 08-24" claim came from an orphaned `sitl_vault` row frozen at 08-24, because the collector upserts and never prunes renamed repos. ✅ **Orphan DELETED 2026-10-10 on Taylor's go-ahead:** `horizon_repo_health` now holds exactly 11 rows, all checked today, no `sitl_vault`. Mirrors is off the v1 open list. ✅ **App.css image FIXED 2026-10-10 (`51850f4`):** bogus `==` padding on a payload whose length is a multiple of 3; browsers' forgiving-base64 rejects it, Node's lenient decoder doesn't, so the 10-04 "not truncated, decodes fine" check missed it. Proven in headless Chrome (fixed loads 1200×800, original errors); a new test fails on the old CSS. ▶ **Swift and Calendar both need a SIGNED-IN browser, and the CLI's Chrome profile is signed out:** Taylor signs in once inside the automation Chrome window at `http://localhost:5173/`, then: screen Swift's three tabs, and insert two `PROBE` events (9:00 AM, 10:00 AM, same day), confirm 9 sorts before 10, delete them. No real day has two timed events yet (checked: 40 rows, none qualify).
 >
@@ -139,6 +141,12 @@ Standing repo notes:
 
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
+
+### 2026-10-11 17:05 ET · Claude Code
+- **Changed:** Travel closed, so all 11 DoD sections are ✓. Flight watch + scheduled sync live (vault-side, `7d2c8f7`); first auto rows verified in `horizon_travel_watch`.
+- **Commit:** `82e7439`
+- **Friction:** misread — Taylor's pasted link was a Google Search results page with no dates, not Google Flights; worked by building the Flights `?q=Flights to PHL from ATL on 2026-12-03 through 2026-12-06` URL directly. gen-fail — first `.env` came out 0 bytes; worked after re-copying from swiftwatch-sync with `-Force`.
+- **Next:** Glance at the Travel tab to see the auto row render.
 
 ### 2026-10-11 11:20 ET · Claude Code
 - **Changed:** Calendar sort closed by a live probe (10:00 inserted before 9:00; Taylor saw 9:00 render first; both rows deleted, 0 left). Swift's three tabs confirmed live by Taylor. DoD now has Calendar, Mirrors, Swift at ✓; Travel is the only ⚠️. Dev server on 5173 stopped.

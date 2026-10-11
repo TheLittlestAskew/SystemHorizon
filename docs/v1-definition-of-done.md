@@ -33,8 +33,9 @@ re-derived from the verdict column rather than decremented by hand.)
 > `⚠️` marks are unproven rather than broken, and three of those collapse the
 > moment Calendar and Flow hold real rows (see the closing section).
 >
-> Updated 2026-10-11: **Calendar, Mirrors and Swift moved to ✓.** Travel is the
-> one `⚠️` left, deferred to November (no flight watch wired yet).
+> Updated 2026-10-11: **Calendar, Mirrors and Swift moved to ✓.** Later the same
+> day **Travel moved to ✓** too: the flight watch is wired and scheduled. **Every
+> section is now ✓.**
 
 | # | Section | Loads | Real data | Core action | In layout | Verdict |
 |---|---|---|---|---|---|---|
@@ -47,7 +48,7 @@ re-derived from the verdict column rather than decremented by hand.)
 | 7 | **Mirrors** | ✓ | ✓ | ✓ | ✓ | **✓** |
 | 8 | **Archive** | ✓ | ✓ | ✓ | ✓ | **✓** |
 | 9 | **Swift** | ✓ | ✓ | ✓ | ✓ | **✓** |
-| 10 | **Travel** | ✓ | ⚠️ | ⚠️ | ✓ | ⚠️ |
+| 10 | **Travel** | ✓ | ✓ | ✓ | ✓ | **✓** |
 | 11 | **War Room** | ✓ | n/a | ✓ | ✓ | **✓** |
 
 ## Why each mark
@@ -202,11 +203,16 @@ three tabs in her signed-in browser and each rendered its rows without errors. D
 preserve: `predicted` + `confidence` on `horizon_swift_events` exist so forecasts
 never render as facts, hence the "Predicted · N%" versus "Logged" badges.
 
-### 10. Travel ⚠️
-Price checks group by trip, soonest departure first, lowest flagged. 2 rows, but
-**no changedetection.io flight watch is wired yet** (needs a watch UUID in
-`travel-watch-sync.config.json`), so the view has never received an automated
-entry. Not urgent until early November for the PAX Unplugged decision.
+### 10. Travel ✓
+Price checks group by trip, soonest departure first, lowest flagged.
+~~**No changedetection.io flight watch is wired yet**~~ ✅ **Wired 2026-10-11.**
+changedetection watch `efc4b328` (Google Flights, ATL-PHL Dec 3-6, Chrome fetcher,
+every 8h, notifications muted) extracts only Google's "Cheapest from $X". The
+`Travel Watch Sync` task runs at 08:30 / 14:30 / 20:30 and its first runs wrote
+`source='auto'` rows (`$73`, PAX Unplugged) into `horizon_travel_watch`, verified
+by query. ⚠️ Rendering of an auto row was inferred, not eyeballed: it is the same
+table and code path the manual rows already render through. ⚠️ "Cheapest" is
+whichever itinerary is cheapest at check time, so treat it as a trend, not a quote.
 
 ### 11. War Room ✓
 Self-contained draft board, player pool, my team, settings. Draft completed
@@ -254,10 +260,8 @@ all four, and `distinct last_activity` went **1 → 3** (spread `00:00:00` → 4
 so M6 ranks on genuine recency (see §4). ⚠️ Rank 3 is still a three-way tie on the
 original seed stamp and will resolve itself as she touches tasks on other projects.
 
-✅ **2026-10-11: Calendar, Mirrors and Swift all closed.** ▶ **Travel is the only
-`⚠️` left**, and it is deferred to early November: it needs a changedetection.io
-flight watch wired (a watch UUID in `travel-watch-sync.config.json`), which is
-Septentrion-side, not this repo.
+✅ **2026-10-11: Calendar, Mirrors, Swift and Travel all closed. No `⚠️` remains;
+all eleven sections are ✓.**
 
 ⚠️ Lesson worth keeping: "add real data" closed one mark, not three. **Specify the
 shape the data has to take**, not just its existence.

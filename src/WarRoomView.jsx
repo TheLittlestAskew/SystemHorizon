@@ -4,6 +4,7 @@ import {
   parseRankingsCSV, normalizeAdpPayload, mergeOrder, moveInOrder,
   applyEspnPicks, describeEspnPoll, teamForSeat,
 } from './warRoomLogic'
+import SeasonHub from './SeasonHub'
 import './WarRoom.css'
 
 // Both endpoints are Vercel functions in TheLittlestAskew/Fantasy-Football and both
@@ -45,7 +46,10 @@ const DEFAULT_STATE = {
   espn: { leagueId: '1573934181', teamId: 16, lastAppliedOverall: 0 },
 }
 
+// The draft ended 2026-08-30, so This Week (the in-season hub) is first and the
+// default; the draft tabs stay for the record and for next year.
 const WAR_ROOM_TABS = [
+  { id: 'season', label: 'This Week' },
   { id: 'draft', label: 'Draft Board' },
   { id: 'players', label: 'Player Pool' },
   { id: 'team', label: 'My Team' },
@@ -86,7 +90,7 @@ function WarRoomView() {
   const [espnError, setEspnError] = useState(false)
   const [syncOn, setSyncOn] = useState(false)
   const [ui, setUi] = useState({ posFilter: 'ALL', search: '', hideTaken: true, edit: false, openNote: null })
-  const [activeTab, setActiveTab] = useState('draft')
+  const [activeTab, setActiveTab] = useState('season')
   const [panel, setPanel] = useState({ open: false, message: '' })
   const [csvText, setCsvText] = useState('')
   const [csvError, setCsvError] = useState('')
@@ -353,11 +357,12 @@ function WarRoomView() {
         <p className="eyebrow">System index / 10</p>
         <h2 id="warroom-heading">War Room</h2>
         <p>
-          20-team PPR snake draft board. ADP from Fantasy Football Calculator, live picks from ESPN.
-          Board state is saved in this browser only.
+          {activeTab === 'season'
+            ? 'Live from ESPN: your matchup, standings, waiver wire and league moves.'
+            : '20-team PPR snake draft board. ADP from Fantasy Football Calculator, live picks from ESPN. Board state is saved in this browser only.'}
         </p>
       </div>
-      <div className="warroom-header-actions">
+      {activeTab !== 'season' && <div className="warroom-header-actions">
         <button type="button" className="button" onClick={() => setActiveTab('settings')} aria-current={activeTab === 'settings' ? 'page' : undefined}>Settings</button>
         <button type="button" className="button" onClick={() => setPanel({ open: !panel.open, message: '' })}>Import CSV</button>
         <button type="button" className="button" onClick={fetchADP}>Refresh ADP</button>
@@ -369,7 +374,7 @@ function WarRoomView() {
         >
           ESPN Sync: {syncOn ? 'On' : 'Off'}
         </button>
-      </div>
+      </div>}
     </header>
 
     <nav className="warroom-tabs" aria-label="War Room pages">
@@ -428,6 +433,8 @@ function WarRoomView() {
         {csvError && <span className="warroom-status error">{csvError}</span>}
       </div>
     </div>}
+
+    {activeTab === 'season' && <SeasonHub apiBase={API_BASE} leagueId={state.espn.leagueId} teamId={state.espn.teamId} />}
 
     {activeTab === 'draft' && <div className="warroom-draft-layout">
       <section className="warroom-available" aria-label="Available players">

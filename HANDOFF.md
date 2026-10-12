@@ -5,7 +5,9 @@
 
 ## ▶ DO NEXT
 
-> 🆕 **2026-10-11 ~17:00 (latest): v1 DEFINITION OF DONE IS ALL ✓ (`82e7439`).** Travel closed: changedetection watch `efc4b328` (Google Flights ATL-PHL Dec 3-6, cheapest fare) + `Travel Watch Sync` task (08:30/14:30/20:30) wrote `source='auto'` rows ($73) into `horizon_travel_watch`. ▶ **Only open item: Taylor glances at the Travel tab to see the auto row render** (inferred, not eyeballed). Everything below is history.
+> 🆕 **2026-10-11 ~18:10 (latest): War Room has a new default tab, THIS WEEK, on branch `war-room-season` (`60aa83e`), NOT merged.** It reads the new `/api/hub` in the Fantasy-Football Vercel project: matchup (both lineups, live + projected), standings, healthy free agents with a position filter, league adds/drops/trades; refreshes every 2 min while visible; **Copy for Claude** puts a self-contained prompt on the clipboard for Flaim-backed advice. 417 tests, lint 0, build 0. ▶ **Taylor reviews it at `localhost:5173` → War Room, then merge to `main`.** Flaim MCP was added to Claude Code (user scope) and needs a one-time `/mcp` sign-in.
+>
+> **2026-10-11 ~17:00: v1 DEFINITION OF DONE IS ALL ✓ (`82e7439`).** Travel closed: changedetection watch `efc4b328` (Google Flights ATL-PHL Dec 3-6, cheapest fare) + `Travel Watch Sync` task (08:30/14:30/20:30) wrote `source='auto'` rows ($73) into `horizon_travel_watch`. ▶ **Only open item: Taylor glances at the Travel tab to see the auto row render** (inferred, not eyeballed). Everything below is history.
 >
 > **2026-10-11: v1 is down to ONE mark. Calendar, Mirrors and Swift are ✓ in `docs/v1-definition-of-done.md` (`41c936b`).** Calendar's sort was proven with a probe inserted out of order (10:00 then 9:00) and seen rendering 9:00 first; probe rows deleted, 0 left. Swift's tabs confirmed live by Taylor. ▶ **Only Travel remains, deferred to early November:** wire a changedetection.io flight watch (watch UUID in `travel-watch-sync.config.json`). The Swift/Calendar instructions in the 10-10 note below are DONE.
 >
@@ -141,6 +143,12 @@ Standing repo notes:
 
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
+
+### 2026-10-11 18:10 ET · Claude Code
+- **Changed:** War Room This Week tab (`SeasonHub.jsx`, pure `seasonHubLogic.js` + 6 tests, CSS). Draft tabs untouched; header draft buttons hide on This Week.
+- **Commit:** `60aa83e` (branch `war-room-season`)
+- **Friction:** gen-fail — `seasonHub.js` and `SeasonHub.jsx` collide on case-insensitive Windows, so the build resolved the import to the logic file ("default is not exported"); renamed to `seasonHubLogic.js` to match `warRoomLogic.js`.
+- **Next:** Taylor reviews on localhost:5173, then merge to main.
 
 ### 2026-10-11 17:05 ET · Claude Code
 - **Changed:** Travel closed, so all 11 DoD sections are ✓. Flight watch + scheduled sync live (vault-side, `7d2c8f7`); first auto rows verified in `horizon_travel_watch`.

@@ -5,6 +5,8 @@
 
 ## ▶ DO NEXT
 
+> 🆕 **2026-10-13 05:10 (latest): War Room THIS WEEK is MERGED to `main` and pushed (`7217af6`, fast-forward of `war-room-season`), on Taylor's "looks good".** 419 tests, build 0 on `main` before the push. The Fantasy-Football feed update is live too: `standings[].form` returns real results (e.g. `WWWWL`), `leaders` is an empty list because week 6 has not kicked off. ⚠️ **The public site was NOT eyeballed from here** (Cloudflare Access blocks the automation browser), so the deploy itself is inferred from the push. ▶ **Nothing pending in this repo.** Optional polish: hide the draft-era "On the clock" strip on the This Week tab. Still open elsewhere: ESPN cookie rotation (see Fantasy-Football HANDOFF), Flaim `/mcp` sign-in in Claude Code. The 10-12 note below is now history.
+>
 > 🆕 **2026-10-12 ~22:30 (latest): This Week got the five layout upgrades Taylor picked from her soccer-dashboard references (`8e885ea`, branch `war-room-season`, NOT merged).** Big scoreboard, slot-by-slot head-to-head bars, recent-form pills in Standings, a League Leaders card, green accent. Seen rendering live at `localhost:5173` against week 5 (131.1 vs 137.6, 7 head-to-head rows, no page overflow). 419 tests, lint 0, build 0. 🛑 **Form pills and Leaders stay empty until the Fantasy-Football feed update ships:** it is committed on that repo's LOCAL branch `lithotripsy/hub-form-leaders` (`7e57cbf`), unpushed because any push there triggers a Vercel deploy. ▶ **Two OKs from Taylor: (1) push/merge the feed update to Fantasy-Football `main`, (2) merge `war-room-season` to SH `main`.** Optional: the draft-era "On the clock" strip still shows above This Week.
 >
 > 🆕 **2026-10-11 ~18:10 (latest): War Room has a new default tab, THIS WEEK, on branch `war-room-season` (`60aa83e`), NOT merged.** It reads the new `/api/hub` in the Fantasy-Football Vercel project: matchup (both lineups, live + projected), standings, healthy free agents with a position filter, league adds/drops/trades; refreshes every 2 min while visible; **Copy for Claude** puts a self-contained prompt on the clipboard for Flaim-backed advice. 417 tests, lint 0, build 0. ▶ **Taylor reviews it at `localhost:5173` → War Room, then merge to `main`.** Flaim MCP was added to Claude Code (user scope) and needs a one-time `/mcp` sign-in.
@@ -145,6 +147,12 @@ Standing repo notes:
 
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
+
+### 2026-10-13 05:10 ET · Claude Code
+- **Changed:** Merged `war-room-season` into `main` (fast-forward) and pushed, on Taylor's explicit OK. No code change beyond the merge.
+- **Commit:** `7217af6`
+- **Next:** Nothing pending. Optional: hide the "On the clock" strip on This Week.
+- **Watch out:** Leaders is empty until the first week 6 game; that is the real empty state, not the old "feed isn't sending" placeholder.
 
 ### 2026-10-12 22:30 ET · Claude Code
 - **Changed:** War Room This Week: scoreboard, head-to-head bars (`headToHead`, `barPct`, `scoreShare` + tests), form pills, League Leaders card, green accent; full lineups moved into a disclosure. Verified in Taylor's signed-in Chrome via claude-in-chrome.

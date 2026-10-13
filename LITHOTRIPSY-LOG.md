@@ -49,3 +49,4 @@ banner gone. 408 tests, lint clean, build exit 0.
 - Backup tags: `lithotripsy-backup-20261012-*` in both repos
 - Changed: scoreboard, head-to-head bars, form pills, League Leaders card, green accent (`8e885ea`); hub gains `form` and `leaders` (`7e57cbf`)
 - Queued for Taylor: push the feed update to Fantasy-Football main (deploys); merge war-room-season to SH main
+- 2026-10-13 05:10: both queued items answered by Taylor ("go feed", "yes"); Fantasy-Football `main` at `387a2c5`, SH `main` at `7217af6`, both pushed.

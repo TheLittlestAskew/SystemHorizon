@@ -79,3 +79,44 @@ export function buildClaudePrompt(hub) {
   lines.push('Questions: Is my lineup optimal for what is left this week? Which free agent, if any, should I pick up, and who would I drop? Any injury risk I should plan around?')
   return lines.join('\n')
 }
+
+// Starters paired slot by slot for the head-to-head bars. Both lineups come
+// back in the same slot order, so index N on each side is the same slot. A
+// player's value is their actual points once they have any, else the
+// projection; `scale` is the largest value on the board, so every bar shares
+// one ruler. Negative scores (a defense can go below zero) draw as an empty bar.
+export function headToHead(matchup) {
+  const starters = (side) => ((side && side.lineup) || []).filter((p) => p.starting)
+  const mine = starters(matchup && matchup.me)
+  const theirs = starters(matchup && matchup.opponent)
+  const value = (p) => (!p ? null : typeof p.points === 'number' ? p.points : typeof p.projected === 'number' ? p.projected : null)
+  const rows = []
+  for (let i = 0; i < Math.max(mine.length, theirs.length); i += 1) {
+    const me = mine[i] || null
+    const opp = theirs[i] || null
+    const meValue = value(me)
+    const oppValue = value(opp)
+    rows.push({
+      slot: (me || opp).slot,
+      me, opp, meValue, oppValue,
+      mePlayed: Boolean(me) && typeof me.points === 'number',
+      oppPlayed: Boolean(opp) && typeof opp.points === 'number',
+      lead: meValue == null || oppValue == null || meValue === oppValue ? null : meValue > oppValue ? 'me' : 'opp',
+    })
+  }
+  const scale = Math.max(0, ...rows.flatMap((r) => [r.meValue, r.oppValue]).filter((v) => v != null))
+  return { rows, scale }
+}
+
+// Bar length as a whole percent of the shared scale, 0 when there is nothing to draw.
+export function barPct(value, scale) {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0 || !(scale > 0)) return 0
+  return Math.min(100, Math.round((value / scale) * 100))
+}
+
+// My share of the two scores, for the scoreboard bar. null until someone has points.
+export function scoreShare(mine, theirs) {
+  const a = typeof mine === 'number' && mine > 0 ? mine : 0
+  const b = typeof theirs === 'number' && theirs > 0 ? theirs : 0
+  return a + b > 0 ? Math.round((a / (a + b)) * 100) : null
+}

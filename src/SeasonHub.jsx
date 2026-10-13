@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { HUB_POLL_MS, hubUrl, validateHub, fmtPts, fmtWhen, freeAgentPositions, buildClaudePrompt } from './seasonHubLogic'
+import { HUB_POLL_MS, hubUrl, validateHub, fmtPts, fmtWhen, freeAgentPositions, buildClaudePrompt, headToHead, barPct, scoreShare } from './seasonHubLogic'
 
 // In-season War Room page: this week's matchup, standings, waivers and league
 // moves from /api/hub. Refreshes every 2 minutes while the tab is visible, so a
@@ -28,6 +28,61 @@ function Lineup({ side, label }) {
       </tbody>
     </table>
   </div>
+}
+
+// Big-number scoreboard: both scores, projections, and one bar splitting the
+// points scored so far. The bar is decoration; every number is also in text.
+function Scoreboard({ matchup, week }) {
+  const { me, opponent } = matchup
+  const share = scoreShare(me.score, opponent && opponent.score)
+  const final = Boolean(matchup.winner) && matchup.winner !== 'UNDECIDED'
+  return <div className="season-scoreboard">
+    <div className="season-team">
+      <span className="eyebrow">You</span>
+      <b>{me.name}</b>
+      <small className="warroom-mono">proj {fmtPts(me.projected)}</small>
+    </div>
+    <div className="season-bigscore">
+      <span className={final ? 'season-live final' : 'season-live'}>{final ? 'Final' : 'Live'} · Week {week}</span>
+      <p><span>{fmtPts(me.score)}</span><i aria-hidden="true">:</i><span className="visually-hidden"> to </span><span>{fmtPts(opponent ? opponent.score : null)}</span></p>
+    </div>
+    <div className="season-team right">
+      <span className="eyebrow">Opponent</span>
+      <b>{opponent ? opponent.name : 'Bye'}</b>
+      <small className="warroom-mono">proj {fmtPts(opponent ? opponent.projected : null)}</small>
+    </div>
+    {share != null && <div className="season-share" aria-hidden="true"><span style={{ width: `${share}%` }} /></div>}
+  </div>
+}
+
+// Slot-by-slot bars, the fantasy version of a match-stats panel. Points once a
+// player has any, the projection (dimmed, marked "proj") until then.
+function HeadToHead({ matchup }) {
+  const { rows, scale } = useMemo(() => headToHead(matchup), [matchup])
+  if (!rows.length) return <p className="empty-state">No starters set on either side yet.</p>
+  const cell = (player, value, played, leading, sideClass) => <div className={`season-h2h-side ${sideClass}${leading ? ' lead' : ''}${played ? '' : ' proj'}`}>
+    <div className="season-h2h-who">
+      <span>{player ? player.name : 'Empty'}</span>
+      {player && player.injuryStatus && <span className="season-injury">{player.injuryStatus.replace('_', ' ')}</span>}
+    </div>
+    <b className="warroom-mono">{fmtPts(value)}{player && !played && value != null ? <small> proj</small> : null}</b>
+    <div className="season-bar" aria-hidden="true"><span style={{ width: `${barPct(value, scale)}%` }} /></div>
+  </div>
+  return <ul className="season-h2h">
+    {rows.map((r, i) => <li key={`${r.slot}-${i}`}>
+      {cell(r.me, r.meValue, r.mePlayed, r.lead === 'me', 'left')}
+      <span className="season-h2h-slot warroom-mono">{r.slot}</span>
+      {cell(r.opp, r.oppValue, r.oppPlayed, r.lead === 'opp', 'right')}
+    </li>)}
+  </ul>
+}
+
+// Last five results as pills, oldest on the left, newest on the right.
+function Form({ results }) {
+  if (!results || !results.length) return null
+  return <span className="season-form" role="img" aria-label={`Last ${results.length}: ${results.join(' ')}`}>
+    {results.map((r, i) => <i key={i} className={`season-pill ${r}`} aria-hidden="true">{r}</i>)}
+  </span>
 }
 
 function SeasonHub({ apiBase, leagueId, teamId }) {
@@ -92,12 +147,19 @@ function SeasonHub({ apiBase, leagueId, teamId }) {
 
     {hub && <>
       <section className="season-card season-matchup" aria-label="This week's matchup">
-        <div className="instrument-heading"><span>Week {hub.week} matchup</span><b>{m && m.winner && m.winner !== 'UNDECIDED' ? 'Final' : 'Live'}</b></div>
         {sectionErrors.matchup && <p className="warroom-status error">{sectionErrors.matchup}</p>}
-        {m ? <div className="season-sides">
-          <Lineup side={m.me} label="You" />
-          <Lineup side={m.opponent} label="Opponent" />
-        </div> : <p className="empty-state">No matchup this week: a bye, or ESPN hasn't published it yet.</p>}
+        {m && m.me ? <>
+          <Scoreboard matchup={m} week={hub.week} />
+          <div className="instrument-heading season-subhead"><span>Head to head</span><b>starters, slot by slot</b></div>
+          <HeadToHead matchup={m} />
+          <details className="season-details">
+            <summary>Full lineups and bench</summary>
+            <div className="season-sides">
+              <Lineup side={m.me} label="You" />
+              <Lineup side={m.opponent} label="Opponent" />
+            </div>
+          </details>
+        </> : <p className="empty-state">No matchup this week: a bye, or ESPN hasn't published it yet.</p>}
       </section>
 
       <div className="season-grid">
@@ -106,7 +168,7 @@ function SeasonHub({ apiBase, leagueId, teamId }) {
           {sectionErrors.standings && <p className="warroom-status error">{sectionErrors.standings}</p>}
           <div className="season-scroll">
             <table className="season-table">
-              <thead><tr><th scope="col" className="num">#</th><th scope="col">Team</th><th scope="col">W-L</th><th scope="col" className="num">PF</th><th scope="col" className="num">PA</th><th scope="col">Strk</th></tr></thead>
+              <thead><tr><th scope="col" className="num">#</th><th scope="col">Team</th><th scope="col">W-L</th><th scope="col" className="num">PF</th><th scope="col" className="num">PA</th><th scope="col">Form</th></tr></thead>
               <tbody>
                 {hub.standings.map((t, i) => <tr key={t.teamId} className={t.teamId === hub.teamId ? 'season-mine' : undefined}>
                   <td className="num warroom-mono">{t.seed ?? i + 1}</td>
@@ -114,11 +176,27 @@ function SeasonHub({ apiBase, leagueId, teamId }) {
                   <td className="warroom-mono">{t.wins}-{t.losses}{t.ties ? `-${t.ties}` : ''}</td>
                   <td className="num">{fmtPts(t.pointsFor)}</td>
                   <td className="num">{fmtPts(t.pointsAgainst)}</td>
-                  <td className="warroom-mono">{t.streak || ''}</td>
+                  <td><Form results={t.form} />{(!t.form || !t.form.length) && <span className="warroom-mono">{t.streak || ''}</span>}</td>
                 </tr>)}
               </tbody>
             </table>
           </div>
+        </section>
+
+        <section className="season-card" aria-label="League leaders">
+          <div className="instrument-heading"><span>League leaders</span><b>top starters, week {hub.week}</b></div>
+          {sectionErrors.leaders && <p className="warroom-status error">{sectionErrors.leaders}</p>}
+          {!Array.isArray(hub.leaders)
+            ? <p className="empty-state">The data feed isn't sending leaders yet.</p>
+            : hub.leaders.length === 0
+              ? <p className="empty-state">No starter has scored yet this week.</p>
+              : <ol className="season-leaders">
+                {hub.leaders.map((p, i) => <li key={p.id} className={p.teamId === hub.teamId ? 'season-mine' : undefined}>
+                  <span className="season-rank warroom-mono">{i + 1}</span>
+                  <div><b>{p.name}</b> <small className="warroom-mono">{p.pos} · {p.proTeam || 'FA'}</small><small>{p.team}</small></div>
+                  <span className="season-leader-pts warroom-mono">{fmtPts(p.points)}</span>
+                </li>)}
+              </ol>}
         </section>
 
         <section className="season-card" aria-label="Waiver wire">

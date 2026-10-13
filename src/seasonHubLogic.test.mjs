@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { hubUrl, validateHub, fmtPts, fmtWhen, freeAgentPositions, buildClaudePrompt } from './seasonHubLogic.js'
+import { hubUrl, validateHub, fmtPts, fmtWhen, freeAgentPositions, buildClaudePrompt, headToHead, barPct, scoreShare } from './seasonHubLogic.js'
 
 const hub = () => ({
   leagueId: '1573934181', teamId: 16, week: 5, leagueName: 'INSPIRED FANTASY FOOTBALL',
@@ -62,4 +62,32 @@ test('buildClaudePrompt carries the numbers, the injury, and the bye case', () =
   assert.match(p, /T\.J\. Edwards \(LB, CHI\) proj 18\.3, 13% owned/)
   assert.match(buildClaudePrompt({ ...hub(), matchup: null }), /No matchup this week/)
   assert.throws(() => buildClaudePrompt({}), /no week/)
+})
+
+test('headToHead pairs starters by slot, prefers actual points, and shares one scale', () => {
+  const p = (slot, points, projected, starting = true) => ({ slot, name: slot, points, projected, starting })
+  const m = {
+    me: { lineup: [p('QB', 36, 30), p('RB', null, 12.5), p('K', -2, 8), p('BE', 50, 50, false)] },
+    opponent: { lineup: [p('QB', 20, 25), p('RB', null, 12.5)] },
+  }
+  const { rows, scale } = headToHead(m)
+  assert.equal(rows.length, 3) // bench is out; my K has no opposite number
+  assert.deepEqual([rows[0].meValue, rows[0].oppValue, rows[0].lead], [36, 20, 'me'])
+  assert.deepEqual([rows[1].meValue, rows[1].mePlayed, rows[1].lead], [12.5, false, null]) // projection, level
+  assert.deepEqual([rows[2].slot, rows[2].opp, rows[2].oppValue, rows[2].lead], ['K', null, null, null])
+  assert.equal(scale, 36)
+  assert.deepEqual(headToHead(null), { rows: [], scale: 0 })
+  assert.deepEqual(headToHead({ me: { lineup: [] }, opponent: null }), { rows: [], scale: 0 })
+})
+
+test('barPct and scoreShare never divide by zero or go out of range', () => {
+  assert.equal(barPct(18, 36), 50)
+  assert.equal(barPct(40, 36), 100)
+  assert.equal(barPct(-2, 36), 0)
+  assert.equal(barPct(null, 36), 0)
+  assert.equal(barPct(5, 0), 0)
+  assert.equal(scoreShare(130.1, 137.6), 49)
+  assert.equal(scoreShare(10, null), 100)
+  assert.equal(scoreShare(0, 0), null)
+  assert.equal(scoreShare(null, undefined), null)
 })

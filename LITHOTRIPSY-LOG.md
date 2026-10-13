@@ -43,3 +43,9 @@ banner gone. 408 tests, lint clean, build exit 0.
    base64 decodes to the length its RIFF header declares and holds no whitespace
    — so the cause is unidentified. A 90KB asset in the bundle that never renders.
 3. The branch is **not merged**. Merge whenever you want it; nothing depends on it.
+
+## 2026-10-12 · med+nausea · War Room This Week layout upgrades
+- Branch: `war-room-season` (SH, pushed); `lithotripsy/hub-form-leaders` (Fantasy-Football, local only)
+- Backup tags: `lithotripsy-backup-20261012-*` in both repos
+- Changed: scoreboard, head-to-head bars, form pills, League Leaders card, green accent (`8e885ea`); hub gains `form` and `leaders` (`7e57cbf`)
+- Queued for Taylor: push the feed update to Fantasy-Football main (deploys); merge war-room-season to SH main

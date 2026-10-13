@@ -38,7 +38,7 @@
 | **Claude desktop** | App | Authored the Projects redesign, Calendar, dark rollout and nav icons — 26 commits between 2026-08-29 and 2026-09-02 | claude.ai / desktop | 2026-09-02 | Paid | Log entries here carry the legacy `Claude chat` label |
 | **Codex** | App | Read-only System Horizon architecture audit and repository handoff | Codex desktop | 2026-09-10 | Paid | No live database or deployment action in this audit |
 | **Cloudflare Access** | Service | Gates the live dashboard behind a login | `sh.tayloraritchie.com` | ~2026-08-29 | Free tier | Verified 2026-08-29 — an unauthenticated request 302s to the Access login |
-| **ESPN Fantasy** | Data | War Room draft view and the This Week in-season hub (/api/hub) | `src/WarRoomView.jsx`, `src/warRoomLogic.js` | 2026-10-11 | Free | Cookie-based auth; the cookie needs periodic rotation |
+| **ESPN Fantasy** | Data | War Room draft view and the This Week in-season hub (/api/hub) | `src/WarRoomView.jsx`, `src/warRoomLogic.js` | 2026-10-12 | Free | Cookie-based auth; the cookie needs periodic rotation |
 | **localStorage** | Data | War Room draft state (`warroom_sh_v1`) | browser | ~2026-08-29 | Free | ⚠️ Deliberate exception to this repo's Supabase-everything rule — a live draft is single-device and latency-critical. Revisit post-draft |
 | **sh.tayloraritchie.com** | Site | The deployed dashboard | sh.tayloraritchie.com | ~2026-08-29 | — | Nav item 10 carries the SH copy per the current DO NEXT |
 

@@ -5,6 +5,8 @@
 
 ## ▶ DO NEXT
 
+> 🆕 **2026-10-12 ~22:30 (latest): This Week got the five layout upgrades Taylor picked from her soccer-dashboard references (`8e885ea`, branch `war-room-season`, NOT merged).** Big scoreboard, slot-by-slot head-to-head bars, recent-form pills in Standings, a League Leaders card, green accent. Seen rendering live at `localhost:5173` against week 5 (131.1 vs 137.6, 7 head-to-head rows, no page overflow). 419 tests, lint 0, build 0. 🛑 **Form pills and Leaders stay empty until the Fantasy-Football feed update ships:** it is committed on that repo's LOCAL branch `lithotripsy/hub-form-leaders` (`7e57cbf`), unpushed because any push there triggers a Vercel deploy. ▶ **Two OKs from Taylor: (1) push/merge the feed update to Fantasy-Football `main`, (2) merge `war-room-season` to SH `main`.** Optional: the draft-era "On the clock" strip still shows above This Week.
+>
 > 🆕 **2026-10-11 ~18:10 (latest): War Room has a new default tab, THIS WEEK, on branch `war-room-season` (`60aa83e`), NOT merged.** It reads the new `/api/hub` in the Fantasy-Football Vercel project: matchup (both lineups, live + projected), standings, healthy free agents with a position filter, league adds/drops/trades; refreshes every 2 min while visible; **Copy for Claude** puts a self-contained prompt on the clipboard for Flaim-backed advice. 417 tests, lint 0, build 0. ▶ **Taylor reviews it at `localhost:5173` → War Room, then merge to `main`.** Flaim MCP was added to Claude Code (user scope) and needs a one-time `/mcp` sign-in.
 >
 > **2026-10-11 ~17:00: v1 DEFINITION OF DONE IS ALL ✓ (`82e7439`).** Travel closed: changedetection watch `efc4b328` (Google Flights ATL-PHL Dec 3-6, cheapest fare) + `Travel Watch Sync` task (08:30/14:30/20:30) wrote `source='auto'` rows ($73) into `horizon_travel_watch`. ▶ **Only open item: Taylor glances at the Travel tab to see the auto row render** (inferred, not eyeballed). Everything below is history.
@@ -143,6 +145,14 @@ Standing repo notes:
 
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
+
+### 2026-10-12 22:30 ET · Claude Code
+- **Changed:** War Room This Week: scoreboard, head-to-head bars (`headToHead`, `barPct`, `scoreShare` + tests), form pills, League Leaders card, green accent; full lineups moved into a disclosure. Verified in Taylor's signed-in Chrome via claude-in-chrome.
+- **Commit:** `8e885ea`
+- **Friction:** gen-fail — first CSS pass used `order` to mirror the opponent side, which dropped the name under the bar; explicit `grid-area` placement fixed it. Only caught by looking at the screenshot.
+- **Friction:** gen-fail — the LeakStop hook threw on one long combined commit-and-handoff shell call and blocked it; splitting it into a commit-message file plus a small script worked.
+- **Next:** Taylor reviews, then OKs the Fantasy-Football feed push and the merge to `main`.
+- **Watch out:** Until the feed update deploys, Leaders reads "The data feed isn't sending leaders yet" and Standings falls back to the streak text. Expected, not a bug.
 
 ### 2026-10-11 18:10 ET · Claude Code
 - **Changed:** War Room This Week tab (`SeasonHub.jsx`, pure `seasonHubLogic.js` + 6 tests, CSS). Draft tabs untouched; header draft buttons hide on This Week.

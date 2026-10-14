@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { HUB_POLL_MS, hubUrl, validateHub, fmtPts, fmtWhen, freeAgentPositions, buildClaudePrompt, headToHead, barPct, scoreShare } from './seasonHubLogic'
+import { useCallback, useMemo, useState } from 'react'
+import { fmtPts, fmtWhen, freeAgentPositions, buildClaudePrompt, headToHead, barPct, scoreShare, rosterGroups } from './seasonHubLogic'
 
-// In-season War Room page: this week's matchup, standings, waivers and league
-// moves from /api/hub. Refreshes every 2 minutes while the tab is visible, so a
-// game-day Sunday stays live without hammering ESPN from a background tab.
+// In-season War Room pages: This Week (matchup, standings, leaders, waivers,
+// league moves) and My Team (the live roster). Both render the one feed from
+// useSeasonHub, which WarRoomView owns.
 function Lineup({ side, label }) {
   if (!side) return null
   return <div className="season-side">
@@ -85,36 +85,68 @@ function Form({ results }) {
   </span>
 }
 
-function SeasonHub({ apiBase, leagueId, teamId }) {
-  const [hub, setHub] = useState(null)
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+// Freshness line shared by both in-season tabs. On a failed refresh it keeps
+// saying how old the data on screen is, instead of hiding it.
+function FeedStatus({ hub, error }) {
+  return <p className={error ? 'warroom-status error' : 'warroom-status'} role="status">
+    {error
+      ? `ESPN · ${error}${hub ? ` (showing data from ${fmtWhen(Date.parse(hub.fetchedAt))})` : ''}`
+      : hub ? `Week ${hub.week} · updated ${fmtWhen(Date.parse(hub.fetchedAt))} · refreshes every 2 min` : 'loading…'}
+  </p>
+}
+
+const ROSTER_GROUPS = [['starters', 'Starters'], ['bench', 'Bench'], ['ir', 'Injured reserve']]
+
+// My Team, in season: the live ESPN roster, grouped and totalled.
+export function MyRoster({ feed }) {
+  const { hub, error, loading, load } = feed
+  const me = hub && hub.matchup && hub.matchup.me
+  const groups = useMemo(() => rosterGroups(me && me.lineup), [me])
+  return <div className="season-hub warroom-tab-page">
+    <div className="season-toolbar">
+      <FeedStatus hub={hub} error={error} />
+      <div className="season-actions">
+        <button type="button" className="button" onClick={load} disabled={loading}>{loading ? 'Refreshing…' : 'Refresh'}</button>
+      </div>
+    </div>
+    {hub && <section className="season-card season-roster" aria-label="My roster">
+      <div className="instrument-heading"><span>{me ? me.name : 'My team'}</span><b>{groups.count} players · live from ESPN</b></div>
+      {hub.errors && hub.errors.matchup && <p className="warroom-status error">{hub.errors.matchup}</p>}
+      {!me
+        ? <p className="empty-state">ESPN has no matchup for you this week (a bye or an eliminated playoff week), and the roster rides along with the matchup, so there is nothing to show until next week's is published.</p>
+        : <>
+          <div className="season-roster-totals">
+            <div><span className="eyebrow">Starters scored</span><b className="warroom-mono">{fmtPts(groups.starterPoints)}</b></div>
+            <div><span className="eyebrow">Starters projected</span><b className="warroom-mono">{fmtPts(groups.starterProjected)}</b></div>
+            <div><span className="eyebrow">Injury flags</span><b className="warroom-mono">{groups.injured}</b></div>
+          </div>
+          {ROSTER_GROUPS.filter(([key]) => groups[key].length).map(([key, label]) => <div key={key} className="season-roster-group">
+            <div className="instrument-heading season-subhead"><span>{label}</span><b>{groups[key].length}</b></div>
+            <table className="season-table">
+              <thead><tr><th scope="col">Slot</th><th scope="col">Player</th><th scope="col" className="num">Pts</th><th scope="col" className="num">Proj</th><th scope="col" className="num">Own%</th></tr></thead>
+              <tbody>
+                {groups[key].map((p) => <tr key={p.id}>
+                  <td className="warroom-mono">{p.slot}</td>
+                  <td>
+                    {p.name} <small className="warroom-mono">{p.pos} · {p.proTeam || 'FA'}</small>
+                    {p.injuryStatus && <span className="season-injury">{p.injuryStatus.replace('_', ' ')}</span>}
+                  </td>
+                  <td className="num">{fmtPts(p.points)}</td>
+                  <td className="num">{fmtPts(p.projected)}</td>
+                  <td className="num">{p.percentOwned ?? '–'}</td>
+                </tr>)}
+              </tbody>
+            </table>
+          </div>)}
+        </>}
+    </section>}
+  </div>
+}
+
+function SeasonHub({ feed }) {
+  const { hub, error, loading, load } = feed
   const [faPos, setFaPos] = useState('ALL')
   const [copyMsg, setCopyMsg] = useState('')
-
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      const response = await fetch(hubUrl(apiBase, leagueId, teamId), { signal: AbortSignal.timeout(30000) })
-      const json = await response.json().catch(() => null)
-      if (!response.ok) throw new Error((json && json.error) || `HTTP ${response.status}`)
-      setHub(validateHub(json))
-      setError('')
-    } catch (err) {
-      // Keep the last good data on screen; the error line says it's stale.
-      setError(err && err.message ? err.message : 'could not reach the hub')
-    } finally {
-      setLoading(false)
-    }
-  }, [apiBase, leagueId, teamId])
-
-  useEffect(() => {
-    load()
-    const tick = () => { if (document.visibilityState === 'visible') load() }
-    const handle = setInterval(tick, HUB_POLL_MS)
-    document.addEventListener('visibilitychange', tick)
-    return () => { clearInterval(handle); document.removeEventListener('visibilitychange', tick) }
-  }, [load])
 
   const positions = useMemo(() => freeAgentPositions(hub && hub.freeAgents), [hub])
   const freeAgents = useMemo(() => (hub ? hub.freeAgents.filter((p) => faPos === 'ALL' || p.pos === faPos) : []), [hub, faPos])
@@ -133,11 +165,7 @@ function SeasonHub({ apiBase, leagueId, teamId }) {
 
   return <div className="season-hub warroom-tab-page">
     <div className="season-toolbar">
-      <p className={error ? 'warroom-status error' : 'warroom-status'} role="status">
-        {error
-          ? `ESPN · ${error}${hub ? ` (showing data from ${fmtWhen(Date.parse(hub.fetchedAt))})` : ''}`
-          : hub ? `Week ${hub.week} · updated ${fmtWhen(Date.parse(hub.fetchedAt))} · refreshes every 2 min` : 'loading…'}
-      </p>
+      <FeedStatus hub={hub} error={error} />
       <div className="season-actions">
         <button type="button" className="button" onClick={load} disabled={loading}>{loading ? 'Refreshing…' : 'Refresh'}</button>
         <button type="button" className="button coral" onClick={copyForClaude} disabled={!hub}>Copy for Claude</button>

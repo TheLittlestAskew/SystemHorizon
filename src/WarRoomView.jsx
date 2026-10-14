@@ -4,7 +4,8 @@ import {
   parseRankingsCSV, normalizeAdpPayload, mergeOrder, moveInOrder,
   applyEspnPicks, describeEspnPoll, teamForSeat,
 } from './warRoomLogic'
-import SeasonHub from './SeasonHub'
+import SeasonHub, { MyRoster } from './SeasonHub'
+import useSeasonHub from './useSeasonHub'
 import './WarRoom.css'
 
 // Both endpoints are Vercel functions in TheLittlestAskew/Fantasy-Football and both
@@ -46,13 +47,14 @@ const DEFAULT_STATE = {
   espn: { leagueId: '1573934181', teamId: 16, lastAppliedOverall: 0 },
 }
 
-// The draft ended 2026-08-30, so This Week (the in-season hub) is first and the
-// default; the draft tabs stay for the record and for next year.
+// The draft ended 2026-08-30, so the two live in-season tabs lead and My Team
+// (the live ESPN roster) is the default. Order is Taylor's (2026-10-14); the
+// draft tabs stay for the record and for next year.
 const WAR_ROOM_TABS = [
-  { id: 'season', label: 'This Week' },
-  { id: 'draft', label: 'Draft Board' },
-  { id: 'players', label: 'Player Pool' },
   { id: 'team', label: 'My Team' },
+  { id: 'season', label: 'This Week' },
+  { id: 'players', label: 'Player Pool' },
+  { id: 'draft', label: 'Draft Board' },
   { id: 'settings', label: 'Settings' },
 ]
 
@@ -90,7 +92,11 @@ function WarRoomView() {
   const [espnError, setEspnError] = useState(false)
   const [syncOn, setSyncOn] = useState(false)
   const [ui, setUi] = useState({ posFilter: 'ALL', search: '', hideTaken: true, edit: false, openNote: null })
-  const [activeTab, setActiveTab] = useState('season')
+  const [activeTab, setActiveTab] = useState('team')
+  // My Team and This Week are live ESPN pages; the draft header, status line
+  // and pick bar belong to the draft tabs only.
+  const inSeason = activeTab === 'team' || activeTab === 'season'
+  const seasonFeed = useSeasonHub(API_BASE, state.espn.leagueId, state.espn.teamId)
   const [panel, setPanel] = useState({ open: false, message: '' })
   const [csvText, setCsvText] = useState('')
   const [csvError, setCsvError] = useState('')
@@ -357,12 +363,12 @@ function WarRoomView() {
         <p className="eyebrow">System index / 10</p>
         <h2 id="warroom-heading">War Room</h2>
         <p>
-          {activeTab === 'season'
-            ? 'Live from ESPN: your matchup, standings, waiver wire and league moves.'
+          {inSeason
+            ? 'Live from ESPN: your roster, matchup, standings, waiver wire and league moves.'
             : '20-team PPR snake draft board. ADP from Fantasy Football Calculator, live picks from ESPN. Board state is saved in this browser only.'}
         </p>
       </div>
-      {activeTab !== 'season' && <div className="warroom-header-actions">
+      {!inSeason && <div className="warroom-header-actions">
         <button type="button" className="button" onClick={() => setActiveTab('settings')} aria-current={activeTab === 'settings' ? 'page' : undefined}>Settings</button>
         <button type="button" className="button" onClick={() => setPanel({ open: !panel.open, message: '' })}>Import CSV</button>
         <button type="button" className="button" onClick={fetchADP}>Refresh ADP</button>
@@ -387,7 +393,7 @@ function WarRoomView() {
       >{tab.label}</button>)}
     </nav>
 
-    <p className={status.isError ? 'warroom-status error' : 'warroom-status'} role="status">{status.text}</p>
+    {!inSeason && <p className={status.isError ? 'warroom-status error' : 'warroom-status'} role="status">{status.text}</p>}
     {syncOn && <p className={espnError ? 'warroom-status error' : 'warroom-status'} role="status">ESPN · {espnStatus || 'polling…'}</p>}
 
     {activeTab === 'settings' && <div className="warroom-settings warroom-tab-page">
@@ -415,14 +421,14 @@ function WarRoomView() {
       {transferMsg && <p className="warroom-transfer-msg">{transferMsg}</p>}
     </div>}
 
-    <div className="warroom-pickbar">
+    {!inSeason && <div className="warroom-pickbar">
       <span>On the clock <b className="warroom-mono">{roundPick ? `${roundPick.round}.${String(roundPick.pick).padStart(2, '0')} (#${overall})` : '?'}</b></span>
       {!slot ? <span className="warroom-dim">Set your slot in Settings to track your picks</span>
         : nextMine === overall ? <span className="warroom-up">YOU ARE UP</span>
         : nextMine ? <span className="warroom-dim">Your next pick: #{nextMine} (in {nextMine - overall})</span>
         : <span className="warroom-dim">No picks left</span>}
       <span className="warroom-dim">{state.players.length ? `${state.players.length} ranked · ${teams * rounds} total picks` : ''}</span>
-    </div>
+    </div>}
 
     {panel.open && <div className="warroom-panel">
       {panel.message && <p className="warroom-status error">{panel.message}</p>}
@@ -434,7 +440,7 @@ function WarRoomView() {
       </div>
     </div>}
 
-    {activeTab === 'season' && <SeasonHub apiBase={API_BASE} leagueId={state.espn.leagueId} teamId={state.espn.teamId} />}
+    {activeTab === 'season' && <SeasonHub feed={seasonFeed} />}
 
     {activeTab === 'draft' && <div className="warroom-draft-layout">
       <section className="warroom-available" aria-label="Available players">
@@ -579,27 +585,7 @@ function WarRoomView() {
       </ul>
     </section>}
 
-    {activeTab === 'team' && <section className="warroom-team-page warroom-tab-page" aria-label="My team">
-      <div className="warroom-team-card">
-        <div className="instrument-heading"><span>My team</span><b>{myTeam.length} picked</b></div>
-        {myTeam.length === 0
-          ? <p className="empty-state">No picks yet. Use Player Pool to claim a player when you draft them.</p>
-          : <div className="warroom-myteam">
-            {myTeam.map((player) => <div key={player.key} className="warroom-slot">
-              <PositionChip pos={player.pos} />
-              <span>{player.name}</span>
-              <small className="warroom-mono">{player.team || 'FA'}{player.bye ? ` · bye ${player.bye}` : ''}</small>
-            </div>)}
-          </div>}
-      </div>
-      <div className="warroom-team-card warroom-queue-card">
-        <div className="instrument-heading"><span>Up next</span><b>{draftQueue.length}</b></div>
-        {draftQueue.map((queued, index) => <div className={index === 0 ? 'warroom-queue-row current' : 'warroom-queue-row'} key={queued.overall}>
-          <span>{queued.round}.{String(queued.overall - ((queued.round - 1) * teams)).padStart(2, '0')}</span>
-          <b>{queued.seat === slot ? 'Your seat' : (teamForSeat(queued.seat)?.name ?? `Seat ${queued.seat}`)}</b>
-        </div>)}
-      </div>
-    </section>}
+    {activeTab === 'team' && <MyRoster feed={seasonFeed} />}
   </section>
 }
 

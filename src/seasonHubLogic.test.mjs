@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { hubUrl, validateHub, fmtPts, fmtWhen, freeAgentPositions, buildClaudePrompt, headToHead, barPct, scoreShare } from './seasonHubLogic.js'
+import { hubUrl, validateHub, fmtPts, fmtWhen, freeAgentPositions, buildClaudePrompt, headToHead, barPct, scoreShare, rosterGroups } from './seasonHubLogic.js'
 
 const hub = () => ({
   leagueId: '1573934181', teamId: 16, week: 5, leagueName: 'INSPIRED FANTASY FOOTBALL',
@@ -90,4 +90,15 @@ test('barPct and scoreShare never divide by zero or go out of range', () => {
   assert.equal(scoreShare(10, null), 100)
   assert.equal(scoreShare(0, 0), null)
   assert.equal(scoreShare(null, undefined), null)
+})
+
+test('rosterGroups splits starters, bench and IR and totals only starters', () => {
+  const p = (id, slot, starting, points, projected, injuryStatus = null) => ({ id, slot, starting, points, projected, injuryStatus })
+  const g = rosterGroups([p(1, 'QB', true, 20.04, 22), p(2, 'K', true, null, 8), p(3, 'BE', false, 30, 30, 'QUESTIONABLE'), p(4, 'IR', false, null, null, 'INJURY_RESERVE')])
+  assert.deepEqual([g.starters.length, g.bench.length, g.ir.length, g.count], [2, 1, 1, 4])
+  assert.equal(g.starterPoints, 20) // K hasn't played; bench 30 doesn't count
+  assert.equal(g.starterProjected, 30)
+  assert.equal(g.injured, 2)
+  const empty = rosterGroups(null)
+  assert.deepEqual([empty.count, empty.starterPoints, empty.starterProjected, empty.injured], [0, null, null, 0])
 })

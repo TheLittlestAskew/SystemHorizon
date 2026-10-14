@@ -120,3 +120,24 @@ export function scoreShare(mine, theirs) {
   const b = typeof theirs === 'number' && theirs > 0 ? theirs : 0
   return a + b > 0 ? Math.round((a / (a + b)) * 100) : null
 }
+
+// My Team grouping: starters in lineup order, then bench, then IR, with the
+// starter totals that actually count toward the matchup. A missing or empty
+// lineup gives empty groups and null totals, never 0.0 for "no data".
+export function rosterGroups(lineup) {
+  const players = Array.isArray(lineup) ? lineup : []
+  const starters = players.filter((p) => p.starting)
+  const ir = players.filter((p) => !p.starting && p.slot === 'IR')
+  const bench = players.filter((p) => !p.starting && p.slot !== 'IR')
+  const sum = (key) => {
+    const values = starters.map((p) => p[key]).filter((v) => typeof v === 'number' && Number.isFinite(v))
+    return values.length ? Math.round(values.reduce((a, b) => a + b, 0) * 10) / 10 : null
+  }
+  return {
+    starters, bench, ir,
+    count: players.length,
+    starterPoints: sum('points'),
+    starterProjected: sum('projected'),
+    injured: players.filter((p) => p.injuryStatus).length,
+  }
+}

@@ -5,6 +5,8 @@
 
 ## ▶ DO NEXT
 
+> 🆕 **2026-10-14 13:20 (latest): War Room MY TEAM now shows the live ESPN roster, on branch `war-room-myteam` (`c8a77aa`), NOT merged.** Starters, bench and IR with points, projections, ownership and injury tags, plus starter totals; it rides the same 2-minute feed as This Week through one shared `useSeasonHub` hook, so the two tabs never disagree. Tabs reordered per Taylor: My Team (default), This Week, Player Pool, Draft Board, Settings; draft-only header, status line and pick bar hidden on the two live tabs. Seen live at `localhost:5173`: week 6, 14 players, no overflow. 420 tests, lint 0, build 0. ▶ **Taylor OKs the merge to `main`.** ⚠️ The roster comes from `matchup.me.lineup`, so a week with no matchup for her (an eliminated playoff week) shows an explained empty state rather than the roster. A dedicated `roster` field in the Fantasy-Football hub would remove that limit if it ever matters.
+>
 > 🆕 **2026-10-13 05:10 (latest): War Room THIS WEEK is MERGED to `main` and pushed (`7217af6`, fast-forward of `war-room-season`), on Taylor's "looks good".** 419 tests, build 0 on `main` before the push. The Fantasy-Football feed update is live too: `standings[].form` returns real results (e.g. `WWWWL`), `leaders` is an empty list because week 6 has not kicked off. ⚠️ **The public site was NOT eyeballed from here** (Cloudflare Access blocks the automation browser), so the deploy itself is inferred from the push. ▶ **Nothing pending in this repo.** Optional polish: hide the draft-era "On the clock" strip on the This Week tab. Still open elsewhere: ESPN cookie rotation (see Fantasy-Football HANDOFF), Flaim `/mcp` sign-in in Claude Code. The 10-12 note below is now history.
 >
 > 🆕 **2026-10-12 ~22:30 (latest): This Week got the five layout upgrades Taylor picked from her soccer-dashboard references (`8e885ea`, branch `war-room-season`, NOT merged).** Big scoreboard, slot-by-slot head-to-head bars, recent-form pills in Standings, a League Leaders card, green accent. Seen rendering live at `localhost:5173` against week 5 (131.1 vs 137.6, 7 head-to-head rows, no page overflow). 419 tests, lint 0, build 0. 🛑 **Form pills and Leaders stay empty until the Fantasy-Football feed update ships:** it is committed on that repo's LOCAL branch `lithotripsy/hub-form-leaders` (`7e57cbf`), unpushed because any push there triggers a Vercel deploy. ▶ **Two OKs from Taylor: (1) push/merge the feed update to Fantasy-Football `main`, (2) merge `war-room-season` to SH `main`.** Optional: the draft-era "On the clock" strip still shows above This Week.
@@ -147,6 +149,13 @@ Standing repo notes:
 
 ## Log
 <!-- newest first · one entry per logical task/session · timestamp · source · changed · commit · next -->
+
+### 2026-10-14 13:20 ET · Claude Code
+- **Changed:** My Team renders the live roster (`MyRoster`, `rosterGroups` + test); fetching moved into `src/useSeasonHub.js` and shared by both live tabs; tab order changed to Taylor's; draft chrome hidden on live tabs. Verified in Chrome via claude-in-chrome.
+- **Commit:** `c8a77aa`
+- **Friction:** misread — work started on `main` with uncommitted edits before branching; moved to `war-room-myteam` before any commit, so `main` never received it.
+- **Next:** Taylor OKs merging `war-room-myteam` to `main`.
+- **Watch out:** Week 6 data showed Joe Burrow and Harrison Mevis projecting 0.0, with Mevis listed as a free agent (no NFL team). Flagged to Taylor as data, not advice.
 
 ### 2026-10-13 05:10 ET · Claude Code
 - **Changed:** Merged `war-room-season` into `main` (fast-forward) and pushed, on Taylor's explicit OK. No code change beyond the merge.
